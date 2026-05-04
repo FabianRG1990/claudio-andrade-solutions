@@ -1,0 +1,39 @@
+<header class="page-header bg-mesh-deep">
+  <app-caustic-bg />
+  <app-bubble-stream [count]="12" class="page-header__bubbles" />
+
+  <!-- Cierre inferior — funde el header al abismo puro para que la siguiente
+       sección entre sin costura horizontal. -->
+  <div class="page-header__fade" aria-hidden="true"></div>
+
+  <div class="page-header__container">
+    <div class="page-header__grid">
+      <div class="page-header__left">
+        <div appReveal>
+          <app-eyebrow>{{ eyebrow() }}</app-eyebrow>
+        </div>
+        <p class="page-header__capitulo" appReveal [delay]="0.06">
+          {{ capitulo() }}
+        </p>
+        <div class="page-header__stamp" appReveal [delay]="0.12">
+          <app-emblem-stamp [size]="28" />
+          <span class="page-header__stamp-text">Aquarium · Inst. 1992</span>
+        </div>
+      </div>
+
+      <div class="page-header__right">
+        <h1 class="page-header__title" appReveal>
+          {{ title() }}
+          @if (italic(); as it) {
+            <span class="page-header__title-italic">{{ it }}</span>
+          }
+        </h1>
+        @if (description(); as desc) {
+          <p class="page-header__description" appReveal [delay]="0.14">
+            {{ desc }}
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+</header>

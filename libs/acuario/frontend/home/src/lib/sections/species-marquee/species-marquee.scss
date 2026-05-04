@@ -1,0 +1,254 @@
+.species-marquee {
+  position: relative;
+  padding-block: 8rem;
+
+  @media (min-width: 1024px) {
+    padding-block: 10rem;
+  }
+}
+
+.species-marquee__container {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline: var(--container-px);
+}
+
+.species-marquee__head {
+  display: grid;
+  gap: 3rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 0.6fr 1fr;
+    align-items: end;
+  }
+}
+
+.species-marquee__count {
+  margin-top: 1.5rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.species-marquee__title {
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-size: var(--type-h2-lg);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+}
+
+.species-marquee__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  color: rgb(var(--foam) / 0.8);
+}
+
+// =============================================================================
+// Reel — carrusel CSS infinito: el reel se duplica en TS y el keyframe lo
+// translatea -50% (= longitud de las 8 únicas) → al volver a 0 el contenido
+// visible es idéntico, sin saltos perceptibles.
+// =============================================================================
+.species-marquee__reel-wrap {
+  position: relative;
+  margin-top: 5rem;
+  // CRÍTICO: contiene la cinta del marquee (~4800px de ancho) dentro del
+  // viewport. Sin esto la cinta desbordaba el body y se filtraba al `html`
+  // como scroll horizontal global. `clip` (en lugar de `hidden`) garantiza
+  // que ni siquiera scrollLeft programático abra ese eje. `hidden` en la
+  // primera línea es fallback para Safari <16.
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.species-marquee__edge {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  height: 100%;
+  width: 8rem;
+}
+
+.species-marquee__edge--left {
+  left: 0;
+  background: linear-gradient(to right, rgb(var(--abyss)), transparent);
+}
+
+.species-marquee__edge--right {
+  right: 0;
+  background: linear-gradient(to left, rgb(var(--abyss)), transparent);
+}
+
+.species-marquee__reel {
+  display: flex;
+  // `width: max-content` es CRÍTICO. Sin esto el reel hereda el ancho del
+  // wrap (~360px en mobile) y el keyframe `translateX(0% → -50%)` calcula
+  // el % sobre el ancho propio del reel, así -50% = -180px = apenas medio
+  // card antes de loopear. Con `max-content` el reel mide los ~4800px
+  // reales de las 16 cards (8 × 2 duplicado), -50% = -2400px = exactamente
+  // las 8 únicas → al volver a 0 el contenido visible es el mismo (porque
+  // los frames 9-16 son duplicados de 1-8) → loop infinito seamless.
+  width: max-content;
+  will-change: transform;
+
+  // 5s por imagen × 8 = 40s para una pasada completa. La duración base
+  // del `.animate-marquee` (50s, en _keyframes.scss) se override aquí.
+  // `linear` es vital — cualquier easing crea aceleración visible al
+  // inicio/final del ciclo y rompe la sensación de loop continuo.
+  &.animate-marquee {
+    animation-duration: 40s;
+    animation-timing-function: linear;
+  }
+}
+
+// Respeta usuarios con preferencia de movimiento reducido.
+@media (prefers-reduced-motion: reduce) {
+  .species-marquee__reel.animate-marquee {
+    animation: none;
+  }
+}
+
+// =============================================================================
+// Species card
+// =============================================================================
+.species-card {
+  position: relative;
+  display: flex;
+  width: 280px;
+  flex-shrink: 0;
+  flex-direction: column;
+  overflow: hidden;
+  margin-right: 1.25rem;
+  border-radius: var(--radius-squircle-sm);
+  padding: 0.375rem;
+}
+
+.species-card__media {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: calc(var(--radius-squircle-sm) - 0.375rem);
+  background: rgb(var(--tide));
+}
+
+.species-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.95);
+  transition: transform 1200ms var(--ease-fluid);
+}
+
+.species-card:hover .species-card__image {
+  transform: scale(1.05);
+}
+
+.species-card__tint {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--abyss) / 0.15),
+    transparent,
+    rgb(var(--abyss) / 0.3)
+  );
+  mix-blend-mode: multiply;
+}
+
+.species-card__gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(var(--abyss) / 0.95),
+    rgb(var(--abyss) / 0.4),
+    transparent
+  );
+}
+
+.species-card__status {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  box-shadow: inset 0 0 0 1px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+
+  &[data-status='estable'] {
+    background: rgb(var(--kelp) / 0.2);
+    color: rgb(var(--bioluminescent));
+    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.3);
+  }
+  &[data-status='vulnerable'] {
+    background: rgb(var(--coral) / 0.15);
+    color: rgb(var(--coral));
+    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.3);
+  }
+  &[data-status='en-peligro'] {
+    background: rgb(var(--coral) / 0.25);
+    color: rgb(var(--coral));
+    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.4);
+  }
+  &[data-status='critico'] {
+    background: rgb(var(--coral) / 0.35);
+    color: rgb(var(--foam));
+    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.6);
+  }
+}
+
+.species-card__caption {
+  position: absolute;
+  inset-inline: 0.75rem;
+  bottom: 0.75rem;
+}
+
+.species-card__scientific {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.6);
+}
+
+.species-card__name {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.125rem; // text-lg
+  line-height: 1.1;
+  letter-spacing: var(--tracking-tight);
+}
+
+.species-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  padding: 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+.species-card__meta-label {
+  opacity: 0.6;
+}
+
+.species-card__meta-value {
+  margin-top: 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: var(--tracking-normal);
+  color: rgb(var(--foam) / 0.85);
+}

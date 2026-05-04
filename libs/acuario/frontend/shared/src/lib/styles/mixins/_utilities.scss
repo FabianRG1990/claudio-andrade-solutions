@@ -1,0 +1,177 @@
+// =============================================================================
+// Utilities — capa de utilidades globales propias del proyecto Acuario,
+// equivalentes al @layer utilities del globals.css original.
+// =============================================================================
+
+// ---- Text wrapping ---------------------------------------------------------
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+// ---- Grano fílmico — pelícuala fija sobre toda la página ------------------
+// El SVG inline dibuja ruido fractal y se aplica con mix-blend-mode overlay
+// para sumar microtextura sin teñir.
+.grain::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+// ---- Mesh backgrounds ------------------------------------------------------
+//
+// Versión refinada (premium): bajamos significativamente las opacidades de
+// las radiales superiores, ampliamos su spread (más difuso → en pantallas de
+// alta densidad de pixel no se ven los aros del gradient) y removimos la
+// radial-kelp del fondo (creaba un tinte verdoso visible en el borde con
+// secciones contiguas + sumaba "ruido" de color sobre el abismo).
+//
+// Antes: 3 radiales saturadas (lagoon 0.15 + teal 0.10 + kelp 0.10) sobre
+// linear con tintes #08213b/#082238. En 4K se distinguían los aros y el
+// conjunto se leía "videojuego".
+// Ahora: 2 radiales muy diluidas (0.07 + 0.04) sobre linear más neutro
+// — la profundidad viene del color, no de "luces" añadidas.
+.bg-mesh-deep {
+  background-image:
+    radial-gradient(80% 60% at 25% 0%, rgb(94 196 209 / 0.07), transparent 70%),
+    radial-gradient(60% 50% at 90% 25%, rgb(127 227 214 / 0.04), transparent 75%),
+    linear-gradient(180deg, #061826 0%, #07203a 40%, #061f37 70%, #061826 100%);
+}
+
+.bg-mesh-foam {
+  background-image:
+    radial-gradient(60% 50% at 80% 0%, rgb(94 196 209 / 0.18), transparent 60%),
+    radial-gradient(40% 50% at 0% 100%, rgb(216 112 96 / 0.10), transparent 60%),
+    linear-gradient(180deg, #f5f1e8 0%, #ede5d2 100%);
+}
+
+// ---- Hairline — línea capilar interior con sombra inset multi-capa --------
+
+.hairline {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 0 1px 0 rgb(245 241 232 / 0.12),
+      inset 0 -1px 0 rgb(245 241 232 / 0.02),
+      inset 0 0 0 1px rgb(245 241 232 / 0.06);
+  }
+}
+
+// ---- Caustic overlay — lentes de luz acuosa (usado sobre el HeroFishCanvas)
+//
+// Opacidades bajadas de 0.18/0.14/0.06 → 0.08/0.06/0.04 y blur ampliado a
+// 60px. En pantallas de alta resolución antes se notaban manchas teal
+// definidas; ahora son caustics atmosféricos sutiles.
+.caustic-overlay {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgb(127 227 214 / 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 70% 60%, rgb(94 196 209 / 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgb(245 241 232 / 0.04) 0%, transparent 50%);
+  filter: blur(60px);
+}
+
+// ---- Squircle mask — recorte radial simple --------------------------------
+
+.squircle-mask {
+  -webkit-mask-image: radial-gradient(black, black);
+  mask-image: radial-gradient(black, black);
+}
+
+// ---- Scrollbar oculto (manteniendo scroll funcional) ----------------------
+
+.scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// ---- Eyebrow tracking ------------------------------------------------------
+// Helper semántico — equivalente a `tracking-eyebrow` del original.
+.tracking-eyebrow {
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+// ---- Img-fade — usado por la directiva [appImgFade] -----------------------
+// Fade-in cuando la imagen termina de cargar. SSR-safe: el estado por defecto
+// es visible (sin opacity 0) para no romper SEO ni FCP. Solo cuando la
+// directiva (cliente) marca .img-fade--pending la imagen se oculta hasta
+// disparar `load` y entrar a .img-fade--loaded.
+.img-fade {
+  transition: opacity 700ms var(--ease-fluid);
+
+  &--pending {
+    opacity: 0;
+  }
+
+  &--loaded {
+    opacity: 1;
+  }
+}
+
+// ---- Reveal — usado por la directiva [appReveal] (UI atom Reveal). ------
+// Estado inicial: oculto + traslado abajo + blur. Cuando el directive recibe
+// el pulso del IntersectionObserver añade `.is-visible` y se ejecuta la
+// transición que iguala lo que framer-motion hacía con whileInView.
+// Reveal vía CSS `animation` (no `transition`). Una transition se omite
+// silenciosamente cuando el browser detecta que initial-state y final-state
+// se aplicaron en el mismo frame — bug típico al renderizar un componente
+// nuevo en SPA y agregar `.is-visible` casi de inmediato. Una animation, en
+// cambio, SIEMPRE corre desde su keyframe `from` cuando el `animation-name`
+// se activa, sin importar el estado previo. Bulletproof.
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.reveal {
+  // Estado oculto inicial — se mantiene mientras el elemento espera entrar
+  // al viewport. Sin `.is-visible` la animación nunca corre y el elemento
+  // permanece invisible.
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(8px);
+  will-change: opacity, transform, filter;
+
+  &.is-visible {
+    // forwards: el end-state del keyframe (opacity 1, sin blur, sin
+    // translate) persiste al terminar — el elemento se queda visible.
+    animation: reveal-in 400ms var(--ease-fluid) var(--reveal-delay, 0s)
+      forwards;
+  }
+}
+
+// Si el usuario prefiere movimiento reducido — sin transición. Estado final
+// directo (visible).
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+}

@@ -1,0 +1,376 @@
+// =============================================================================
+// ContactoPage — single-screen layout en desktop (100dvh, sin scroll). Mobile
+// stack vertical con scroll natural. Información mínima: form + email + tel +
+// dirección. Sin canales repetidos, sin departamentos, sin mapa, sin sidebar
+// de horarios — todo lo que antes vivía en 4 secciones de scroll comprimido
+// en un solo viewport.
+// =============================================================================
+
+.contacto {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  // Réplica del bg-mesh-deep refinado (premium): radiales muy diluidas
+  // con spread amplio + linear neutralizado + sin radial-kelp inferior
+  // (esa generaba franja verdosa contra el footer y, en alta resolución,
+  // lecturas de "videojuego"). La profundidad viene del color del abismo,
+  // no de luces añadidas.
+  background-image:
+    radial-gradient(80% 60% at 25% 0%, rgb(94 196 209 / 0.07), transparent 70%),
+    radial-gradient(60% 50% at 90% 25%, rgb(127 227 214 / 0.04), transparent 75%),
+    linear-gradient(180deg, #061826 0%, #07203a 40%, #061f37 70%, #061826 100%);
+
+  // Mobile: layout natural, scroll permitido, padding holgado para el nav
+  // fijo de arriba.
+  padding-block: clamp(6rem, 4rem + 6vw, 7rem) clamp(2.5rem, 2rem + 1vw, 3rem);
+
+  // Desktop: 100dvh exact — el header arriba y el body queda alineado al
+  // centro vertical. `min-height` evita colapso si el contenido por algún
+  // motivo crece (zoom de browser, traducción automática).
+  @media (min-width: 1024px) {
+    height: 100dvh;
+    min-height: 640px;
+    display: flex;
+    align-items: center;
+    padding-block: 6.5rem 2.5rem;
+  }
+
+  // Fade inferior — disuelve el mesh (con su tinte kelp) en `#061826`
+  // puro antes de tocar el footer (mismo color del `--abyss`). Sin esto
+  // se ve un corte horizontal entre el verde tenue del contacto y el
+  // abyss del footer. El gradient acumula opacidad rápido y aterriza
+  // 100% sólido en el borde inferior — el píxel final = primer píxel
+  // del footer → costura invisible.
+  &::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 8rem;
+    z-index: 0;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgb(6 24 38 / 0.45) 40%,
+      rgb(6 24 38 / 0.85) 75%,
+      #061826 100%
+    );
+  }
+}
+
+.contacto__container {
+  // `position: relative` + z-index 1 mantiene el container por encima del
+  // fade del `.contacto::after` (z-index 0). Sin esto el fade taparía el
+  // contenido en la zona inferior.
+  position: relative;
+  z-index: 1;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: var(--container-px);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+
+  @media (min-width: 1024px) {
+    gap: 2.5rem;
+  }
+}
+
+// ─── Header inline ────────────────────────────────────────────────────────
+.contacto__header {
+  // Compacto — sin emblem stamp, sin párrafo descriptivo; el chip + capítulo
+  // + título grande dan suficiente jerarquía editorial.
+}
+
+.contacto__chapter {
+  margin-top: 1rem;
+  font-size: var(--type-label-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.contacto__title {
+  margin-top: 1rem;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  // Más chico que el título estándar (clamp 44→96 del page-header) para
+  // dejar respirar el form en 100dvh. Aquí 32→56px alcanza al feel
+  // editorial sin tragar la mitad del viewport.
+  font-size: clamp(2rem, 1.5rem + 2.5vw, 3.5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+
+  @media (min-width: 1024px) {
+    margin-top: 1.25rem;
+  }
+}
+
+.contacto__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  color: rgb(var(--foam) / 0.8);
+}
+
+// ─── Body: form + info ────────────────────────────────────────────────────
+.contacto__body {
+  display: grid;
+  gap: 1.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 2.25rem;
+    align-items: stretch;
+  }
+}
+
+// ─── Form ─────────────────────────────────────────────────────────────────
+.contacto__form {
+  border-radius: var(--radius-squircle);
+  padding: 0.5rem;
+}
+
+.contacto__form-inner {
+  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+
+  @media (min-width: 768px) {
+    padding: 1.75rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 1.75rem 2rem;
+    gap: 1.125rem;
+  }
+}
+
+.contacto__form-row {
+  display: grid;
+  gap: 1rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.form-field {
+  display: block;
+}
+
+.form-field--message {
+  // En desktop el textarea se estira para ocupar el espacio sobrante y el
+  // bloque entero queda balanceado con la columna de info-cards.
+  @media (min-width: 1024px) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+
+    .form-field__input--block {
+      flex: 1;
+    }
+  }
+}
+
+.form-field__label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+.form-field__input {
+  margin-top: 0.5rem;
+  width: 100%;
+  border: 1px solid rgb(var(--foam) / 0.1);
+  background: rgb(var(--foam) / 0.03);
+  color: rgb(var(--foam));
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+  transition:
+    border-color 500ms var(--ease-fluid),
+    background 500ms var(--ease-fluid);
+
+  &::placeholder {
+    color: rgb(var(--foam) / 0.3);
+  }
+
+  &:focus {
+    border-color: rgb(var(--lagoon) / 0.5);
+    background: rgb(var(--foam) / 0.05);
+  }
+
+  &--pill {
+    border-radius: 9999px;
+    padding: 0.625rem 1.125rem;
+  }
+
+  &--block {
+    border-radius: 1rem;
+    padding: 0.75rem 1rem;
+    resize: none;
+    min-height: 5.5rem;
+  }
+}
+
+.contacto__form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid rgb(var(--foam) / 0.1);
+}
+
+.contacto__form-legal {
+  max-width: 36ch;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgb(var(--foam) / 0.55);
+}
+
+.contacto__submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.375rem 0.375rem 1.25rem;
+  border-radius: 9999px;
+  font-family: var(--font-button);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.contacto__submit-label {
+  padding-block: 0.375rem;
+}
+
+.contacto__submit-icon {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  transition: transform 700ms var(--ease-fluid);
+
+  .contacto__submit:hover & {
+    transform: translate(2px, -2px);
+  }
+}
+
+// ─── Info column ──────────────────────────────────────────────────────────
+.contacto__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+
+  @media (min-width: 1024px) {
+    gap: 1rem;
+    justify-content: stretch;
+  }
+}
+
+.info-card {
+  display: block;
+  border-radius: var(--radius-squircle-sm);
+  padding: 0.375rem;
+  text-decoration: none;
+
+  @media (min-width: 1024px) {
+    flex: 1;
+  }
+
+  &:is(a) {
+    transition: transform 500ms var(--ease-fluid);
+
+    @media (hover: hover) {
+      &:hover {
+        transform: translateY(-2px);
+      }
+    }
+  }
+}
+
+.info-card__inner {
+  height: 100%;
+  border-radius: calc(var(--radius-squircle-sm) - 0.375rem);
+  padding: 1rem 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.info-card__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+
+  &[data-accent='lagoon'] {
+    background: rgb(var(--lagoon) / 0.08);
+    color: rgb(var(--lagoon));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.3);
+  }
+
+  &[data-accent='bioluminescent'] {
+    background: rgb(var(--bioluminescent) / 0.08);
+    color: rgb(var(--bioluminescent));
+    box-shadow: inset 0 0 0 1px rgb(var(--bioluminescent) / 0.3);
+  }
+
+  &[data-accent='kelp'] {
+    background: rgb(var(--kelp) / 0.12);
+    color: rgb(var(--bioluminescent));
+    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.3);
+  }
+}
+
+.info-card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.info-card__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.info-card__value {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  // En mobile las cadenas largas (la dirección) se trunca con elipsis para
+  // mantener el ítem en una línea; en desktop hay espacio así que se ve
+  // completo.
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (min-width: 1024px) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}

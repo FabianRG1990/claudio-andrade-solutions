@@ -1,0 +1,64 @@
+<section class="species-marquee">
+  <div class="species-marquee__container">
+    <div class="species-marquee__head">
+      <div>
+        <div appReveal>
+          <app-eyebrow tone="kelp">Capítulo 02 · Habitantes</app-eyebrow>
+        </div>
+        <p appReveal [delay]="0.05" class="species-marquee__count">
+          1.247 especies bajo cuidado
+        </p>
+      </div>
+      <h2 appReveal [delay]="0.1" class="species-marquee__title">
+        Cada criatura tiene un nombre,
+        <span class="species-marquee__title-italic">una historia</span>
+        y un protocolo de cuidado propio.
+      </h2>
+    </div>
+  </div>
+
+  <div class="species-marquee__reel-wrap">
+    <div class="species-marquee__edge species-marquee__edge--left" aria-hidden="true"></div>
+    <div class="species-marquee__edge species-marquee__edge--right" aria-hidden="true"></div>
+
+    <div class="species-marquee__reel animate-marquee">
+      @for (sp of reel(); track sp.reelKey) {
+        <article class="species-card glass-shell">
+          <div class="species-card__media">
+            <img
+              appImgFade
+              [src]="sp.image"
+              [alt]="sp.common"
+              class="species-card__image"
+              [style.object-position]="sp.imagePosition || 'center 38%'"
+              loading="lazy"
+            />
+            <div class="species-card__tint"></div>
+            <div class="species-card__gradient"></div>
+            <span
+              class="species-card__status"
+              [attr.data-status]="statusToneAttr(sp.status)"
+            >
+              {{ sp.status }}
+            </span>
+            <div class="species-card__caption">
+              <p class="species-card__scientific">{{ sp.scientific }}</p>
+              <h3 class="species-card__name">{{ sp.common }}</h3>
+            </div>
+          </div>
+
+          <dl class="species-card__meta">
+            <div>
+              <dt class="species-card__meta-label">Hábitat</dt>
+              <dd class="species-card__meta-value">{{ sp.habitat }}</dd>
+            </div>
+            <div>
+              <dt class="species-card__meta-label">Profundidad</dt>
+              <dd class="species-card__meta-value">{{ sp.depth }}</dd>
+            </div>
+          </dl>
+        </article>
+      }
+    </div>
+  </div>
+</section>

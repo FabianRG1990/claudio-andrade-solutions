@@ -1,0 +1,29 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@acuario-ui-shared": ["./libs/acuario/frontend/shared/src/index.ts"],
+      "@acuario-ui-shared/*": ["./libs/acuario/frontend/shared/src/lib/*"],
+      "@acuario-ui-home": ["./libs/acuario/frontend/home/src/index.ts"],
+      "@acuario-ui-exhibiciones": [
+        "./libs/acuario/frontend/exhibiciones/src/index.ts"
+      ],
+      "@acuario-ui-especies": ["./libs/acuario/frontend/especies/src/index.ts"],
+      "@acuario-ui-contacto": ["./libs/acuario/frontend/contacto/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

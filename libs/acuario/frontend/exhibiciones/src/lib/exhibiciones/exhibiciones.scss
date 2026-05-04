@@ -1,0 +1,174 @@
+// =============================================================================
+// ExhibicionesPage — listado editorial alternado de los 6 biomas.
+// =============================================================================
+
+.exhibiciones {
+  position: relative;
+  // Padding-top muy reducido — el header ocupa 100dvh así que esta
+  // sección está debajo del fold inicial. Apenas el usuario scrollea
+  // empieza a verse el primer bioma sin tener que cruzar un valle de
+  // espacio muerto. Antes 5rem/7rem + 22vh de depth-transition encima.
+  padding-block: 2rem 4rem;
+
+  @media (min-width: 1024px) {
+    padding-block: 3rem 6rem;
+  }
+}
+
+.exhibiciones__container {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline: var(--container-px);
+}
+
+.exhibiciones__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+
+// ─── Card por exhibit ──────────────────────────────────────────────────────
+.exhibit-row {
+  display: grid;
+  gap: 2.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1.1fr 1fr;
+    align-items: center;
+  }
+
+  // Alternancia: la card par mantiene imagen→texto, la impar invierte.
+  &--reverse {
+    @media (min-width: 1024px) {
+      .exhibit-row__media {
+        order: 2;
+      }
+    }
+  }
+}
+
+// ─── Media — wrapper glass-shell con imagen recortada ──────────────────────
+.exhibit-row__media {
+  border-radius: var(--radius-squircle);
+  padding: 0.5rem;
+}
+
+.exhibit-row__media-inner {
+  position: relative;
+  aspect-ratio: 5 / 6;
+  overflow: hidden;
+  border-radius: calc(var(--radius-squircle) - 0.5rem);
+
+  @media (min-width: 1024px) {
+    aspect-ratio: 4 / 5;
+  }
+}
+
+.exhibit-row__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.exhibit-row__media-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(var(--abyss) / 0.7) 0%,
+    transparent 40%,
+    transparent 100%
+  );
+}
+
+// ─── Body — texto + stats + CTA ────────────────────────────────────────────
+.exhibit-row__zone {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--lagoon));
+}
+
+.exhibit-row__title {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: var(--type-h2-lg);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+}
+
+.exhibit-row__copy {
+  margin-top: 1.5rem;
+  max-width: 58ch;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.7);
+  line-height: 1.625;
+  font-size: var(--type-body-lg);
+}
+
+.exhibit-row__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgb(var(--foam) / 0.1);
+}
+
+.exhibit-row__stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.exhibit-row__stat-value {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-lg);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--foam));
+
+  &--accent {
+    color: rgb(var(--lagoon));
+  }
+}
+
+.exhibit-row__cta-wrap {
+  margin-top: 2.5rem;
+}
+
+.exhibit-row__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 0.375rem 0.375rem 1.25rem;
+  border-radius: 9999px;
+  font-family: var(--font-button);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.exhibit-row__cta-label {
+  padding-block: 0.375rem;
+}
+
+.exhibit-row__cta-icon {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  transition: transform 700ms var(--ease-fluid);
+
+  .exhibit-row__cta:hover & {
+    transform: translate(2px, -2px);
+  }
+}

@@ -1,0 +1,117 @@
+// =============================================================================
+// Design tokens — colores, tipografía, ritmos, radios, sombras, transiciones.
+// Las variables CSS (`--abyss`, etc.) se exponen como triplets RGB sin coma
+// para permitir alpha-channel inline: `rgb(var(--foam) / 0.5)`.
+// Las variables SCSS son para uso interno desde mixins / partials.
+// =============================================================================
+
+:root {
+  // ---- Paleta oceánica -----------------------------------------------------
+  --abyss: 6 24 38;            // #061826 — abismo
+  --ink: 11 34 53;             // #0B2235 — tinta
+  --tide: 16 51 73;            // #103349 — marea
+  --shoal: 27 71 103;          // #1B4767 — banco
+  --foam: 245 241 232;         // #F5F1E8 — espuma
+  --sand: 232 220 196;         // #E8DCC4 — arena
+  --dune: 200 184 150;         // #C8B896 — duna
+  --lagoon: 94 196 209;        // #5EC4D1 — laguna
+  --bioluminescent: 127 227 214; // #7FE3D6 — bioluminiscente
+  --kelp: 74 107 92;           // #4A6B5C — kelp
+  --coral: 216 112 96;         // #D87060 — coral
+  --urchin: 58 42 77;          // #3A2A4D — erizo
+
+  // ---- Tipografía ----------------------------------------------------------
+  // Principal: Times New Roman en TODO el contenido textual + botones + nav.
+  // Secundaria editorial: Fraunces (con fallback a Times escalado para italic).
+  --font-times: 'Times New Roman', Times, serif;
+  // Cadena editorial — replica el output de `next/font/google` Fraunces:
+  // Fraunces (solo normal declarada) → Fraunces Fallback (Times local con
+  // size-adjust 115.45%) → fallbacks crudos. Cuando se pide italic, el
+  // navegador salta Fraunces (no tiene italic) y aterriza en el Fallback,
+  // produciendo Times italic ~15% más grande (idéntico al original 6001).
+  --font-fraunces: 'Fraunces', 'Fraunces Fallback', Georgia, 'Times New Roman', serif;
+
+  --font-display: var(--font-times);
+  --font-sans: var(--font-times);
+  --font-mono: var(--font-times);
+  --font-button: var(--font-times);
+  --font-editorial: var(--font-fraunces);
+
+  // ---- Tracking (letter-spacing) ------------------------------------------
+  --tracking-tighter: -0.005em;
+  --tracking-tight: 0em;
+  --tracking-normal: 0.01em;
+  --tracking-eyebrow: 0.22em;
+
+  // ---- Radios -------------------------------------------------------------
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+  --radius-squircle: 2rem;
+  --radius-squircle-sm: 1.25rem;
+
+  // ---- Sombras ------------------------------------------------------------
+  --shadow-diffusion: 0 30px 80px -30px rgb(6 24 38 / 0.45),
+    0 8px 24px -12px rgb(6 24 38 / 0.25);
+  --shadow-inner-light: inset 0 1px 0 rgb(245 241 232 / 0.08);
+  --shadow-ring: inset 0 0 0 1px rgb(245 241 232 / 0.07);
+
+  // ---- Easings (transition-timing-function) -------------------------------
+  --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  // ---- Layout -------------------------------------------------------------
+  --container-max: 80rem;     // max-w-7xl
+  // Padding fluido: 1rem (16px) en phones de 360px, escala suavemente a 2rem
+  // (32px) en desktop. Reemplaza el step-function `1.5rem → @media → 2rem`
+  // que dejaba el contenido demasiado pegado a los bordes en phones chicos.
+  --container-px: clamp(1rem, 4vw, 2rem);
+
+  // ---- Tipografía fluida (clamp-based) -----------------------------------
+  // Fórmulas tipo Utopia: rem-floor para accesibilidad (WCAG 1.4.4 zoom),
+  // vw-driven para escalar sin step-functions, rem-cap para no romper en
+  // ultra-wide. Min asume viewport 360px; max asume viewport 1440px.
+  // Convertí cada `font-size` con dos breakpoints en una sola línea fluida.
+
+  // Body / párrafos
+  --type-body: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);                   // 16→18
+  --type-body-lg: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);                // 17→20
+
+  // Eyebrows / labels — quedan chicos, escala mínima
+  --type-label-xs: 0.625rem;                                              // 10px constante
+  --type-label-sm: clamp(0.625rem, 0.6rem + 0.1vw, 0.6875rem);            // 10→11
+  --type-label-md: clamp(0.75rem, 0.7rem + 0.2vw, 0.875rem);              // 12→14
+
+  // Botones
+  --type-button: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);            // 13→14
+
+  // Headings — niveles editorial
+  --type-h4: clamp(1.125rem, 1rem + 0.6vw, 1.5rem);                       // 18→24
+  --type-h3: clamp(1.25rem, 1.05rem + 0.85vw, 1.875rem);                  // 20→30
+  --type-h3-lg: clamp(1.5rem, 1.2rem + 1.3vw, 2.25rem);                   // 24→36
+  --type-h2: clamp(1.875rem, 1.4rem + 2vw, 3.75rem);                      // 30→60
+  --type-h2-lg: clamp(2.25rem, 1.6rem + 2.7vw, 4.5rem);                   // 36→72
+  --type-h1: clamp(2.75rem, 1.85rem + 3.8vw, 6rem);                       // 44→96
+  --type-h1-hero: clamp(2.75rem, 1.5rem + 5.5vw, 7rem);                   // 44→112
+
+  // Mono / numéricos grandes (stats, conteos)
+  --type-mono-lg: clamp(1.5rem, 1.2rem + 1.3vw, 2.25rem);                 // 24→36
+  --type-mono-xl: clamp(1.875rem, 1.4rem + 2vw, 3.75rem);                 // 30→60
+  --type-mono-display: clamp(2.5rem, 1.8rem + 3vw, 5rem);                 // 40→80
+}
+
+// SCSS variables (mismas tokens, reutilizables desde mixins) -----------------
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+$breakpoint-2xl: 1400px;
+
+// Spacing scale (Tailwind-like: 1 unidad = 0.25rem) -------------------------
+@function space($n) {
+  @return #{$n * 0.25}rem;
+}

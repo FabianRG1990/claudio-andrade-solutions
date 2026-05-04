@@ -1,0 +1,6 @@
+// Main wrapper — replica el `<main className="relative z-10">` del original.
+// Vive sobre el OceanBackground (z:0) pero por debajo del FloatingNav (z:50).
+.app-main {
+  position: relative;
+  z-index: 10;
+}

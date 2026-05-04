@@ -1,0 +1,154 @@
+// =============================================================================
+// Footer — shell inferior compacto. Vive sobre el OceanBackground; el
+// `bg-abyss` es indispensable para que las costuras entre secciones no se
+// vean. Diseño orientado a mínima altura: brand inline, nav horizontal,
+// bottom bar de una sola línea cuando el ancho lo permite.
+// =============================================================================
+
+.footer {
+  position: relative;
+  // Antes 5rem (mt-20) — demasiado aire para un cierre compacto. 2rem
+  // separa lo suficiente del último contenido sin abrir un vacío.
+  margin-top: 2rem;
+  // SIN border-top: un hairline `rgb(var(--foam) / 0.1)` se lee como una
+  // línea horizontal de corte entre la sección anterior y el footer —
+  // exactamente lo que el usuario quiere evitar. El cierre visual lo da
+  // únicamente el cambio de color del background al `--abyss` puro;
+  // cualquier sección que viva encima debe terminar también en `#061826`
+  // opaco para que la transición sea invisible.
+  background: rgb(var(--abyss));
+  color: rgb(var(--foam));
+}
+
+.footer__container {
+  position: relative;
+  margin-inline: auto;
+  max-width: 80rem;
+  // Padding vertical recortado al mínimo legible.
+  padding: 1.25rem 1.5rem;
+
+  @media (min-width: 1024px) {
+    padding: 1.5rem 2rem;
+  }
+}
+
+.footer__top {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+}
+
+// Brand horizontal: emblema chico + meta inline en columna a su derecha.
+// Antes: BrandLockup 150×180 (la versión grande con texto vertical) que
+// solo era visible aquí — overkill para un footer. Ahora: emblema 36px.
+.footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.footer__brand-meta {
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.footer__eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.5);
+}
+
+.footer__tagline {
+  text-wrap: pretty;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgb(var(--foam) / 0.6);
+}
+
+// Nav horizontal: lista en una línea con separador visual `·` (vía
+// pseudo-elemento). Sin eyebrow "Recorrer" arriba — los links se leen
+// solos y el header sumaba 18px innecesarios.
+.footer__nav {
+  @media (min-width: 768px) {
+    flex-shrink: 0;
+  }
+}
+
+.footer__nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.875rem;
+  list-style: none;
+  font-size: 0.8125rem;
+
+  @media (min-width: 768px) {
+    justify-content: flex-end;
+  }
+
+  // Separador `·` entre items en desktop. En mobile el wrap respira mejor
+  // sin separadores.
+  @media (min-width: 768px) {
+    > li + li::before {
+      content: '·';
+      margin-right: 0.875rem;
+      color: rgb(var(--foam) / 0.25);
+    }
+  }
+}
+
+.footer__nav-link {
+  color: rgb(var(--foam) / 0.75);
+  transition: color 500ms;
+
+  &:hover {
+    color: rgb(var(--lagoon));
+  }
+}
+
+// Bottom bar: una línea en desktop, dos en mobile. Antes margin-top 2rem
+// + padding-top 1.25rem = 3.25rem solo de aire entre top y bottom; ahora
+// la suma es ~1rem.
+.footer__bottom {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgb(var(--foam) / 0.08);
+  padding-top: 0.875rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.footer__copyright {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.footer__meta-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  list-style: none;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.5);
+}

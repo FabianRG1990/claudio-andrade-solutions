@@ -1,0 +1,315 @@
+// =============================================================================
+// FloatingNav — header flotante + bottom-sheet móvil.
+// =============================================================================
+
+// ─── Header ──────────────────────────────────────────────────────────────────
+// IMPORTANT: el contenedor `.floating-nav` NO debe tener transform (ni siquiera
+// animation que termine en translateY(0)). Cualquier transform en el ancestor
+// crea un containing block que rompe `backdrop-filter` en Chrome para los
+// descendientes — el blur intentaría samplear lo que hay dentro del header en
+// vez de la página detrás. Firefox lo tolera; Chrome no. La animación de
+// entrada se mueve a cada hijo (brand, pill, burger), aplicada sobre el mismo
+// elemento con backdrop-filter — eso sí funciona en ambos navegadores.
+//
+// Layout: GRID de 3 columnas (`auto 1fr auto`). La marca queda anclada a la
+// columna 1 con `justify-self: start` SIEMPRE — aunque pill o burger se
+// muestren u oculten, la marca nunca se mueve. Esto reemplaza el anterior
+// `flex + justify-content: space-between`, que dejaba la marca "viajando"
+// cuando el orden o visibilidad de los siblings cambiaba.
+.floating-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 1rem;
+  // z-index 70 — arriba del .grain::before (z:60) que vive en `<body>` con
+  // mix-blend-mode:overlay. A z:50 el grain estaba dim-eando el nav en home
+  // (donde el hero tiene gradient layers) al punto de hacerlo invisible.
+  z-index: 70;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  width: 100%;
+  max-width: 80rem;
+  // Padding fluido — alineado al `.hero__container` para que la marca quede
+  // a la misma X que el título. Antes era 1.5rem fijo, lo que en phones con
+  // viewport <360px sentía la marca "pegada" al borde.
+  padding-inline: var(--container-px);
+
+  @media (min-width: 1024px) {
+    top: 1.5rem;
+  }
+}
+
+// ─── Brand: emblema + wordmark ───────────────────────────────────────────────
+// IMPORTANT: SIN animation. La animación de entrada con `animation-fill-mode:
+// both` + delay de 0.3s dejaba la marca con `opacity: 0` durante esos primeros
+// 300ms — el usuario lo percibía como "el logo desaparece" cada vez que el
+// browser re-aplicaba estilos (HMR del dev-server, toggle de DevTools device
+// mode, hot-reload de CSS, navegación SPA con re-mount de animation). Se
+// quitó del todo: la marca debe estar visible desde el primer paint, sin
+// excepciones. La aparición sutil del nav ya está cubierta por el contraste
+// natural del cristal sobre el océano.
+.floating-nav__brand {
+  grid-column: 1;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  // Cuando el wordmark se colapsa al hacer scroll, el gap también se
+  // cierra para que el emblema no quede con un "hueco" a su derecha.
+  transition: gap 500ms var(--ease-fluid);
+
+  .floating-nav.is-scrolled & {
+    gap: 0;
+  }
+}
+
+// Wordmark: visible al tope, se oculta al hacer scroll para evitar que
+// se solape con el eyebrow / título de la página interna que aparece a
+// la misma altura ("ESPECIES BAJO CUIDADO", "CONTACTO · ESTAMOS AQUÍ",
+// etc.). El emblema queda como anchor visual; al volver al tope, el
+// wordmark vuelve. Antes era siempre visible — la palabra "Aquarium" se
+// pisaba con las letras del eyebrow al hacer scroll en mobile.
+//
+// Anim: opacity (fade) + max-width (colapso de ancho real) para que la
+// columna 1 del grid se ajuste y el emblema se mueva hacia el extremo.
+// `overflow: hidden` recorta el texto mientras `max-width` baja a 0.
+.floating-nav__brand-wordmark {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 12ch;
+  opacity: 1;
+  transition:
+    opacity 350ms var(--ease-fluid),
+    max-width 500ms var(--ease-fluid);
+
+  .floating-nav.is-scrolled & {
+    opacity: 0;
+    max-width: 0;
+  }
+}
+
+// ─── Pill desktop / tablet ──────────────────────────────────────────────────
+// Breakpoints:
+//   • <880px (phone): pill oculto → burger visible
+//   • 880-1023px (tablet): pill visible al tope; cuando .is-scrolled, se
+//     oculta y aparece el burger en su lugar (libera el ancho para que el
+//     contenido respire mientras el usuario lee).
+//   • ≥1024px (desktop): pill siempre visible; burger siempre oculto.
+.floating-nav__pill {
+  grid-column: 3;
+  justify-self: end;
+  position: relative;
+  display: none;
+  align-items: center;
+  gap: 0.125rem;
+  border-radius: 9999px;
+  padding: 0.5rem;
+
+  // Sin entrance animation — ver nota en `.floating-nav__brand`. El pill
+  // debe ser visible desde frame 1.
+  transition: transform 600ms var(--ease-fluid);
+
+  @media (min-width: 880px) {
+    display: flex;
+  }
+
+  // Tablet: oculto cuando se hace scroll para que el burger aparezca y libere
+  // espacio horizontal sobre el contenido.
+  @media (min-width: 880px) and (max-width: 1023.98px) {
+    .floating-nav.is-scrolled & {
+      display: none;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    // Desktop: solo escala suave — pill siempre visible.
+    .floating-nav.is-scrolled & {
+      transform: scale(0.97);
+    }
+  }
+}
+
+// Cada link del pill.
+.floating-nav__link {
+  position: relative;
+  z-index: 10;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(var(--foam) / 0.7);
+  transition: color 500ms var(--ease-fluid);
+
+  &:hover {
+    color: rgb(var(--foam));
+  }
+
+  &.is-active {
+    color: rgb(var(--foam));
+  }
+}
+
+// Indicador del link activo. Variante sutil — NO usa .glass-bubble-icon porque
+// ese trae un catchlight blanco al 65% y un ring claro pensados para botones,
+// no para ribbon de nav. Aquí solo un wash apenas perceptible: linear gradient
+// muy bajo + hairline ring foam, sin highlight superior brillante.
+.floating-nav__link-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 500ms var(--ease-fluid);
+  background: linear-gradient(
+    180deg,
+    rgb(245 241 232 / 0.07) 0%,
+    rgb(245 241 232 / 0.015) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgb(245 241 232 / 0.08),
+    inset 0 1px 0 rgb(245 241 232 / 0.10);
+
+  .floating-nav__link.is-active & {
+    opacity: 1;
+  }
+}
+
+.floating-nav__link-text {
+  position: relative;
+}
+
+// ─── Burger móvil / tablet-scroll ───────────────────────────────────────────
+.floating-nav__burger {
+  grid-column: 3;
+  justify-self: end;
+  position: relative;
+  display: flex;
+  // 44×44 px = mínimo táctil de Apple HIG / WCAG 2.2 SC 2.5.8 (Target Size).
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: rgb(var(--foam));
+  // Sin animation — ver nota en `.floating-nav__brand`. Crítico aquí: el
+  // burger se reinsertaba en el DOM cuando el viewport cruzaba 880px o 1024px
+  // (display: none ↔ flex), reactivando la animación y dejándolo invisible
+  // 300ms. Quitada, el burger es estable durante resize.
+  touch-action: manipulation;
+
+  // Tablet: oculto al tope, aparece SOLO cuando se hace scroll (reemplaza al
+  // pill que se ocultó).
+  @media (min-width: 880px) and (max-width: 1023.98px) {
+    display: none;
+
+    .floating-nav.is-scrolled & {
+      display: flex;
+    }
+  }
+
+  // Desktop: nunca aparece — el pill ya cubre la navegación.
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+// =============================================================================
+// Mobile bottom-sheet
+// =============================================================================
+
+.mobile-menu {
+  position: fixed;
+  inset: 0;
+  // z-index 65 — encima del .grain (60) pero debajo del nav header (70) para
+  // que cuando se abra el sheet el nav siga visible y el botón X se pueda
+  // tocar para cerrar.
+  z-index: 65;
+  // Background opacity 0.92 (antes 0.85) compensa la pérdida visual de
+  // bajar el blur — la legibilidad del overlay no se degrada. blur(20px)
+  // (antes 40px) corta el peso GPU del compositor a la mitad. El sheet
+  // cubre el viewport entero, así que cada pixel del blur es caro.
+  background: rgb(var(--abyss) / 0.92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+
+  // El sheet se queda en el DOM; toggleamos con clase para que las
+  // animaciones CSS de salida también se vean.
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 500ms var(--ease-fluid);
+
+  &.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  // El sheet móvil puede aparecer hasta el desktop: en tablet (880-1023) el
+  // burger sí existe (cuando scrollado) y debe poder abrir el menú. Solo en
+  // desktop (≥1024) se oculta porque ahí no hay burger.
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+.mobile-menu__container {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.mobile-menu__list {
+  list-style: none;
+
+  > li + li {
+    margin-top: 0.5rem;
+  }
+}
+
+.mobile-menu__item {
+  // Stagger fade-up por item (0.1s + index * 0.05s) — equivalente al
+  // motion.li per-item con delay incremental del original.
+  opacity: 0;
+  transform: translateY(24px);
+  filter: blur(6px);
+  transition:
+    opacity 700ms var(--ease-fluid),
+    transform 700ms var(--ease-fluid),
+    filter 700ms var(--ease-fluid);
+  transition-delay: calc(100ms + var(--stagger-index, 0) * 50ms);
+
+  .mobile-menu.is-open & {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.mobile-menu__link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid rgb(var(--foam) / 0.1);
+  padding-bottom: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+.mobile-menu__index {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}

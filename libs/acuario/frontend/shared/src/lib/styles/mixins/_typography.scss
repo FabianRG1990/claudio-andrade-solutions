@@ -1,0 +1,58 @@
+// =============================================================================
+// Tipografía — replica exacta del comportamiento de `next/font/google` Fraunces
+// del proyecto original. Insight clave: el original NUNCA carga Fraunces italic
+// (solo declara font-style: normal). Cuando el CSS pide `font-style: italic`,
+// el navegador cae al fallback `Fraunces Fallback` que mapea a Times New Roman
+// local con `size-adjust: 115.45%` — escalado para mimic las métricas de
+// Fraunces. Por eso los italics editoriales del original son Times italic
+// ~15% más anchos, no Fraunces italic real.
+// =============================================================================
+
+// Fraunces normal latin — para usos no-italic (actualmente ninguno, pero queda
+// disponible). Se mantiene self-hosted desde /public/fonts.
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/Fraunces-Variable.woff2') format('woff2-variations'),
+       url('/fonts/Fraunces-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/Fraunces-LatinExt-Variable.woff2') format('woff2-variations'),
+       url('/fonts/Fraunces-LatinExt-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+// Fallback font-face — replica EXACTA de lo que `next/font/google` genera para
+// Fraunces. Mapea a local Times New Roman con override de métricas + size-adjust
+// 115.45% para que sus dimensiones cuadren con Fraunces. Cuando un span pide
+// `font-style: italic` y la familia es 'Fraunces' (que solo declara normal),
+// el navegador cae aquí y obtiene Times New Roman italic ~15% más grande.
+// Estos números (84.71%, 22.09%, 115.45%) vienen literalmente del CSS
+// generado por Next.js — verificados leyendo .next/static/css/app/layout.css.
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Times New Roman'), local('Times');
+  ascent-override: 84.71%;
+  descent-override: 22.09%;
+  line-gap-override: 0.00%;
+  size-adjust: 115.45%;
+}
+
+// Activación explícita de auto optical sizing — el browser auto-aplica
+// `opsz` matching `font-size` cuando la variable font lo soporta.
+html {
+  font-optical-sizing: auto;
+}

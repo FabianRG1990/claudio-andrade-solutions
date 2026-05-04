@@ -1,0 +1,48 @@
+:host {
+  display: inline-flex;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid;
+  padding: 0.25rem 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.eyebrow__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+// ─── Tonos ───────────────────────────────────────────────────────────────────
+.eyebrow[data-tone='lagoon'] {
+  color: rgb(var(--lagoon));
+  border-color: rgb(var(--lagoon) / 0.3);
+  background: rgb(var(--lagoon) / 0.05);
+}
+
+.eyebrow[data-tone='foam'] {
+  color: rgb(var(--foam) / 0.8);
+  border-color: rgb(var(--foam) / 0.15);
+  background: rgb(var(--foam) / 0.03);
+}
+
+.eyebrow[data-tone='coral'] {
+  color: rgb(var(--coral));
+  border-color: rgb(var(--coral) / 0.3);
+  background: rgb(var(--coral) / 0.05);
+}
+
+.eyebrow[data-tone='kelp'] {
+  color: rgb(var(--bioluminescent));
+  border-color: rgb(var(--bioluminescent) / 0.25);
+  background: rgb(var(--bioluminescent) / 0.05);
+}

@@ -1,0 +1,136 @@
+// =============================================================================
+// PageHeader — wrapper editorial de las páginas internas. Replica
+// `bg-mesh-deep` + caustic + bubbles + dos columnas (left/right) con stagger
+// de reveal por bloque.
+// =============================================================================
+
+.page-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  // `min-height: 100dvh` ancla el header a la viewport completa en la
+  // carga inicial: el siguiente segmento de la página queda debajo del
+  // fold, sin "intrusión" sobre el encabezado. Cuando el usuario scrollea
+  // arriba devuelve naturalmente al estado inicial — el segmento siguiente
+  // queda fuera de pantalla porque está debajo del fold del header.
+  min-height: 100dvh;
+  // Padding fluido sin step-functions: phone (~360px) → 8rem top, desktop
+  // (1440px) → 14rem. Bottom escala 4→7rem. El nav respira sin dejar huecos.
+  padding-top: clamp(8rem, 5rem + 9vw, 14rem);
+  padding-bottom: clamp(4rem, 2.5rem + 4vw, 7rem);
+  // Flex column centrado: el container queda al centro vertical del
+  // header en lugar de pegado arriba contra el padding-top. Resultado:
+  // el contenido editorial (chip + capítulo + título + descripción) vive
+  // en el centro óptico de la viewport, con el aire mesh-deep + bubbles
+  // distribuído arriba y abajo. Sin esto el contenido quedaba pegado
+  // arriba dejando ~700px muertos de fondo bajo la última línea.
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.page-header__bubbles {
+  opacity: 0.5;
+}
+
+// Fade inferior — disuelve el bottom del header en el océano.
+//
+// El header tiene bubbles + caustic-bg + radial gradients que crean
+// CONTENIDO visual sobre el bg-mesh-deep. Si la opacidad no llega al 100%
+// en el borde, ese contenido (sumado al gradient radial verde anclado al
+// 50% / 100% del mesh) se percibe como una franja sobre el body abyss.
+//
+// El fade vive ENTERO dentro del header (`bottom: 0`) — no se desborda en
+// la siguiente sección, así no roba espacio visual al primer bloque (en
+// mobile el depth-transition está oculto y el header empalma directo con
+// el contenido). La curva acumula opacidad en la primera mitad y aterriza
+// en `#061826` opaco — exactamente el color del body — para que el
+// empalme con la siguiente sección sea un único color continuo.
+.page-header__fade {
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 16rem;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(6 24 38 / 0.35) 25%,
+    rgb(6 24 38 / 0.7) 55%,
+    rgb(6 24 38 / 0.92) 80%,
+    #061826 100%
+  );
+}
+
+.page-header__container {
+  position: relative;
+  z-index: 10;
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline: var(--container-px);
+}
+
+.page-header__grid {
+  display: grid;
+  gap: 3rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 0.45fr 1fr;
+    align-items: end;
+  }
+}
+
+// ─── Columna izquierda — eyebrow + capítulo + sello ────────────────────────
+.page-header__capitulo {
+  margin-top: 1.5rem;
+  font-size: var(--type-label-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.page-header__stamp {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 3rem;
+
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+}
+
+.page-header__stamp-text {
+  font-size: var(--type-label-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.4);
+}
+
+// ─── Columna derecha — título grande + descripción ─────────────────────────
+.page-header__title {
+  text-wrap: balance;
+  font-family: var(--font-display);
+  // Fluido 44→96px en una línea — antes 3 declaraciones step (3rem→4.5rem→96px).
+  font-size: var(--type-h1);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: var(--tracking-tight);
+}
+
+.page-header__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  color: rgb(var(--foam) / 0.8);
+}
+
+.page-header__description {
+  margin-top: 2rem;
+  max-width: 60ch;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.7);
+  line-height: 1.625;
+  font-size: var(--type-body-lg);
+}

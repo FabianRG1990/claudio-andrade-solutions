@@ -1,0 +1,30 @@
+<section class="timeline">
+  <div class="timeline__container">
+    <div class="timeline__head">
+      <div>
+        <div appReveal>
+          <app-eyebrow>Línea de tiempo</app-eyebrow>
+        </div>
+        <h2 appReveal [delay]="0.05" class="timeline__title">
+          Treinta y cuatro años
+          <span class="timeline__title-italic">de oficio.</span>
+        </h2>
+      </div>
+      <span appReveal [delay]="0.1" class="timeline__meta">
+        06 hitos · 1992 — 2026
+      </span>
+    </div>
+
+    <ol class="timeline__list">
+      @for (m of milestones; track m.year; let i = $index) {
+        <li appReveal [delay]="0.04 * i" class="timeline__item">
+          <div class="timeline__year-row">
+            <p class="timeline__year">{{ m.year }}</p>
+            <span class="timeline__index">0{{ i + 1 }}</span>
+          </div>
+          <p class="timeline__body">{{ m.body }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>

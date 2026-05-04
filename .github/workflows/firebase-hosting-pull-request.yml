@@ -1,0 +1,46 @@
+name: Deploy preview to Firebase Hosting on PR
+
+# Por cada Pull Request al repo, builda la app y la sube a un canal de preview
+# de Firebase Hosting. La URL del preview queda comentada automáticamente
+# en el PR por la action oficial.
+#
+# Por seguridad — no corre para PRs desde forks (no tendrían acceso al
+# secret del service account).
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build_and_preview:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build production
+        run: yarn nx build acuario --configuration=production
+
+      - name: Deploy preview to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LANDING_PAGES_79AFC }}
+          projectId: landing-pages-79afc
+          expires: 7d

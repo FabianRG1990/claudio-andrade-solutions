@@ -1,0 +1,20 @@
+// =============================================================================
+// Stylesheet raíz del proyecto Acuario.
+//
+// El design system vive en `libs/acuario/frontend/shared/src/lib/styles/`.
+// El `stylePreprocessorOptions.includePaths` del project.json apunta ahí, así
+// que `@use 'settings/...'` y `@use 'mixins/...'` resuelven sin path relativo.
+//
+// Este archivo solo orquesta — emite las @-rules globales (font-face,
+// keyframes, :root tokens, base reset, utilities) una sola vez. Los
+// componentes individuales no necesitan @use'arlas: las CSS custom
+// properties y las clases utility quedan disponibles globalmente.
+// =============================================================================
+
+@use 'settings/tokens';
+@use 'mixins/typography';
+@use 'mixins/keyframes';
+@use 'mixins/base';
+@use 'mixins/utilities';
+@use 'mixins/glass';
+@use 'mixins/layout';

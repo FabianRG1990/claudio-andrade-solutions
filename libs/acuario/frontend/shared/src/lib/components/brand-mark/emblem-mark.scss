@@ -1,0 +1,15 @@
+:host {
+  display: inline-flex;
+}
+
+.emblem-mark {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.emblem-mark__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

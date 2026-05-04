@@ -1,0 +1,162 @@
+<app-page-header
+  eyebrow="Galería · 1.247 especies"
+  capitulo="Capítulo 02 / 04 · Galería + Conservación"
+  title="Cada habitante,"
+  italic="un protocolo propio."
+  description="Llevamos un registro vivo de cada criatura: hábitat, dieta, profundidad y estado de conservación. Y abajo, los programas que mantenemos abiertos al mundo para protegerlas."
+/>
+
+<!-- ──── 1: Catálogo de especies ──── -->
+<section class="especies">
+  <div class="especies__container">
+    <!-- Filtros -->
+    <div appReveal class="especies__filters">
+      <span class="especies__filters-label">Filtrar por hábitat</span>
+      <div class="especies__filters-list">
+        @for (f of filters; track f; let i = $index) {
+          <button
+            type="button"
+            class="filter-chip"
+            [class.filter-chip--active]="i === 0"
+            [class.glass-bubble]="i === 0"
+          >
+            {{ f }}
+          </button>
+        }
+      </div>
+      <div class="especies__update">
+        <span class="especies__update-dot" aria-hidden="true"></span>
+        Catálogo actualizado · Hoy 06:14
+      </div>
+    </div>
+
+    <div class="especies__grid">
+      @for (sp of species; track sp.slug; let i = $index) {
+        <article
+          appReveal
+          [delay]="0.03 * i"
+          class="species-card glass-shell glass-shell-hover"
+        >
+          <div class="species-card__media">
+            <img
+              appImgFade
+              [src]="sp.image"
+              [alt]="sp.common"
+              [style.object-position]="imagePosition(sp)"
+              class="species-card__image"
+              decoding="async"
+            />
+            <div class="species-card__multiply" aria-hidden="true"></div>
+            <div class="species-card__gradient" aria-hidden="true"></div>
+            <span class="species-card__status" [class]="statusToneClass(sp.status)">
+              <span class="species-card__status-dot" aria-hidden="true"></span>
+              {{ sp.status }}
+            </span>
+            <div class="species-card__caption">
+              <p class="species-card__scientific">{{ sp.scientific }}</p>
+              <h3 class="species-card__common">{{ sp.common }}</h3>
+            </div>
+          </div>
+
+          <dl class="species-card__data">
+            <div>
+              <dt class="species-card__data-label">Hábitat</dt>
+              <dd class="species-card__data-value">{{ sp.habitat }}</dd>
+            </div>
+            <div>
+              <dt class="species-card__data-label">Profundidad</dt>
+              <dd class="species-card__data-value">{{ sp.depth }}</dd>
+            </div>
+            <div class="species-card__data-wide">
+              <dt class="species-card__data-label">Dieta</dt>
+              <dd class="species-card__data-value">{{ sp.diet }}</dd>
+            </div>
+          </dl>
+        </article>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ──── 2: Bridge editorial — conservación ──── -->
+<section class="especies-bridge">
+  <div class="especies-bridge__container">
+    <div class="especies-bridge__inner">
+      <span class="especies-bridge__chip" appReveal>
+        <span class="especies-bridge__chip-dot" aria-hidden="true"></span>
+        Conservación · Misión pública
+      </span>
+      <h2 class="especies-bridge__title" appReveal [delay]="0.06">
+        Cuidar lo que se ama.
+        <span class="especies-bridge__title-italic">
+          Estudiar lo que apenas conocemos.
+        </span>
+      </h2>
+      <p class="especies-bridge__copy" appReveal [delay]="0.14">
+        Acuario no es un parque temático: es un instituto activo de
+        investigación marina. El 38% de cada entrada financia programas que
+        mantenemos abiertos al mundo.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ──── 3: Stats de impacto ──── -->
+<section class="especies-stats">
+  <div class="especies-stats__container">
+    <div class="especies-stats__grid">
+      @for (s of stats; track s.label; let i = $index) {
+        <div appReveal [delay]="0.05 * i" class="stat-cell">
+          <p class="stat-cell__label">{{ s.label }}</p>
+          <p class="stat-cell__value">
+            {{ s.value }}
+            @if (s.suffix.trim()) {
+              <span class="stat-cell__suffix">{{ s.suffix.trim() }}</span>
+            }
+          </p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ──── 4: Programas activos ──── -->
+<section class="especies-programs">
+  <div class="especies-programs__container">
+    <h3 class="especies-programs__title" appReveal>
+      Cuatro programas activos.
+      <span class="especies-programs__title-italic">
+        Una misma corriente.
+      </span>
+    </h3>
+    <div class="especies-programs__grid">
+      @for (p of programs; track p.code; let i = $index) {
+        <article
+          appReveal
+          [delay]="0.05 * i"
+          class="program-card glass-shell glass-shell-hover"
+        >
+          <div class="program-card__media">
+            <img
+              appImgFade
+              [src]="p.image"
+              [alt]="p.title"
+              class="program-card__image"
+              decoding="async"
+            />
+            <div class="program-card__gradient" aria-hidden="true"></div>
+            <div class="program-card__code">
+              <span class="program-card__code-dot" aria-hidden="true"></span>
+              {{ p.code }}
+            </div>
+          </div>
+          <div class="program-card__body">
+            <p class="program-card__region">{{ p.region }}</p>
+            <h4 class="program-card__title">{{ p.title }}</h4>
+            <p class="program-card__copy">{{ p.body }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

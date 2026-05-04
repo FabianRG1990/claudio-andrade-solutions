@@ -1,0 +1,13 @@
+// Barrel del módulo de mixins/partials globales. Forwardea cada partial
+// para que los consumers puedan elegir si traen todo (`@use 'mixins'`)
+// o uno específico (`@use 'mixins/glass' as glass;`).
+//
+// Orden importa: base resetea, typography declara @font-face, keyframes
+// registra animaciones, utilities define helpers de layout y reveal,
+// glass aplica el sistema visual líquido encima.
+@forward 'base';
+@forward 'typography';
+@forward 'keyframes';
+@forward 'utilities';
+@forward 'glass';
+@forward 'layout';

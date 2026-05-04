@@ -1,0 +1,82 @@
+<section class="membership">
+  <div class="membership__container">
+    <div class="membership__head">
+      <div>
+        <div appReveal>
+          <app-eyebrow tone="lagoon">Capítulo 03 · Patronato</app-eyebrow>
+        </div>
+        <h2 appReveal [delay]="0.08" class="membership__title">
+          Tres formas de entrar.
+          <span class="membership__title-italic">Una sola comunidad.</span>
+        </h2>
+      </div>
+      <p appReveal [delay]="0.18" class="membership__lead">
+        Cada entrada financia el cuidado de los animales y los programas de
+        conservación que mantenemos abiertos al mundo.
+      </p>
+    </div>
+
+    <div class="membership__grid">
+      @for (t of tickets; track t.name; let i = $index) {
+        <article
+          appReveal
+          [delay]="0.05 * i"
+          class="ticket-card glass-shell"
+          [class.ticket-card--highlight]="t.highlight"
+        >
+          @if (t.highlight) {
+            <div class="ticket-card__overlay" aria-hidden="true"></div>
+            <div class="ticket-card__overlay-edge" aria-hidden="true"></div>
+          }
+          <div class="ticket-card__inner glass-core">
+            <div class="ticket-card__head">
+              <h3 class="ticket-card__name">{{ t.name }}</h3>
+              @if (t.highlight) {
+                <span class="ticket-card__tag">
+                  <span class="ticket-card__tag-pulse" aria-hidden="true"></span>
+                  Recomendado
+                </span>
+              }
+            </div>
+
+            <div class="ticket-card__price-row">
+              <span class="ticket-card__price">{{ t.price }}</span>
+              <span class="ticket-card__cadence">{{ t.cadence }}</span>
+            </div>
+
+            <p class="ticket-card__description">{{ t.description }}</p>
+
+            <ul class="ticket-card__perks">
+              @for (perk of t.perks; track perk) {
+                <li class="ticket-card__perk">
+                  <span class="ticket-card__check" aria-hidden="true">
+                    <ng-icon name="phosphorCheckBold" size="11" />
+                  </span>
+                  <span class="ticket-card__perk-label">{{ perk }}</span>
+                </li>
+              }
+            </ul>
+
+            <div class="ticket-card__cta-wrap">
+              <a
+                routerLink="/entradas"
+                class="ticket-card__cta"
+                [class.ticket-card__cta--highlight]="t.highlight"
+                [class.glass-bubble]="!t.highlight"
+              >
+                <span class="ticket-card__cta-label">Elegir {{ t.name }}</span>
+                <span
+                  class="ticket-card__cta-icon"
+                  [class.ticket-card__cta-icon--highlight]="t.highlight"
+                  [class.glass-bubble-icon]="!t.highlight"
+                >
+                  <ng-icon name="phosphorArrowUpRightBold" size="12" />
+                </span>
+              </a>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

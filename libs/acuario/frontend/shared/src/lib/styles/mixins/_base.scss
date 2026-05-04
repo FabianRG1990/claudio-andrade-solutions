@@ -1,0 +1,101 @@
+// =============================================================================
+// Reset y bases — equivalente al @layer base de globals.css del proyecto Next.
+// =============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  border: 0 solid rgb(245 241 232 / 0.06); // border-color por defecto
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  // No `scroll-behavior: smooth` global. Si se setea, el `window.scrollTo(0,0)`
+  // que el router de Angular invoca en cada NavigationEnd se convierte en una
+  // animación de scroll que el usuario percibe como "la página sube" cuando
+  // realmente debería empezar arriba al instante. El handler de logo/Inicio
+  // (misma ruta) ya usa `behavior: 'smooth'` explícito en JS, así que el
+  // suave del nav sigue funcionando sin este CSS.
+  height: 100%;
+  // Bloqueo defensivo de scroll horizontal a nivel de raíz. Si SOLO se pone
+  // en `body` y un descendiente desborda, algunos browsers permiten que el
+  // overflow se filtre al `html` y la página gana scroll lateral. Aplicar
+  // aquí también garantiza que NUNCA exista un eje X scrollable en mobile.
+  // `clip` (sin scrollbar, sin scrollLeft programático) — fallback `hidden`
+  // para Safari <16. El componente que requiera scroll-X interno (carruseles,
+  // marquees) debe contenerlo en su propio wrapper con overflow:hidden.
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+body {
+  min-height: 100dvh;
+  background: #061826;
+  color: rgb(var(--foam));
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01', 'cv11';
+  letter-spacing: 0.015em;
+  line-height: 1.5;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+::selection {
+  background: rgb(var(--lagoon) / 0.35);
+  color: rgb(var(--foam));
+}
+
+// Tipografía heredada — los headings no traen estilos por defecto del browser.
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  background: transparent;
+  cursor: pointer;
+  border: none;
+  color: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}

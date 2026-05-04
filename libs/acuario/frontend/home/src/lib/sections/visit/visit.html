@@ -1,0 +1,119 @@
+<section class="visit">
+  <div class="visit__container">
+    <div class="visit__grid">
+      <!-- LEFT — manifiesto sticky -->
+      <div class="visit__lead">
+        <div appReveal>
+          <app-eyebrow>Capítulo 05 · Visita</app-eyebrow>
+        </div>
+        <h2 appReveal [delay]="0.08" class="visit__title">
+          Llegás cuando quieras.
+          <span class="visit__title-italic">Te quedás cuanto necesites.</span>
+        </h2>
+        <p appReveal [delay]="0.16" class="visit__copy">
+          {{ visitInfo.ticketingNote }}
+        </p>
+
+        <div appReveal [delay]="0.24" class="visit__ctas">
+          <a routerLink="/entradas" class="visit__cta glass-bubble">
+            <span class="visit__cta-label">Comprar entradas</span>
+            <span class="visit__cta-icon glass-bubble-icon">
+              <ng-icon name="phosphorArrowUpRightBold" size="14" />
+            </span>
+          </a>
+          <a routerLink="/visita" class="visit__cta glass-bubble">
+            <span class="visit__cta-label">Cómo llegar</span>
+            <span class="visit__cta-icon glass-bubble-icon">
+              <ng-icon name="phosphorMapPin" size="14" />
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT — info rows -->
+      <div class="visit__info">
+        <!-- Horarios -->
+        <div appReveal class="info-row glass-shell">
+          <div class="info-row__inner glass-core">
+            <div class="info-row__head">
+              <div class="info-row__title-wrap">
+                <span class="info-row__icon">
+                  <ng-icon name="phosphorClock" size="16" />
+                </span>
+                <h3 class="info-row__title">Horarios</h3>
+              </div>
+              <span class="info-row__helper">Reentrada el mismo día</span>
+            </div>
+            <div class="info-row__body">
+              <ul class="info-row__hours">
+                @for (h of visitInfo.hours; track h.day) {
+                  <li class="info-row__hour">
+                    <span class="info-row__hour-day">{{ h.day }}</span>
+                    <span class="info-row__hour-value">{{ h.hours }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ubicación -->
+        <div appReveal [delay]="0.1" class="info-row glass-shell">
+          <div class="info-row__inner glass-core">
+            <div class="info-row__head">
+              <div class="info-row__title-wrap">
+                <span class="info-row__icon">
+                  <ng-icon name="phosphorMapPin" size="16" />
+                </span>
+                <h3 class="info-row__title">Ubicación</h3>
+              </div>
+              <span class="info-row__helper">A 12 min del centro</span>
+            </div>
+            <div class="info-row__body">
+              <p class="info-row__address">{{ visitInfo.address }}</p>
+              <div class="info-row__transport">
+                <div>
+                  <p class="info-row__transport-label">Tren</p>
+                  <p class="info-row__transport-value">Línea Costa</p>
+                </div>
+                <div>
+                  <p class="info-row__transport-label">Bus</p>
+                  <p class="info-row__transport-value">14 · 22 · 81</p>
+                </div>
+                <div>
+                  <p class="info-row__transport-label">Bici</p>
+                  <p class="info-row__transport-value">6 estaciones</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entrada general -->
+        <div appReveal [delay]="0.16" class="info-row glass-shell">
+          <div class="info-row__inner glass-core">
+            <div class="info-row__head">
+              <div class="info-row__title-wrap">
+                <span class="info-row__icon">
+                  <ng-icon name="phosphorTicket" size="16" />
+                </span>
+                <h3 class="info-row__title">Entrada general</h3>
+              </div>
+              <span class="info-row__helper">Capacidad limitada</span>
+            </div>
+            <div class="info-row__body">
+              <div class="info-row__price-row">
+                <span class="info-row__price">$28</span>
+                <span class="info-row__price-cadence">por persona</span>
+              </div>
+              <p class="info-row__price-note">
+                Niños menores de 6 años entran libres. Estudiantes con carné
+                vigente: $14.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

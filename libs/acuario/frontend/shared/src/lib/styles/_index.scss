@@ -1,0 +1,5 @@
+// Conveniencia: `@use 'styles' as ds;` trae todo el design system bajo
+// un solo namespace. La app entry-point usa esto; los componentes individuales
+// pueden hacer `@use 'settings/tokens' as tokens;` para algo más quirúrgico.
+@forward 'settings';
+@forward 'mixins';

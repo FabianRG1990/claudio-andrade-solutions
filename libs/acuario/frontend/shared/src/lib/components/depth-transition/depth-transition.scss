@@ -1,0 +1,72 @@
+.depth-transition {
+  position: relative;
+  height: 22vh;
+  min-height: 200px;
+  width: 100%;
+  overflow: hidden;
+
+  // Top fade — espeja el bottom fade del page-header. Crea continuidad: el
+  // page-header termina disolviéndose en oscuridad, y aquí mismo arranca
+  // disolviéndose desde oscuridad → transparente, dejando ver gradualmente
+  // los peces del ocean-background sin un corte abrupto. La banda está
+  // anclada al top y se desborda 2rem hacia arriba (`top: -2rem`) para
+  // entrelazarse con el fade del header.
+  &::before {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset-inline: 0;
+    top: -2rem;
+    height: 9rem;
+    z-index: 1;
+    background: linear-gradient(
+      180deg,
+      rgb(6 24 38 / 0.85) 0%,
+      rgb(6 24 38 / 0.4) 50%,
+      transparent 100%
+    );
+  }
+
+  // En tablet/mobile (≤1023px) los efectos decorativos (top fade oscuro +
+  // god-rays con blend `screen` y blur + sedimento) se perciben como un
+  // rectángulo iluminado entre secciones — una franja con corte en lugar
+  // de una transición. Se preserva la altura (espaciado entre segmentos)
+  // pero se silencia todo lo visual: queda el body abyss continuo.
+  @media (max-width: 1023.98px) {
+    &::before {
+      display: none;
+    }
+
+    .depth-transition__rays,
+    .depth-transition__motes {
+      display: none;
+    }
+  }
+}
+
+.depth-transition__rays,
+.depth-transition__motes {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.depth-transition__ray {
+  position: absolute;
+  top: -10%;
+  display: block;
+  height: 120%;
+  width: 160px;
+  transform-origin: top;
+  filter: blur(40px);
+  mix-blend-mode: screen;
+}
+
+.depth-transition__mote {
+  position: absolute;
+  top: -0.5rem;
+  display: block;
+  border-radius: 9999px;
+  background: rgb(var(--foam) / 0.25);
+  will-change: transform;
+}

@@ -1,0 +1,44 @@
+<footer class="footer">
+  <div class="footer__container">
+    <div class="footer__top">
+      <!-- Brand block — emblema chico inline (sin BrandLockup completo) -->
+      <div class="footer__brand">
+        <app-emblem-mark [size]="36" />
+        <div class="footer__brand-meta">
+          <p class="footer__eyebrow">
+            Aquarium · Est. 1992 · 09°56'N · CR
+          </p>
+          <p class="footer__tagline">
+            Instituto vivo de conservación marina y divulgación científica del
+            océano profundo.
+          </p>
+        </div>
+      </div>
+
+      <!-- Navegación secundaria -->
+      <nav class="footer__nav" aria-label="Pie de página">
+        <ul class="footer__nav-list">
+          @for (link of navLinks; track link.label) {
+            <li>
+              <a [routerLink]="link.href" class="footer__nav-link">
+                {{ link.label }}
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+    </div>
+
+    <!-- Bottom bar legal -->
+    <div class="footer__bottom">
+      <p class="footer__copyright">
+        © {{ currentYear }} · Acuario · Paseo Marítimo 1492 · San José
+      </p>
+      <ul class="footer__meta-list">
+        @for (item of metaItems; track item) {
+          <li>{{ item }}</li>
+        }
+      </ul>
+    </div>
+  </div>
+</footer>

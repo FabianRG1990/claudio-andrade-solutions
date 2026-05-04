@@ -1,0 +1,18 @@
+@if (href(); as link) {
+  <a [routerLink]="link" class="pill-button glass-bubble">
+    <ng-container *ngTemplateOutlet="content" />
+  </a>
+} @else {
+  <button [type]="type()" class="pill-button glass-bubble" (click)="clicked.emit()">
+    <ng-container *ngTemplateOutlet="content" />
+  </button>
+}
+
+<ng-template #content>
+  <span class="pill-button__label"><ng-content /></span>
+  <span class="pill-button__icon glass-bubble-icon">
+    <ng-content select="[pillIcon]">
+      <ng-icon name="phosphorArrowUpRightBold" size="14" />
+    </ng-content>
+  </span>
+</ng-template>

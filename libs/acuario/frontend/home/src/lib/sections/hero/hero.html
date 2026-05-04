@@ -1,0 +1,98 @@
+<section class="hero">
+  <!-- SLOT animación pez — no editar layout, solo enchufar render. -->
+  <app-hero-fish-canvas />
+
+  <!-- Burbujas decorativas (capa 1) -->
+  <app-bubble-stream [count]="18" class="hero__bubbles" />
+
+  <!-- Cierre inferior — funde la base del hero al abismo puro para que la
+       siguiente sección no muestre una costura horizontal. -->
+  <div class="hero__seam" aria-hidden="true"></div>
+
+  <!-- Marco superior — eyebrow telemetría -->
+  <div class="hero__telemetry">
+    <div class="hero__telemetry-col">
+      <span>09°56'N · 84°08'W</span>
+      <span class="hero__telemetry-secondary">Profundidad media · 24 m</span>
+    </div>
+    <div class="hero__telemetry-col hero__telemetry-col--right">
+      <span>Temperatura · 17.4 °C</span>
+      <span>Salinidad · 34.7 PSU</span>
+    </div>
+  </div>
+
+  <!-- Capa principal -->
+  <div class="hero__container">
+    <div class="hero__grid">
+      <div class="hero__lead">
+        <span class="hero__badge">
+          <ng-icon
+            name="phosphorFishSimpleDuotone"
+            size="12"
+            class="hero__badge-icon"
+          />
+          <span class="hero__badge-prefix">Temporada · </span>
+          <span class="hero__badge-key">Bioluminiscencia</span>
+          <span class="hero__badge-suffix"> abisal</span>
+        </span>
+
+        <h1 class="hero__title">
+          Inmersión <br />
+          <span class="hero__title-italic">en lo</span> profundo.
+        </h1>
+
+        <p class="hero__copy">
+          Acuario es un instituto vivo: 1.247 especies, seis biomas, una misión
+          científica y un solo principio —que el océano deje de ser un lugar
+          lejano para convertirse en una experiencia íntima.
+        </p>
+
+        <div class="hero__cta">
+          <app-pill-button href="/exhibiciones">
+            Recorrer exhibiciones
+          </app-pill-button>
+        </div>
+      </div>
+
+      <div class="hero__aside">
+        <div class="hero__wave-card glass-shell">
+          <div class="hero__wave-core glass-core">
+            <div class="hero__wave-head">
+              <p class="hero__wave-label">Próxima ola</p>
+              <span class="hero__wave-pulse" aria-hidden="true"></span>
+            </div>
+            <p class="hero__wave-time">19:30</p>
+            <p class="hero__wave-context">
+              Noche bioluminiscente · Galería Abismo Pacífico
+            </p>
+
+            <div class="hero__wave-stats">
+              <div class="hero__stat">
+                <p class="hero__stat-label">especies</p>
+                <p class="hero__stat-value">47</p>
+              </div>
+              <div class="hero__stat">
+                <p class="hero__stat-label">litros</p>
+                <p class="hero__stat-value">2.4M</p>
+              </div>
+              <div class="hero__stat">
+                <p class="hero__stat-label">metros</p>
+                <p class="hero__stat-value">1.84K</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero__scroll-hint">
+          <div class="hero__scroll-cue">
+            <span class="hero__scroll-icon animate-drift" aria-hidden="true">
+              <ng-icon name="phosphorArrowDown" size="11" />
+            </span>
+            Desciende
+          </div>
+          <div class="hero__pagination">01 / 05</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,38 @@
+name: Deploy to Firebase Hosting on merge
+
+# Cuando se mergea a `main` (o se hace push directo a main), builda y publica
+# al canal `live` — la URL pública oficial del proyecto:
+#   https://landing-pages-79afc.web.app
+#   https://landing-pages-79afc.firebaseapp.com
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build production
+        run: yarn nx build acuario --configuration=production
+
+      - name: Deploy to Firebase Hosting (live channel)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LANDING_PAGES_79AFC }}
+          projectId: landing-pages-79afc
+          channelId: live

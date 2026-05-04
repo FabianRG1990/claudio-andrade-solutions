@@ -1,0 +1,322 @@
+// El path resuelve vía `stylePreprocessorOptions.includePaths` del project.json
+// del app, que apunta a `libs/acuario/frontend/shared/src/lib/styles`. Si este
+// componente se mueve a otro proyecto, basta replicar ese includePath.
+@use 'mixins' as m;
+
+// =============================================================================
+// Hero — capítulo de apertura. Las clases globales `bg-mesh-deep` y
+// `caustic-overlay` ya están en _utilities.scss / _glass.scss.
+// =============================================================================
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow: hidden;
+  // Réplica del bg-mesh-deep refinado: dos radiales muy diluidas + linear
+  // neutralizado. En pantallas de alta resolución antes se notaban los
+  // aros y el conjunto se sentía "videojuego"; ahora la profundidad viene
+  // del color del abismo, no de luces añadidas.
+  background-image:
+    radial-gradient(80% 60% at 25% 0%, rgb(94 196 209 / 0.07), transparent 70%),
+    radial-gradient(60% 50% at 90% 25%, rgb(127 227 214 / 0.04), transparent 75%),
+    linear-gradient(180deg, #061826 0%, #07203a 40%, #061f37 70%, #061826 100%);
+}
+
+.hero__bubbles {
+  z-index: 1;
+  opacity: 0.7;
+}
+
+// Cierre inferior — degradado al abismo puro (sin costura entre Hero y next).
+.hero__seam {
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 11rem; // h-44
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(6 24 38 / 0.55) 45%,
+    #061826 100%
+  );
+}
+
+// ─── Telemetría superior ─────────────────────────────────────────────────────
+.hero__telemetry {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 7rem; // top-28
+  z-index: 10;
+  margin-inline: auto;
+  display: flex;
+  max-width: 80rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-inline: var(--container-px);
+
+  @media (min-width: 1024px) {
+    top: 8rem; // lg:top-32
+  }
+}
+
+.hero__telemetry-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+.hero__telemetry-col--right {
+  display: none;
+
+  @media (min-width: 640px) {
+    display: flex;
+    align-items: flex-end;
+  }
+}
+
+.hero__telemetry-secondary {
+  display: none;
+
+  @media (min-width: 640px) {
+    display: inline;
+  }
+}
+
+// ─── Capa principal ──────────────────────────────────────────────────────────
+.hero__container {
+  position: relative;
+  z-index: 10;
+  margin-inline: auto;
+  display: flex;
+  min-height: 100dvh;
+  max-width: 80rem;
+  flex-direction: column;
+  justify-content: flex-end;
+  // Padding fluido: pt grande para dejar respirar el nav, px que se contrae
+  // en phones (1rem) hasta 2rem en desktop. pb escala 5rem→8rem.
+  padding-top: clamp(8rem, 4rem + 12vw, 14rem);
+  padding-inline: var(--container-px);
+  padding-bottom: clamp(4rem, 2.5rem + 4vw, 8rem);
+}
+
+.hero__grid {
+  display: grid;
+  gap: 3rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1.5fr 1fr;
+    align-items: end;
+  }
+}
+
+// ─── Lead column (badge + título + copy + CTA) ───────────────────────────────
+.hero__lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+// Badge — adapta su contenido por breakpoint en lugar de solo escalar.
+//   • <360px: oculto entero (libera espacio para el título — competía
+//     visualmente contra el h1 en phones extra-chicos).
+//   • 360-479px: solo "Bioluminiscencia" + ícono.
+//   • 480-639px: "Bioluminiscencia abisal" (sin prefijo "Temporada · ").
+//   • ≥640px: cadena completa "Temporada · Bioluminiscencia abisal".
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--foam) / 0.15);
+  background: rgb(var(--foam) / 0.04);
+  padding: 0.25rem 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.8);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+
+  @media (max-width: 359.98px) {
+    display: none;
+  }
+}
+
+.hero__badge-icon {
+  color: rgb(var(--lagoon));
+}
+
+.hero__badge-prefix {
+  display: none;
+
+  @media (min-width: 640px) {
+    display: inline;
+  }
+}
+
+.hero__badge-suffix {
+  display: none;
+
+  @media (min-width: 480px) {
+    display: inline;
+  }
+}
+
+.hero__title {
+  margin-top: 2rem;
+  max-width: 16ch;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  // Fluido 44→112px sin steps. Una sola línea reemplaza 3 declaraciones.
+  font-size: var(--type-h1-hero);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+.hero__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  color: rgb(var(--foam) / 0.8);
+}
+
+.hero__copy {
+  margin-top: 2rem;
+  max-width: 52ch;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.7);
+  line-height: 1.625;
+  font-size: var(--type-body-lg);
+}
+
+.hero__cta {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+// ─── Aside column (ola card + scroll hint) ───────────────────────────────────
+.hero__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero__wave-card {
+  border-radius: var(--radius-squircle);
+  padding: 0.5rem;
+}
+
+.hero__wave-core {
+  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  padding: 1.5rem;
+}
+
+.hero__wave-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero__wave-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+.hero__wave-pulse {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 12px 2px rgb(127 227 214 / 0.6);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.hero__wave-time {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: var(--type-mono-xl);
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+.hero__wave-context {
+  margin-top: 0.25rem;
+  color: rgb(var(--foam) / 0.65);
+}
+
+.hero__wave-stats {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  border-top: 1px solid rgb(var(--foam) / 0.1);
+  padding-top: 1.25rem;
+}
+
+.hero__stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.hero__stat-value {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem; // text-xl
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+// ─── Scroll hint (solo visible en lg+) ───────────────────────────────────────
+.hero__scroll-hint {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  color: rgb(var(--foam) / 0.55);
+
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+}
+
+.hero__scroll-cue {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.hero__scroll-icon {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.15);
+}
+
+.hero__pagination {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}

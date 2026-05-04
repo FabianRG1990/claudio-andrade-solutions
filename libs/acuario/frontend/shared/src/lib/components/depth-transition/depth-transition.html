@@ -1,0 +1,30 @@
+<section class="depth-transition" aria-hidden="true">
+  <!-- God rays — solo visibles en la franja media via las máscaras del bg -->
+  <div class="depth-transition__rays">
+    @for (r of rays; track r.left) {
+      <span
+        class="depth-transition__ray animate-godray"
+        [style.left]="r.left"
+        [style.background]="rayBackground(r)"
+        [style.transform]="'translate3d(-50%, 0, 0) rotate(' + r.angle + 'deg)'"
+        [style.animation-duration.s]="r.dur"
+        [style.animation-delay.s]="r.delay"
+      ></span>
+    }
+  </div>
+
+  <!-- Sedimento descendente — micro-partículas cayendo -->
+  <div class="depth-transition__motes">
+    @for (m of motes; track $index; let i = $index) {
+      <span
+        class="depth-transition__mote animate-sediment"
+        [style.left.%]="m.left"
+        [style.width.px]="m.size"
+        [style.height.px]="m.size"
+        [style.animation-duration.s]="m.dur"
+        [style.animation-delay.s]="m.delay"
+        [style.filter]="'blur(' + m.blur + 'px)'"
+      ></span>
+    }
+  </div>
+</section>

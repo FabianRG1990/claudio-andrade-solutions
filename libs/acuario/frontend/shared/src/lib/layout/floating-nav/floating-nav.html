@@ -1,0 +1,76 @@
+<header class="floating-nav" [class.is-scrolled]="scrolled()">
+  <!-- LEFT — brand: emblema + wordmark. Sin glass; la marca respira. -->
+  <a
+    routerLink="/"
+    class="floating-nav__brand"
+    aria-label="Aquarium · Inicio"
+    (click)="onLinkClick('/', $event)"
+  >
+    <app-emblem-mark [size]="48" />
+    <span class="floating-nav__brand-wordmark">Aquarium</span>
+  </a>
+
+  <!-- RIGHT — pill desktop con cristal 3D + links activos. -->
+  <nav
+    #navRef
+    class="floating-nav__pill glass-nav-shell"
+    [class.glass-nav-shell-scrolled]="scrolled()"
+    aria-label="Navegación principal"
+  >
+    @if (pillVisible()) {
+      <!-- Three.js + WebGL: solo se monta cuando el pill está realmente
+           visible (≥880px). En mobile el pill es display:none y, sin este
+           gate, el canvas seguía corriendo RAF + manteniendo contexto WebGL
+           en GPU memory innecesariamente. -->
+      <app-glass-pill-canvas />
+    }
+
+    @for (link of links; track link.href) {
+      <a
+        [routerLink]="link.href"
+        class="floating-nav__link"
+        [class.is-active]="isActive(link)"
+        (click)="onLinkClick(link.href, $event)"
+      >
+        <span class="floating-nav__link-indicator" aria-hidden="true"></span>
+        <span class="floating-nav__link-text">{{ link.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <!-- Burger móvil — mismo lenguaje glass que el resto. -->
+  <button
+    type="button"
+    class="floating-nav__burger glass-bubble"
+    (click)="toggleMenu()"
+    [attr.aria-label]="menuOpen() ? 'Cerrar menú' : 'Abrir menú'"
+    [attr.aria-expanded]="menuOpen()"
+  >
+    @if (menuOpen()) {
+      <ng-icon name="phosphorX" size="16" />
+    } @else {
+      <ng-icon name="phosphorList" size="16" />
+    }
+  </button>
+</header>
+
+<!-- Bottom sheet móvil. Se queda renderizado y conmuta vía clase para que
+     las animaciones CSS de entrada/salida fluyan en ambas direcciones. -->
+<div
+  class="mobile-menu"
+  [class.is-open]="menuOpen()"
+  [attr.aria-hidden]="!menuOpen()"
+>
+  <div class="mobile-menu__container">
+    <ul class="mobile-menu__list">
+      @for (link of links; track link.href; let i = $index) {
+        <li class="mobile-menu__item" [style.--stagger-index]="i">
+          <a [routerLink]="link.href" class="mobile-menu__link">
+            <span>{{ link.label }}</span>
+            <span class="mobile-menu__index">0{{ i + 1 }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

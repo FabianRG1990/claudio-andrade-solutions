@@ -1,0 +1,13 @@
+{
+  "name": "acuario-ui-home",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/acuario/frontend/home/src",
+  "prefix": "app",
+  "projectType": "library",
+  "tags": ["scope:acuario"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

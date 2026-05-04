@@ -1,0 +1,13 @@
+.glass-pill-canvas {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 9999px;
+}
+
+.glass-pill-canvas__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

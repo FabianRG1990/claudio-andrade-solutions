@@ -1,0 +1,78 @@
+<section class="featured-exhibits">
+  <div class="featured-exhibits__container">
+    <div class="featured-exhibits__head">
+      <app-section-heading
+        eyebrow="Capítulo 01 · Exhibiciones"
+        title="Seis biomas."
+        italic="Una sola caída."
+        description="De la superficie tropical al frío antártico, cada galería ha sido construida con curaduría científica y sensibilidad escénica. Recorrelas en cualquier orden — o déjate llevar por la corriente sugerida."
+        tone="lagoon"
+      />
+      <a
+        routerLink="/exhibiciones"
+        class="featured-exhibits__cta glass-bubble"
+        appReveal
+        [delay]="0.2"
+      >
+        <span class="featured-exhibits__cta-label">Ver las 6 galerías</span>
+        <span class="featured-exhibits__cta-icon glass-bubble-icon">
+          <ng-icon name="phosphorArrowUpRightBold" size="14" />
+        </span>
+      </a>
+    </div>
+
+    <!-- Bento asimétrico: 1 XL (col 7, row 2) + 2 MD (col 5) + 1 LG (col 7) + 1 MD (col 5) -->
+    <div class="featured-exhibits__grid">
+      @for (ex of featured; track ex.slug; let i = $index) {
+        <a
+          appReveal
+          routerLink="/exhibiciones"
+          class="exhibit-card glass-shell glass-shell-hover"
+          [class.exhibit-card--xl]="i === 0"
+          [class.exhibit-card--lg]="i === 3"
+          [class.exhibit-card--md]="i === 1 || i === 2 || i === 4"
+        >
+          <div class="exhibit-card__inner">
+            <img
+              appImgFade
+              [src]="ex.image"
+              [alt]="ex.name"
+              class="exhibit-card__image"
+              loading="lazy"
+            />
+            <div class="exhibit-card__gradient"></div>
+            <div class="exhibit-card__hairline hairline"></div>
+
+            <div class="exhibit-card__top">
+              <span
+                class="exhibit-card__badge"
+                [attr.data-accent]="ex.accent"
+              >
+                <span class="exhibit-card__badge-dot" aria-hidden="true"></span>
+                {{ ex.zone }}
+              </span>
+              <span class="exhibit-card__depth">{{ ex.depth }}</span>
+            </div>
+
+            <div class="exhibit-card__bottom">
+              <div class="exhibit-card__row">
+                <div>
+                  <h3 class="exhibit-card__title">{{ ex.name }}</h3>
+                  <p class="exhibit-card__description">{{ ex.description }}</p>
+                </div>
+                <span class="exhibit-card__arrow" aria-hidden="true">
+                  <ng-icon name="phosphorArrowUpRightBold" size="14" />
+                </span>
+              </div>
+              <div class="exhibit-card__meta">
+                <span>{{ ex.species }} especies</span>
+                <span class="exhibit-card__meta-dot" aria-hidden="true"></span>
+                <span>{{ ex.liters }} L</span>
+              </div>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+  </div>
+</section>

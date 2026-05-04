@@ -1,0 +1,35 @@
+.section-heading {
+  max-width: 48rem; // max-w-3xl
+
+  &[data-align='center'] {
+    margin-inline: auto;
+    text-align: center;
+  }
+}
+
+.section-heading__title {
+  margin-top: 1.5rem;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  // Fluido 36→72px sin step. Reemplaza 2.25rem → md 3.75rem.
+  font-size: var(--type-h2-lg);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: var(--tracking-tight);
+}
+
+.section-heading__italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  color: rgb(var(--foam) / 0.85);
+}
+
+.section-heading__description {
+  margin-top: 1.5rem;
+  max-width: 58ch;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.7);
+  line-height: 1.625;
+  font-size: var(--type-body-lg);
+}

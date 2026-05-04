@@ -1,0 +1,77 @@
+<section class="conservation">
+  <div class="conservation__container">
+    <!-- Header: title + CTA -->
+    <div class="conservation__head">
+      <app-section-heading
+        eyebrow="Capítulo 04 · Conservación"
+        title="Cuidar lo que se ama."
+        italic="Estudiar lo que apenas conocemos."
+        tone="lagoon"
+      />
+      <div appReveal [delay]="0.2">
+        <app-pill-button href="/especies">Conoce el instituto</app-pill-button>
+      </div>
+    </div>
+
+    <!-- Grid: imagen + stats -->
+    <div class="conservation__grid">
+      <!-- Programa destacado -->
+      <div appReveal class="conservation__program glass-shell">
+        <div class="conservation__program-frame">
+          <img
+            appImgFade
+            src="/conservacion/lab-coralino.png"
+            alt="Cultivo de coral en laboratorio"
+            class="conservation__program-image"
+            loading="lazy"
+          />
+          <div class="conservation__program-tint"></div>
+          <div class="conservation__program-gradient"></div>
+
+          <div class="conservation__program-badge">
+            <span class="conservation__program-pulse" aria-hidden="true"></span>
+            Lab Coralino · Activo
+          </div>
+
+          <div class="conservation__program-caption">
+            <div>
+              <p class="conservation__program-label">Programa · PR-01</p>
+              <p class="conservation__program-name">
+                Reefscape · cultivo y reintroducción
+              </p>
+            </div>
+            <span class="conservation__program-year">2025</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats tipográficos -->
+      <div class="conservation__stats">
+        <div appReveal class="conservation__stats-head">
+          <span class="conservation__stats-eyebrow">Impacto · 2025</span>
+          <span class="conservation__stats-meta">04 datos vivos</span>
+        </div>
+
+        <dl appReveal [delay]="0.1" class="conservation__stats-grid">
+          @for (s of stats; track s.label) {
+            <div>
+              <dt class="conservation__stat-label">{{ s.label }}</dt>
+              <dd class="conservation__stat-value">{{ s.value }}</dd>
+              @if (s.suffix) {
+                <p class="conservation__stat-suffix">{{ s.suffix.trim() }}</p>
+              }
+            </div>
+          }
+        </dl>
+
+        <p appReveal [delay]="0.2" class="conservation__manifesto">
+          <span class="conservation__manifesto-pct">El 38%</span>
+          de cada entrada financia cuatro programas activos en el Caribe, el
+          Pacífico y el Mar Antártico. Datos abiertos bajo licencia
+          <span class="conservation__manifesto-license">CC-BY</span>
+          — para que la ciencia sea de todos.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

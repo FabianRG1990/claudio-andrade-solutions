@@ -1,0 +1,13 @@
+<app-ocean-background />
+
+<main class="app-main">
+  <router-outlet />
+</main>
+
+<app-footer />
+
+<!-- IMPORTANTE: el nav va al final del DOM (después de main + footer) para
+     garantizar que pinta encima de cualquier sección con isolation:isolate
+     o transform que pueda generar un nuevo stacking context. Position fixed
+     + z-index alto debería bastar, pero el orden DOM es el seguro extra. -->
+<app-floating-nav />

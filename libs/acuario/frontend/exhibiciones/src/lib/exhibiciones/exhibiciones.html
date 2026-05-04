@@ -1,0 +1,64 @@
+<app-page-header
+  eyebrow="Recorrido · 6 biomas"
+  capitulo="Capítulo 01 / 05 · Exhibiciones"
+  title="Galerías"
+  italic="vivas."
+  description="Cada bioma es un ecosistema completo, no una vitrina. Construidos con curaduría científica, presiones reales y luz natural, las exhibiciones se comportan como el océano que representan."
+/>
+
+<section class="exhibiciones">
+  <div class="exhibiciones__container">
+    <div class="exhibiciones__list">
+      @for (ex of exhibits; track ex.slug; let i = $index) {
+        <article
+          appReveal
+          class="exhibit-row"
+          [class.exhibit-row--reverse]="i % 2 === 1"
+        >
+          <div class="exhibit-row__media glass-shell">
+            <div class="exhibit-row__media-inner">
+              <img
+                appImgFade
+                [src]="ex.image"
+                [alt]="ex.name"
+                class="exhibit-row__image"
+                decoding="async"
+              />
+              <div class="exhibit-row__media-gradient" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <div class="exhibit-row__body">
+            <p class="exhibit-row__zone">{{ ex.zone }} · {{ ex.depth }}</p>
+            <h2 class="exhibit-row__title">{{ ex.name }}</h2>
+            <p class="exhibit-row__copy">{{ ex.description }}</p>
+            <dl class="exhibit-row__stats">
+              <div class="exhibit-row__stat">
+                <dt class="exhibit-row__stat-label">Especies</dt>
+                <dd class="exhibit-row__stat-value">{{ ex.species }}</dd>
+              </div>
+              <div class="exhibit-row__stat">
+                <dt class="exhibit-row__stat-label">Capacidad</dt>
+                <dd class="exhibit-row__stat-value">{{ ex.liters }} L</dd>
+              </div>
+              <div class="exhibit-row__stat">
+                <dt class="exhibit-row__stat-label">Número</dt>
+                <dd class="exhibit-row__stat-value exhibit-row__stat-value--accent">
+                  0{{ i + 1 }}
+                </dd>
+              </div>
+            </dl>
+            <div class="exhibit-row__cta-wrap">
+              <button type="button" class="exhibit-row__cta glass-bubble">
+                <span class="exhibit-row__cta-label">Detalle curatorial</span>
+                <span class="exhibit-row__cta-icon glass-bubble-icon">
+                  <ng-icon name="phosphorArrowUpRightBold" size="12" />
+                </span>
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,118 @@
+<section class="contacto">
+  <div class="contacto__container">
+    <header class="contacto__header">
+      <div appReveal>
+        <app-eyebrow tone="lagoon">Contacto · Estamos aquí</app-eyebrow>
+      </div>
+      <p appReveal [delay]="0.05" class="contacto__chapter">
+        Capítulo 04 / 04 · Contáctenos
+      </p>
+      <h1 appReveal [delay]="0.1" class="contacto__title">
+        Hablemos.
+        <span class="contacto__title-italic">El océano nos une.</span>
+      </h1>
+    </header>
+
+    <div class="contacto__body">
+      <form
+        appReveal
+        [delay]="0.18"
+        class="contacto__form glass-shell"
+        (submit)="$event.preventDefault()"
+      >
+        <div class="contacto__form-inner glass-core">
+          <div class="contacto__form-row">
+            <label class="form-field">
+              <span class="form-field__label">Nombre</span>
+              <input
+                type="text"
+                name="name"
+                placeholder="Tu nombre"
+                class="form-field__input form-field__input--pill"
+              />
+            </label>
+            <label class="form-field">
+              <span class="form-field__label">Email</span>
+              <input
+                type="email"
+                name="email"
+                placeholder="tu@correo.com"
+                class="form-field__input form-field__input--pill"
+              />
+            </label>
+          </div>
+
+          <label class="form-field">
+            <span class="form-field__label">Asunto</span>
+            <input
+              type="text"
+              name="subject"
+              placeholder="¿De qué nos querés hablar?"
+              class="form-field__input form-field__input--pill"
+            />
+          </label>
+
+          <label class="form-field form-field--message">
+            <span class="form-field__label">Mensaje</span>
+            <textarea
+              name="message"
+              rows="3"
+              placeholder="Escribinos lo que necesités. Sin formalidades."
+              class="form-field__input form-field__input--block"
+            ></textarea>
+          </label>
+
+          <div class="contacto__form-footer">
+            <p class="contacto__form-legal">
+              Al enviar, aceptás nuestra política de privacidad.
+            </p>
+            <button type="submit" class="contacto__submit glass-bubble">
+              <span class="contacto__submit-label">Enviar mensaje</span>
+              <span class="contacto__submit-icon glass-bubble-icon">
+                <ng-icon name="phosphorPaperPlaneTiltBold" size="14" />
+              </span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <aside appReveal [delay]="0.22" class="contacto__info">
+        <a href="mailto:hola@aquarium.cr" class="info-card glass-shell">
+          <div class="info-card__inner glass-core">
+            <span class="info-card__icon" data-accent="lagoon">
+              <ng-icon name="phosphorEnvelopeSimpleDuotone" size="22" />
+            </span>
+            <div class="info-card__copy">
+              <span class="info-card__label">Email</span>
+              <span class="info-card__value">hola&#64;aquarium.cr</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="tel:+50622871992" class="info-card glass-shell">
+          <div class="info-card__inner glass-core">
+            <span class="info-card__icon" data-accent="bioluminescent">
+              <ng-icon name="phosphorPhoneDuotone" size="22" />
+            </span>
+            <div class="info-card__copy">
+              <span class="info-card__label">Teléfono</span>
+              <span class="info-card__value">+506 2287 1992</span>
+            </div>
+          </div>
+        </a>
+
+        <div class="info-card glass-shell">
+          <div class="info-card__inner glass-core">
+            <span class="info-card__icon" data-accent="kelp">
+              <ng-icon name="phosphorMapPinDuotone" size="22" />
+            </span>
+            <div class="info-card__copy">
+              <span class="info-card__label">Dirección</span>
+              <span class="info-card__value">Paseo Marítimo 1492 · San José</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>

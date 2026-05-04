@@ -1,0 +1,13 @@
+{
+  "name": "acuario-ui-especies",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/acuario/frontend/especies/src",
+  "prefix": "app",
+  "projectType": "library",
+  "tags": ["scope:acuario"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}
