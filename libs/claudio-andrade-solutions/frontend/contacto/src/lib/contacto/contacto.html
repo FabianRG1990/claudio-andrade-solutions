@@ -1,117 +1,162 @@
 <section class="contacto">
   <div class="contacto__container">
-    <header class="contacto__header">
-      <div appReveal>
-        <app-eyebrow tone="lagoon">Contacto · Estamos aquí</app-eyebrow>
-      </div>
-      <p appReveal [delay]="0.05" class="contacto__chapter">
-        Capítulo 04 / 04 · Contáctenos
-      </p>
-      <h1 appReveal [delay]="0.1" class="contacto__title">
-        Hablemos.
-        <span class="contacto__title-italic">El océano nos une.</span>
+    <!-- Header centrado — eyebrow + título + subtítulo. Composición tipo
+         "manchete" como en la imagen de referencia. -->
+    <header class="contacto__header" appReveal>
+      <app-eyebrow tone="lagoon">Capítulo 04 / 04 · Contacto</app-eyebrow>
+      <h1 class="contacto__title">
+        ¿Tenés una idea?
+        <span class="contacto__title-italic">Contános.</span>
       </h1>
+      <p class="contacto__subtitle">
+        Diseñamos, desarrollamos y construimos experiencias digitales premium.
+      </p>
     </header>
 
+    <!-- Body — 2 columnas en desktop. -->
     <div class="contacto__body">
+      <!-- LEFT: Formulario -->
       <form
         appReveal
-        [delay]="0.18"
-        class="contacto__form glass-shell"
+        [delay]="0.1"
+        class="contacto__form"
         (submit)="$event.preventDefault()"
       >
-        <div class="contacto__form-inner glass-core">
-          <div class="contacto__form-row">
-            <label class="form-field">
-              <span class="form-field__label">Nombre</span>
-              <input
-                type="text"
-                name="name"
-                placeholder="Tu nombre"
-                class="form-field__input form-field__input--pill"
-              />
-            </label>
-            <label class="form-field">
-              <span class="form-field__label">Email</span>
-              <input
-                type="email"
-                name="email"
-                placeholder="tu@correo.com"
-                class="form-field__input form-field__input--pill"
-              />
-            </label>
-          </div>
-
-          <label class="form-field">
-            <span class="form-field__label">Asunto</span>
+        <div class="contacto__field-row">
+          <label class="field">
+            <span class="field__label">
+              Nombre
+              <span class="field__required">Obligatorio</span>
+            </span>
             <input
+              class="field__input"
               type="text"
-              name="subject"
-              placeholder="¿De qué nos querés hablar?"
-              class="form-field__input form-field__input--pill"
+              name="name"
+              placeholder="Tu nombre"
+              autocomplete="name"
+              required
             />
+            <span class="field__line" aria-hidden="true"></span>
           </label>
-
-          <label class="form-field form-field--message">
-            <span class="form-field__label">Mensaje</span>
-            <textarea
-              name="message"
-              rows="3"
-              placeholder="Escribinos lo que necesités. Sin formalidades."
-              class="form-field__input form-field__input--block"
-            ></textarea>
+          <label class="field">
+            <span class="field__label">
+              Teléfono
+              <span class="field__required">Obligatorio</span>
+            </span>
+            <input
+              class="field__input"
+              type="tel"
+              name="phone"
+              placeholder="+506 ..."
+              autocomplete="tel"
+              required
+            />
+            <span class="field__line" aria-hidden="true"></span>
           </label>
-
-          <div class="contacto__form-footer">
-            <p class="contacto__form-legal">
-              Al enviar, aceptás nuestra política de privacidad.
-            </p>
-            <button type="submit" class="contacto__submit glass-bubble">
-              <span class="contacto__submit-label">Enviar mensaje</span>
-              <span class="contacto__submit-icon glass-bubble-icon">
-                <ng-icon name="phosphorPaperPlaneTiltBold" size="14" />
-              </span>
-            </button>
-          </div>
         </div>
+
+        <div class="contacto__field-row">
+          <label class="field">
+            <span class="field__label">
+              Empresa
+              <span class="field__required field__required--soft">Opcional</span>
+            </span>
+            <input
+              class="field__input"
+              type="text"
+              name="company"
+              placeholder="Tu empresa"
+              autocomplete="organization"
+            />
+            <span class="field__line" aria-hidden="true"></span>
+          </label>
+          <label class="field">
+            <span class="field__label">
+              Email
+              <span class="field__required">Obligatorio</span>
+            </span>
+            <input
+              class="field__input"
+              type="email"
+              name="email"
+              placeholder="tu@correo.com"
+              autocomplete="email"
+              required
+            />
+            <span class="field__line" aria-hidden="true"></span>
+          </label>
+        </div>
+
+        <label class="field field--message">
+          <span class="field__label">
+            Cuéntanos sobre tu proyecto
+            <span class="field__required">Obligatorio</span>
+          </span>
+          <textarea
+            class="field__input field__input--textarea"
+            name="message"
+            rows="4"
+            placeholder="Algo sobre tu gran idea…"
+            required
+          ></textarea>
+          <span class="field__line" aria-hidden="true"></span>
+        </label>
+
+        <!-- Submit pill — full-width con gradient lagoon + halo en hover.
+             Diseñado como acción protagonista (versus el "Enviar mensaje"
+             inline editorial de la versión anterior). -->
+        <button type="submit" class="contacto__submit">
+          <span class="contacto__submit-glow" aria-hidden="true"></span>
+          <span class="contacto__submit-label">Enviar solicitud</span>
+          <span class="contacto__submit-arrow" aria-hidden="true">
+            <ng-icon name="phosphorArrowRightBold" size="16" />
+          </span>
+        </button>
       </form>
 
-      <aside appReveal [delay]="0.22" class="contacto__info">
-        <a href="mailto:hola@aquarium.cr" class="info-card glass-shell">
-          <div class="info-card__inner glass-core">
-            <span class="info-card__icon" data-accent="lagoon">
-              <ng-icon name="phosphorEnvelopeSimpleDuotone" size="22" />
-            </span>
-            <div class="info-card__copy">
-              <span class="info-card__label">Email</span>
-              <span class="info-card__value">hola&#64;aquarium.cr</span>
-            </div>
+      <!-- RIGHT: Chip selectors — servicios + presupuesto (single-select). -->
+      <aside appReveal [delay]="0.2" class="contacto__selectors">
+        <fieldset class="selector">
+          <legend class="selector__title">Estoy interesado en…</legend>
+          <div class="selector__chips" role="radiogroup" aria-label="Servicios">
+            @for (service of services; track service) {
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="selectedService() === service"
+                class="chip"
+                [class.chip--selected]="selectedService() === service"
+                (click)="selectService(service)"
+              >
+                {{ service }}
+              </button>
+            }
           </div>
-        </a>
+        </fieldset>
 
-        <a href="tel:+50622871992" class="info-card glass-shell">
-          <div class="info-card__inner glass-core">
-            <span class="info-card__icon" data-accent="bioluminescent">
-              <ng-icon name="phosphorPhoneDuotone" size="22" />
-            </span>
-            <div class="info-card__copy">
-              <span class="info-card__label">Teléfono</span>
-              <span class="info-card__value">+506 2287 1992</span>
-            </div>
+        <fieldset class="selector">
+          <legend class="selector__title">Presupuesto del proyecto (USD)</legend>
+          <div class="selector__chips" role="radiogroup" aria-label="Presupuesto">
+            @for (budget of budgets; track budget) {
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="selectedBudget() === budget"
+                class="chip chip--budget"
+                [class.chip--selected]="selectedBudget() === budget"
+                (click)="selectBudget(budget)"
+              >
+                {{ budget }}
+              </button>
+            }
           </div>
-        </a>
+        </fieldset>
 
-        <div class="info-card glass-shell">
-          <div class="info-card__inner glass-core">
-            <span class="info-card__icon" data-accent="kelp">
-              <ng-icon name="phosphorMapPinDuotone" size="22" />
-            </span>
-            <div class="info-card__copy">
-              <span class="info-card__label">Dirección</span>
-              <span class="info-card__value">Paseo Marítimo 1492 · San José</span>
-            </div>
-          </div>
-        </div>
+        <!-- Trust signal pequeño bajo los selectors. -->
+        <p class="contacto__trust">
+          <span class="contacto__trust-dot" aria-hidden="true"></span>
+          Respondemos en 24 h · Lunes a viernes
+        </p>
       </aside>
     </div>
   </div>
