@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-import { conservationStats, species } from '@cas-ui-shared/data/data';
 import { ImgFadeDirective } from '@cas-ui-shared/directives/img-fade/img-fade.directive';
 import { PageHeader } from '@cas-ui-shared/components/page-header/page-header';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
@@ -12,8 +11,6 @@ interface Program {
   body: string;
   image: string;
 }
-
-const FILTERS = ['Todas', 'Pelágicas', 'Bentónicas', 'Abisales', 'Costeras'] as const;
 
 const PROGRAMS: ReadonlyArray<Program> = [
   {
@@ -47,9 +44,10 @@ const PROGRAMS: ReadonlyArray<Program> = [
 ];
 
 /**
- * GaleriaPage — catálogo vivo de las 1.247 especies + bridge editorial a
- * conservación + stats de impacto + 4 programas activos. Replica las cuatro
- * secciones del `/especies` original sin perder un solo data point.
+ * GaleriaPage — solo header + 4 programas activos. Antes tenía 4 segmentos
+ * (catálogo de especies, bridge editorial, stats de impacto, programas);
+ * los 3 primeros se quitaron por decisión de producto. Si vuelven a hacer
+ * falta, el git history conserva la versión anterior.
  */
 @Component({
   selector: 'app-especies-page',
@@ -59,27 +57,5 @@ const PROGRAMS: ReadonlyArray<Program> = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EspeciesPage {
-  protected readonly species = species;
-  protected readonly stats = conservationStats;
-  protected readonly filters = FILTERS;
   protected readonly programs = PROGRAMS;
-
-  protected statusToneClass(status: string): string {
-    switch (status) {
-      case 'Estable':
-        return 'is-stable';
-      case 'Vulnerable':
-        return 'is-vulnerable';
-      case 'En peligro':
-        return 'is-endangered';
-      case 'Crítico':
-        return 'is-critical';
-      default:
-        return 'is-stable';
-    }
-  }
-
-  protected imagePosition(sp: (typeof species)[number]): string {
-    return sp.imagePosition ?? 'center 38%';
-  }
 }
