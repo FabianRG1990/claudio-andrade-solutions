@@ -42,58 +42,63 @@
 }
 
 // ─── Brand: emblema + wordmark ───────────────────────────────────────────────
-// IMPORTANT: SIN animation. La animación de entrada con `animation-fill-mode:
-// both` + delay de 0.3s dejaba la marca con `opacity: 0` durante esos primeros
-// 300ms — el usuario lo percibía como "el logo desaparece" cada vez que el
-// browser re-aplicaba estilos (HMR del dev-server, toggle de DevTools device
-// mode, hot-reload de CSS, navegación SPA con re-mount de animation). Se
-// quitó del todo: la marca debe estar visible desde el primer paint, sin
-// excepciones. La aparición sutil del nav ya está cubierta por el contraste
-// natural del cristal sobre el océano.
+// IMPORTANT: SIN animation de entrada. La animación de entrada con
+// `animation-fill-mode: both` + delay de 0.3s dejaba la marca con
+// `opacity: 0` durante esos primeros 300ms — el usuario lo percibía como
+// "el logo desaparece" cada vez que el browser re-aplicaba estilos. Se
+// quitó del todo: la marca debe estar visible desde el primer paint.
 .floating-nav__brand {
   grid-column: 1;
   justify-self: start;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  // Cuando el wordmark se colapsa al hacer scroll, el gap también se
-  // cierra para que el emblema no quede con un "hueco" a su derecha.
-  transition: gap 500ms var(--ease-fluid);
+  // El gap se cierra junto con el wordmark al scrollear — sin esto, el
+  // emblema queda con un "hueco" del tamaño del gap a su derecha cuando
+  // el wordmark colapsa.
+  transition: gap 600ms var(--ease-fluid);
 
   .floating-nav.is-scrolled & {
     gap: 0;
   }
 }
 
-// Wordmark: visible al tope, se oculta al hacer scroll para evitar que
-// se solape con el eyebrow / título de la página interna que aparece a
-// la misma altura ("ESPECIES BAJO CUIDADO", "CONTACTO · ESTAMOS AQUÍ",
-// etc.). El emblema queda como anchor visual; al volver al tope, el
-// wordmark vuelve. Antes era siempre visible — la palabra "Aquarium" se
-// pisaba con las letras del eyebrow al hacer scroll en mobile.
-//
-// Anim: opacity (fade) + max-width (colapso de ancho real) para que la
-// columna 1 del grid se ajuste y el emblema se mueva hacia el extremo.
-// `overflow: hidden` recorta el texto mientras `max-width` baja a 0.
+// Wordmark: visible al tope, se esconde con transición fluida al scrollear.
+// Combinación opacity (fade) + max-width (colapso real del ancho) +
+// transform (sutil deslizamiento horizontal) — la curva `ease-fluid`
+// (cubic-bezier 0.32, 0.72, 0, 1) da la sensación de movimiento "asentado"
+// como una puerta que cierra suave, sin rebote. Al volver al tope la
+// transición se reproduce inversa.
 .floating-nav__brand-wordmark {
   display: inline-block;
   font-family: var(--font-display);
-  font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.375rem);
+  font-size: clamp(0.875rem, 0.7rem + 0.7vw, 1.25rem);
   font-weight: 500;
   line-height: 1;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
   white-space: nowrap;
   overflow: hidden;
-  max-width: 12ch;
+  max-width: 26ch;
   opacity: 1;
+  transform: translateX(0);
+  transform-origin: left center;
   transition:
-    opacity 350ms var(--ease-fluid),
-    max-width 500ms var(--ease-fluid);
+    opacity 450ms var(--ease-fluid),
+    max-width 600ms var(--ease-fluid),
+    transform 600ms var(--ease-fluid);
 
   .floating-nav.is-scrolled & {
     opacity: 0;
     max-width: 0;
+    transform: translateX(-0.5rem);
+  }
+
+  // En phones chicos donde el espacio es premium, ocultamos el wordmark
+  // (queda solo el emblema como ancla visual) — el burger ya identifica
+  // la app y sumar 26ch de texto rompía el layout.
+  @media (max-width: 479.98px) {
+    display: none;
   }
 }
 

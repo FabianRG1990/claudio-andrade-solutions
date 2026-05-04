@@ -10,7 +10,18 @@
       content="Claudio Andrade Solutions es un instituto vivo dedicado a la conservación marina, la divulgación científica y la experiencia inmersiva con las criaturas más extraordinarias del océano."
     />
     <meta name="theme-color" content="#06091A" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!-- Favicon — el lobo de la marca, multi-tamaño.
+         - favicon.ico (16/32/48 multi-frame): default que el browser pide
+           sin que se lo digamos. Crítico que sea válido o el tab queda con
+           el ícono genérico.
+         - PNG sized 32 + 192: browsers modernos los prefieren si los ofrecemos.
+         - apple-touch-icon 192: iOS al guardar a home screen.
+         La versión 2.3MB original (`/logo/logo.png`) la dejamos para el nav
+         y page-headers; el favicon usa las versiones reducidas (1-36 KB). -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo/logo-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo/logo-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/logo/logo-192.png" />
 
     <!-- Sin preload de Fraunces italic — el original tampoco la carga.
          Los spans editoriales italic se renderizan con Times New Roman
