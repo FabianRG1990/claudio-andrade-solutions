@@ -35,18 +35,18 @@ import { filter } from 'rxjs/operators';
 
 type Vec = { x: number; y: number };
 
-// Tintes — los peces se renderizan con `globalCompositeOperation = 'screen'`
-// (ver render()) que SUMA luminancia sobre el bg sin importar el hue del
-// fondo. Eso hace que cada silueta sea garantizadamente más brillante que
-// `#06091A` independientemente del color que el bg tenga en el futuro —
-// resolvemos el problema raíz de calibrar alphas por luminancia perceptual.
-// Las alphas siguen modulando "qué tan brillante" pero nunca "se hunde".
+// Tintes — los peces leen como siluetas atmosféricas casi fundidas con
+// el agua oscura (estética original Acuario). Compositing normal (sin
+// `screen` blend, que multiplicaba la presencia y los volvía protagonistas).
+// Alphas calibrados al punto intermedio: ~2× los originales (0.06-0.11),
+// suficiente para que el ojo los registre sobre `#06091A` (navy puro,
+// sin hue-contrast disponible) pero por debajo del umbral de "fish loud".
 const TINTS: ReadonlyArray<{ body: string; tail: string }> = [
-  { body: 'rgba(127, 227, 214, 0.55)', tail: 'rgba(94, 196, 209, 0.40)' },
-  { body: 'rgba(180, 205, 215, 0.45)', tail: 'rgba(140, 165, 180, 0.32)' },
-  { body: 'rgba(94, 196, 209, 0.55)', tail: 'rgba(140, 175, 155, 0.40)' },
-  { body: 'rgba(160, 195, 175, 0.50)', tail: 'rgba(115, 150, 135, 0.38)' },
-  { body: 'rgba(140, 175, 200, 0.50)', tail: 'rgba(105, 140, 170, 0.36)' },
+  { body: 'rgba(127, 227, 214, 0.16)', tail: 'rgba(94, 196, 209, 0.11)' },
+  { body: 'rgba(180, 205, 215, 0.13)', tail: 'rgba(140, 165, 180, 0.09)' },
+  { body: 'rgba(94, 196, 209, 0.15)', tail: 'rgba(140, 175, 155, 0.11)' },
+  { body: 'rgba(160, 195, 175, 0.14)', tail: 'rgba(115, 150, 135, 0.10)' },
+  { body: 'rgba(140, 175, 200, 0.13)', tail: 'rgba(105, 140, 170, 0.09)' },
 ];
 
 class ShadowFish {
@@ -72,7 +72,7 @@ class ShadowFish {
       x: start.x - i * this.segLen,
       y: start.y,
     }));
-    this.baseAlpha = 0.7 + (1 - depth) * 0.3;
+    this.baseAlpha = 0.5 + (1 - depth) * 0.35;
     this.speed = 0.45 + (1 - depth) * 0.45;
     this.blurAmount = 0.8 + depth * 1.8;
     this.tint = TINTS[Math.floor(Math.random() * TINTS.length)];
@@ -204,11 +204,6 @@ class ShadowFish {
     };
 
     ctx.save();
-    // `screen` blending: result = 1 - (1-bg)*(1-fish). Garantiza que el
-    // resultado SIEMPRE es ≥ bg en cada canal — los peces no pueden hundirse
-    // contra el bg sin importar cuál sea su luminancia. Esto reemplaza la
-    // calibración por luminancia perceptual que falló dos veces.
-    ctx.globalCompositeOperation = 'screen';
     ctx.globalAlpha = this.baseAlpha;
 
     // Tail (caudal fan)
@@ -262,7 +257,7 @@ class Mote {
     this.vy = -3 - Math.random() * 7;
     this.drift = (Math.random() - 0.5) * 0.5;
     this.phase = Math.random() * Math.PI * 2;
-    this.alpha = 0.25 + Math.random() * 0.35;
+    this.alpha = 0.07 + Math.random() * 0.10;
   }
 
   update(dt: number, w: number, h: number): void {
@@ -276,15 +271,10 @@ class Mote {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    ctx.save();
-    // `screen` blend igual que ShadowFish — plancton brilla aditivamente
-    // sobre el bg sin depender de su hue.
-    ctx.globalCompositeOperation = 'screen';
     ctx.fillStyle = `rgba(127, 227, 214, ${this.alpha})`;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
 }
 
