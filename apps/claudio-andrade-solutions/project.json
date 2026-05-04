@@ -1,0 +1,85 @@
+{
+  "name": "claudio-andrade-solutions",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/claudio-andrade-solutions/src",
+  "tags": ["scope:claudio-andrade-solutions"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/claudio-andrade-solutions",
+        "browser": "apps/claudio-andrade-solutions/src/main.ts",
+        "tsConfig": "apps/claudio-andrade-solutions/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "stylePreprocessorOptions": {
+          "includePaths": ["libs/claudio-andrade-solutions/frontend/shared/src/lib/styles"]
+        },
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/claudio-andrade-solutions/public"
+          }
+        ],
+        "styles": ["apps/claudio-andrade-solutions/src/styles.scss"],
+        "server": "apps/claudio-andrade-solutions/src/main.server.ts",
+        "outputMode": "static",
+        "prerender": true
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "1mb",
+              "maximumError": "1.5mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "18kb",
+              "maximumError": "24kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "options": {
+        "port": 4200
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "claudio-andrade-solutions:build:production"
+        },
+        "development": {
+          "buildTarget": "claudio-andrade-solutions:build:development"
+        }
+      },
+      "defaultConfiguration": "development"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "claudio-andrade-solutions:build",
+        "port": 4200,
+        "staticFilePath": "dist/apps/claudio-andrade-solutions/browser",
+        "spa": true
+      }
+    }
+  }
+}

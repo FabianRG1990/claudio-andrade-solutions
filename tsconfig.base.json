@@ -15,14 +15,14 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@acuario-ui-shared": ["./libs/acuario/frontend/shared/src/index.ts"],
-      "@acuario-ui-shared/*": ["./libs/acuario/frontend/shared/src/lib/*"],
-      "@acuario-ui-home": ["./libs/acuario/frontend/home/src/index.ts"],
-      "@acuario-ui-exhibiciones": [
-        "./libs/acuario/frontend/exhibiciones/src/index.ts"
+      "@cas-ui-shared": ["./libs/claudio-andrade-solutions/frontend/shared/src/index.ts"],
+      "@cas-ui-shared/*": ["./libs/claudio-andrade-solutions/frontend/shared/src/lib/*"],
+      "@cas-ui-home": ["./libs/claudio-andrade-solutions/frontend/home/src/index.ts"],
+      "@cas-ui-exhibiciones": [
+        "./libs/claudio-andrade-solutions/frontend/exhibiciones/src/index.ts"
       ],
-      "@acuario-ui-especies": ["./libs/acuario/frontend/especies/src/index.ts"],
-      "@acuario-ui-contacto": ["./libs/acuario/frontend/contacto/src/index.ts"]
+      "@cas-ui-especies": ["./libs/claudio-andrade-solutions/frontend/especies/src/index.ts"],
+      "@cas-ui-contacto": ["./libs/claudio-andrade-solutions/frontend/contacto/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

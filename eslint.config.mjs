@@ -25,8 +25,8 @@ export default [
               onlyDependOnLibsWithTags: ['scope:shared'],
             },
             {
-              sourceTag: 'scope:acuario',
-              onlyDependOnLibsWithTags: ['scope:acuario', 'scope:shared'],
+              sourceTag: 'scope:claudio-andrade-solutions',
+              onlyDependOnLibsWithTags: ['scope:claudio-andrade-solutions', 'scope:shared'],
             },
           ],
         },

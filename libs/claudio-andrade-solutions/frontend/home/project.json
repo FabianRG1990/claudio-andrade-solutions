@@ -1,0 +1,13 @@
+{
+  "name": "cas-ui-home",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/claudio-andrade-solutions/frontend/home/src",
+  "prefix": "app",
+  "projectType": "library",
+  "tags": ["scope:claudio-andrade-solutions"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

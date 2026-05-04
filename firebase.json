@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist/apps/acuario/browser",
+    "public": "dist/apps/claudio-andrade-solutions/browser",
     "ignore": [
       "firebase.json",
       "**/.*",
