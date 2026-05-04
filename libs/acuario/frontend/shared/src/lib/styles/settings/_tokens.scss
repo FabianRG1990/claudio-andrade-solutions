@@ -7,10 +7,10 @@
 
 :root {
   // ---- Paleta oceánica -----------------------------------------------------
-  --abyss: 6 24 38;            // #061826 — abismo
-  --ink: 11 34 53;             // #0B2235 — tinta
-  --tide: 16 51 73;            // #103349 — marea
-  --shoal: 27 71 103;          // #1B4767 — banco
+  --abyss: 6 9 26;             // #06091A — abismo
+  --ink: 10 13 38;             // #0A0D26 — tinta
+  --tide: 15 19 56;            // #0F1338 — marea
+  --shoal: 22 30 80;           // #161E50 — banco
   --foam: 245 241 232;         // #F5F1E8 — espuma
   --sand: 232 220 196;         // #E8DCC4 — arena
   --dune: 200 184 150;         // #C8B896 — duna
@@ -55,8 +55,8 @@
   --radius-squircle-sm: 1.25rem;
 
   // ---- Sombras ------------------------------------------------------------
-  --shadow-diffusion: 0 30px 80px -30px rgb(6 24 38 / 0.45),
-    0 8px 24px -12px rgb(6 24 38 / 0.25);
+  --shadow-diffusion: 0 30px 80px -30px rgb(6 9 26 / 0.45),
+    0 8px 24px -12px rgb(6 9 26 / 0.25);
   --shadow-inner-light: inset 0 1px 0 rgb(245 241 232 / 0.08);
   --shadow-ring: inset 0 0 0 1px rgb(245 241 232 / 0.07);
 

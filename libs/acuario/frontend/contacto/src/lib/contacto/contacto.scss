@@ -19,7 +19,7 @@
   background-image:
     radial-gradient(80% 60% at 25% 0%, rgb(94 196 209 / 0.07), transparent 70%),
     radial-gradient(60% 50% at 90% 25%, rgb(127 227 214 / 0.04), transparent 75%),
-    linear-gradient(180deg, #061826 0%, #07203a 40%, #061f37 70%, #061826 100%);
+    linear-gradient(180deg, #06091A 0%, #080D24 40%, #070C22 70%, #06091A 100%);
 
   // Mobile: layout natural, scroll permitido, padding holgado para el nav
   // fijo de arriba.
@@ -36,7 +36,7 @@
     padding-block: 6.5rem 2.5rem;
   }
 
-  // Fade inferior — disuelve el mesh (con su tinte kelp) en `#061826`
+  // Fade inferior — disuelve el mesh (con su tinte kelp) en `#06091A`
   // puro antes de tocar el footer (mismo color del `--abyss`). Sin esto
   // se ve un corte horizontal entre el verde tenue del contacto y el
   // abyss del footer. El gradient acumula opacidad rápido y aterriza
@@ -53,9 +53,9 @@
     background: linear-gradient(
       180deg,
       transparent 0%,
-      rgb(6 24 38 / 0.45) 40%,
-      rgb(6 24 38 / 0.85) 75%,
-      #061826 100%
+      rgb(6 9 26 / 0.45) 40%,
+      rgb(6 9 26 / 0.85) 75%,
+      #06091A 100%
     );
   }
 }

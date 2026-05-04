@@ -44,7 +44,7 @@
 // la siguiente sección, así no roba espacio visual al primer bloque (en
 // mobile el depth-transition está oculto y el header empalma directo con
 // el contenido). La curva acumula opacidad en la primera mitad y aterriza
-// en `#061826` opaco — exactamente el color del body — para que el
+// en `#06091A` opaco — exactamente el color del body — para que el
 // empalme con la siguiente sección sea un único color continuo.
 .page-header__fade {
   pointer-events: none;
@@ -56,10 +56,10 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgb(6 24 38 / 0.35) 25%,
-    rgb(6 24 38 / 0.7) 55%,
-    rgb(6 24 38 / 0.92) 80%,
-    #061826 100%
+    rgb(6 9 26 / 0.35) 25%,
+    rgb(6 9 26 / 0.7) 55%,
+    rgb(6 9 26 / 0.92) 80%,
+    #06091A 100%
   );
 }
 
