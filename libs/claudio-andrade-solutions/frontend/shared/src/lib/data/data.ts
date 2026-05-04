@@ -64,7 +64,7 @@ export const exhibits: Exhibit[] = [
     species: 18,
     liters: 'Multi-modelo',
     description:
-      'Agentes Claude, RAG sobre documentación interna, asistentes de soporte, generación de contenido y automatización de tareas de soporte. La IA pegada a tu proceso real.',
+      'Agentes Claude, RAG sobre documentación interna, asistentes de soporte, generación de contenido y automatización de tareas de soporte. IA integrada a tu proceso real.',
     accent: 'bioluminescent',
     image: '/biomas/arrecife-de-coral.png',
   },
@@ -185,7 +185,7 @@ export const species: Species[] = [
   {
     slug: 'apps-walmart',
     common: 'Apps proveedores Walmart',
-    scientific: 'Retail Link, OTIF, scorecards y forecast assist sin pelearle al sistema.',
+    scientific: 'Retail Link, OTIF, scorecards y forecast assist sin fricción con el sistema.',
     habitat: 'Vertical · Retail',
     status: 'En peligro',
     depth: '6 — 12 semanas',

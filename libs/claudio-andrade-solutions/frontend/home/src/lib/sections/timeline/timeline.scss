@@ -1,6 +1,13 @@
+// =============================================================================
+// Timeline — sección de cierre del home: trayectoria + stack + por qué.
+// Cuatro zonas verticales: header editorial → stats hero → hitos (timeline
+// con dot+line) → tech stack (cards premium con halo de color por accent).
+// =============================================================================
+
 .timeline {
   position: relative;
   padding-block: 8rem;
+  border-top: 1px solid rgb(var(--foam) / 0.05);
 
   @media (min-width: 1024px) {
     padding-block: 10rem;
@@ -11,95 +18,412 @@
   margin-inline: auto;
   max-width: 80rem;
   padding-inline: var(--container-px);
-}
-
-.timeline__head {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
+  gap: 5rem;
 
   @media (min-width: 1024px) {
-    flex-direction: row;
-    align-items: flex-end;
+    gap: 7rem;
   }
 }
 
+// ─── Header editorial ────────────────────────────────────────────────────────
+// Layout 2-col en desktop: eyebrow a la izquierda, título + lead a la derecha
+// — patrón premium tipo magazine. En mobile colapsa a 1-col stack natural.
+.timeline__head {
+  display: grid;
+  gap: 2rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 0.4fr 1fr;
+    align-items: start;
+    gap: 4rem;
+  }
+}
+
+.timeline__head-eyebrow {
+  @media (min-width: 1024px) {
+    padding-top: 0.625rem; // visual baseline alignment con el título
+  }
+}
+
+.timeline__head-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .timeline__title {
-  margin-top: 1.5rem;
-  max-width: 48rem;
   text-wrap: balance;
+  max-width: 22ch;
   font-family: var(--font-display);
   font-size: var(--type-h2-lg);
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.05;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
 }
 
 .timeline__title-italic {
+  display: block;
+  margin-top: 0.25rem;
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
-  color: rgb(var(--foam) / 0.75);
+  color: rgb(var(--foam) / 0.78);
 }
 
-.timeline__meta {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.4);
-}
-
-.timeline__list {
-  list-style: none;
-  margin-top: 4rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  column-gap: 2rem;
-  row-gap: 3rem;
+.timeline__lead {
+  max-width: 56ch;
+  text-wrap: pretty;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgb(var(--foam) / 0.7);
 
   @media (min-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(3, 1fr);
+    font-size: 1.0625rem;
   }
 }
 
-.timeline__item {
-  border-top: 1px solid rgb(var(--foam) / 0.1);
-  padding-top: 1.5rem;
+// ─── Stats hero ──────────────────────────────────────────────────────────────
+// Cuatro cifras numéricas grandes. Mono font + tabular-nums para alineación
+// vertical perfecta. Border top + bottom hairline para enmarcar la zona.
+.timeline__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2.5rem 1.5rem;
+  margin: 0;
+  padding-block: 2.5rem;
+  border-top: 1px solid rgb(var(--foam) / 0.08);
+  border-bottom: 1px solid rgb(var(--foam) / 0.08);
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    padding-block: 3rem;
+  }
 }
 
-.timeline__year-row {
+.timeline__stat {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.625rem;
 }
 
-.timeline__year {
+.timeline__stat-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+  order: 2; // label DEBAJO del valor para jerarquía editorial
+}
+
+.timeline__stat-value {
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: var(--type-mono-xl);
+  font-size: clamp(2.25rem, 1.8rem + 1.6vw, 3.25rem);
+  font-weight: 400;
   line-height: 1;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
   font-variant-numeric: tabular-nums;
+  order: 1;
 }
 
-.timeline__index {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.35);
+// ─── Zona genérica (hitos + stack) ───────────────────────────────────────────
+// Layout 2-col en desktop: head editorial a la izquierda, contenido a la
+// derecha. Mismo patrón que el header de la sección — coherencia interna.
+.timeline__zone {
+  display: grid;
+  gap: 2.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 0.4fr 1fr;
+    gap: 4rem;
+    align-items: start;
+  }
+}
+
+.timeline__zone-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  @media (min-width: 1024px) {
+    position: sticky;
+    top: 8rem;
+  }
+}
+
+.timeline__zone-title {
+  text-wrap: balance;
+  max-width: 16ch;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam) / 0.92);
+
+  @media (min-width: 768px) {
+    font-size: 1.75rem;
+  }
+}
+
+// ─── Timeline list · vertical con dot+line ──────────────────────────────────
+// Línea vertical hairline a la izquierda + dot por hito. El dot tiene glow
+// lagoon para que se sienta "vivo" — cada hito es un punto en el viaje.
+.timeline__list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  // Línea de tiempo: gradient vertical hairline, intensidad mayor arriba
+  // (los hitos antiguos) y desvanece hacia abajo (futuro abierto).
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0.4375rem;
+    top: 0.625rem;
+    bottom: 0.625rem;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      rgb(var(--foam) / 0.22) 0%,
+      rgb(var(--foam) / 0.08) 100%
+    );
+  }
+}
+
+.timeline__milestone {
+  position: relative;
+  padding-left: 2.25rem;
+  padding-bottom: 2rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1.5rem;
+  align-items: baseline;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 639.98px) {
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+  }
+}
+
+// Dot del hito — con glow lagoon + border que combina con el fondo navy
+// para crear el efecto de "punto encajado en la línea".
+.timeline__milestone-marker {
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  width: 0.9375rem;
+  height: 0.9375rem;
+  border-radius: 50%;
+  background: rgb(var(--lagoon));
+  border: 3px solid rgb(var(--abyss));
+  box-shadow:
+    0 0 0 1px rgb(var(--lagoon) / 0.5),
+    0 0 14px rgb(var(--lagoon) / 0.55);
+}
+
+.timeline__year {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1.625rem;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  font-variant-numeric: tabular-nums;
+
+  @media (min-width: 768px) {
+    font-size: 1.875rem;
+  }
 }
 
 .timeline__body {
-  margin-top: 1rem;
-  max-width: 38ch;
+  margin: 0;
+  max-width: 52ch;
   text-wrap: pretty;
-  color: rgb(var(--foam) / 0.65);
-  line-height: 1.625;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: rgb(var(--foam) / 0.7);
+}
+
+// ─── Tech stack · cards premium ──────────────────────────────────────────────
+// Mismo lenguaje visual que las service-cards del capítulo 2: glass-shell +
+// glass-core, halo de color por accent en la esquina superior derecha,
+// glass-bubble-icon como protagonista. Lectura inmediata: tech + por qué.
+.timeline__stack-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.tech-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-squircle);
+  padding: 0.5rem;
+}
+
+.tech-card__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  padding: 1.5rem 1.5rem 1.625rem;
+  gap: 1rem;
+}
+
+// Halo de color por accent — copia de service-card. Un sibling absoluto en
+// la esquina superior derecha que se recorta al border-radius del glass-core.
+.tech-card__glow {
+  position: absolute;
+  top: -3rem;
+  right: -3rem;
+  width: 12rem;
+  height: 12rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(26px);
+  opacity: 0.55;
+  z-index: 0;
+  transition:
+    opacity 800ms var(--ease-fluid),
+    transform 800ms var(--ease-fluid);
+}
+
+.tech-card[data-accent='lagoon'] .tech-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--lagoon) / 0.40) 0%,
+    rgb(var(--lagoon) / 0.10) 38%,
+    transparent 72%
+  );
+}
+.tech-card[data-accent='kelp'] .tech-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--kelp) / 0.45) 0%,
+    rgb(var(--kelp) / 0.12) 38%,
+    transparent 72%
+  );
+}
+.tech-card[data-accent='coral'] .tech-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--coral) / 0.38) 0%,
+    rgb(var(--coral) / 0.10) 38%,
+    transparent 72%
+  );
+}
+.tech-card[data-accent='bioluminescent'] .tech-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--bioluminescent) / 0.38) 0%,
+    rgb(var(--bioluminescent) / 0.10) 38%,
+    transparent 72%
+  );
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tech-card:hover .tech-card__glow {
+    opacity: 0.82;
+    transform: scale(1.06);
+  }
+}
+
+// Hijos sobre el halo
+.tech-card__head,
+.tech-card__name,
+.tech-card__reason {
+  position: relative;
+  z-index: 1;
+}
+
+.tech-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.tech-card__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  color: rgb(var(--foam));
+}
+
+.tech-card__category {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+// Accent dot antes del category — vincula la card al halo cromático.
+.tech-card[data-accent] .tech-card__category::before {
+  content: '';
+  display: inline-block;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 9999px;
+  margin-right: 0.5rem;
+  vertical-align: 0.1em;
+}
+.tech-card[data-accent='lagoon'] .tech-card__category::before {
+  background: rgb(var(--lagoon));
+  box-shadow: 0 0 6px rgb(var(--lagoon) / 0.6);
+}
+.tech-card[data-accent='kelp'] .tech-card__category::before {
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 6px rgb(var(--bioluminescent) / 0.6);
+}
+.tech-card[data-accent='coral'] .tech-card__category::before {
+  background: rgb(var(--coral));
+  box-shadow: 0 0 6px rgb(var(--coral) / 0.6);
+}
+.tech-card[data-accent='bioluminescent'] .tech-card__category::before {
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 8px rgb(var(--bioluminescent) / 0.7);
+}
+
+.tech-card__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  text-wrap: balance;
+
+  @media (min-width: 768px) {
+    font-size: 1.375rem;
+  }
+}
+
+.tech-card__reason {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgb(var(--foam) / 0.7);
+  text-wrap: pretty;
 }
