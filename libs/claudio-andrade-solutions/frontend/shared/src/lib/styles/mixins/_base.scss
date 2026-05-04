@@ -41,6 +41,11 @@ body {
   background: #06091A;
   color: rgb(var(--foam));
   font-family: var(--font-sans);
+  // Roboto Medium (500) como peso default — el usuario pidió "Roboto Medium"
+  // explícitamente. Los componentes que sobreescriben con `font-weight: 700`
+  // o `font-weight: 300` siguen funcionando (Roboto carga 300/400/500 +
+  // italic; los pesos no declarados los sintetiza el browser).
+  font-weight: 500;
   font-feature-settings: 'ss01', 'cv11';
   letter-spacing: 0.015em;
   line-height: 1.5;

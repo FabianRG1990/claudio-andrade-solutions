@@ -71,7 +71,12 @@
 // transición se reproduce inversa.
 .floating-nav__brand-wordmark {
   display: inline-block;
-  font-family: var(--font-display);
+  // Excepción tipográfica: el wordmark de la marca conserva Times (serif)
+  // mientras el resto del sitio usa Roboto Medium. Decisión del usuario
+  // — la firma editorial de "Claudio Andrade Solutions" debe leerse con
+  // tipografía distinta al UI para que se sienta como marca, no como
+  // título de sección.
+  font-family: var(--font-times);
   font-size: clamp(0.875rem, 0.7rem + 0.7vw, 1.25rem);
   font-weight: 500;
   line-height: 1;

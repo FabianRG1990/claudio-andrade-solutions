@@ -173,13 +173,22 @@
 
 .hero__title {
   margin-top: 2rem;
-  max-width: 16ch;
+  // 20ch (antes 16ch) — Roboto Medium tiene "0" más ancho que Times,
+  // así que `1ch` mide más píxeles. Pero el ancho del texto crece
+  // proporcionalmente todavía más, así que necesitamos más ch para
+  // que "en lo profundo." (15 chars) quepa en una sola línea.
+  // `text-wrap: balance` distribuye los segmentos: "Inmersión" arriba,
+  // "en lo profundo." abajo — el `<br>` del HTML fuerza el primer
+  // corte, balance evita que el segundo segmento se rompa en 2.
+  max-width: 20ch;
   text-wrap: balance;
   font-family: var(--font-display);
-  // Fluido 44→112px sin steps. Una sola línea reemplaza 3 declaraciones.
-  font-size: var(--type-h1-hero);
+  // Fluido 36→88px (antes 44→112px). Roboto es más ancho que Times,
+  // así que bajamos ~20% el tope para que "en lo profundo." entre en
+  // una sola línea sin saturar el container ni que se sienta apretado.
+  font-size: clamp(2.25rem, 1.3rem + 4vw, 5.5rem);
   font-weight: 500;
-  line-height: 0.92;
+  line-height: 0.95;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
 }

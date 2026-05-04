@@ -21,21 +21,31 @@
   --urchin: 58 42 77;          // #3A2A4D — erizo
 
   // ---- Tipografía ----------------------------------------------------------
-  // Principal: Times New Roman en TODO el contenido textual + botones + nav.
-  // Secundaria editorial: Fraunces (con fallback a Times escalado para italic).
+  // Principal: Roboto Medium (500) en TODO el contenido textual — títulos,
+  // subtítulos, body, botones, eyebrows, links, italics editoriales.
+  // Excepciones que conservan Times:
+  //   • `--font-mono`: usado por números grandes / stats (`.stat-cell__value`,
+  //     `.timeline__year`, etc.). Decisión del usuario: los números mantienen
+  //     su tipo editorial actual.
+  //   • `.floating-nav__brand-wordmark`: override directo a `--font-times`
+  //     en floating-nav.scss — la marca "Claudio Andrade Solutions" del nav
+  //     mantiene su tipo serif.
   --font-times: 'Times New Roman', Times, serif;
-  // Cadena editorial — replica el output de `next/font/google` Fraunces:
-  // Fraunces (solo normal declarada) → Fraunces Fallback (Times local con
-  // size-adjust 115.45%) → fallbacks crudos. Cuando se pide italic, el
-  // navegador salta Fraunces (no tiene italic) y aterriza en el Fallback,
-  // produciendo Times italic ~15% más grande (idéntico al original 6001).
+  // Roboto se carga vía Google Fonts CDN en index.html (latin subset, weights
+  // 300/400/500 normal+italic). El fallback `'Helvetica Neue', Arial, sans-serif`
+  // cubre el flash mientras descarga (FOUT) y el caso degradado sin red.
+  --font-roboto: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  // Fraunces se mantiene declarada por compatibilidad — `--font-editorial`
+  // ahora apunta a Roboto, así no se renderiza salvo que un componente la
+  // pida directo (no es el caso). La @font-face de _typography.scss queda
+  // sin uso pero no la borro hasta confirmar el cambio.
   --font-fraunces: 'Fraunces', 'Fraunces Fallback', Georgia, 'Times New Roman', serif;
 
-  --font-display: var(--font-times);
-  --font-sans: var(--font-times);
+  --font-display: var(--font-roboto);
+  --font-sans: var(--font-roboto);
   --font-mono: var(--font-times);
-  --font-button: var(--font-times);
-  --font-editorial: var(--font-fraunces);
+  --font-button: var(--font-roboto);
+  --font-editorial: var(--font-roboto);
 
   // ---- Tracking (letter-spacing) ------------------------------------------
   --tracking-tighter: -0.005em;
