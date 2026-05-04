@@ -1,16 +1,31 @@
 // =============================================================================
-// data — port directo de `lib/data.ts` del proyecto Next. Mismas estructuras,
-// mismos contenidos, mismas tonalidades de accent. Las imágenes apuntan a los
-// assets ya copiados en `apps/claudio-andrade-solutions/public/`.
+// data — fuente única de contenido del sitio.
+//
+// Antes este módulo describía un acuario (especies, biomas, conservación).
+// Hoy describe Claudio Andrade Solutions: una consultora tecnológica que
+// vende soluciones a medida — auditorías, sistemas, IA, automatización,
+// landing pages premium, integraciones con el ecosistema Walmart.
+//
+// Los nombres de los tipos (`Exhibit`, `Species`, `ConservationStat`,
+// `Ticket`) se conservan por inercia con los componentes existentes; lo
+// que cambia es el contenido y el campo `image` apunta a las assets viejas
+// hasta que las reemplacemos. Los componentes consumen `name`, `description`,
+// `accent`, `status`, etc. — la semántica visual se mantiene; solo la
+// narrativa cambia de "ecosistemas marinos" a "soluciones tecnológicas".
 // =============================================================================
 
+// ---- Productos ------------------------------------------------------------
+// `Exhibit` se reutiliza como tipo "Producto/Solución". Cada card tiene un
+// nombre, una categoría (`zone`), un timeline estimado (`depth`), un par de
+// métricas (`species` = entregables, `liters` = cobertura) y una descripción
+// corta. El `accent` controla los tintes en la UI existente.
 export type Exhibit = {
   slug: string;
   name: string;
-  zone: string;
-  depth: string;
-  species: number;
-  liters: string;
+  zone: string;        // categoría (Auditoría, Sistema, IA, etc.)
+  depth: string;       // timeline estimado (2-4 sem, 12+ sem...)
+  species: number;     // entregables / módulos
+  liters: string;      // cobertura / escala
   description: string;
   accent: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
   image: string;
@@ -18,79 +33,92 @@ export type Exhibit = {
 
 export const exhibits: Exhibit[] = [
   {
-    slug: 'abismo-pacifico',
-    name: 'Abismo Pacífico',
-    zone: 'Nivel −2',
-    depth: '1.840 m',
-    species: 47,
-    liters: '2.4 M',
+    slug: 'auditoria-tecnologica',
+    name: 'Auditoría tecnológica',
+    zone: 'Discovery',
+    depth: '2 — 4 semanas',
+    species: 14,
+    liters: '360°',
     description:
-      'Un descenso al océano abisal donde la luz desaparece y los organismos generan su propia bioluminiscencia.',
-    accent: 'bioluminescent',
+      'Diagnóstico completo del stack, los flujos y los procesos. Detectamos qué automatizar, qué reescribir y qué dejar quieto — con un mapa accionable y prioridades claras.',
+    accent: 'lagoon',
     image: '/biomas/abismo-pacifico.png',
   },
   {
-    slug: 'bosque-de-kelp',
-    name: 'Bosque de Kelp',
-    zone: 'Nivel 0',
-    depth: '12 m',
-    species: 86,
-    liters: '1.1 M',
+    slug: 'sistemas-a-medida',
+    name: 'Sistemas a medida',
+    zone: 'Build',
+    depth: '12 — 24 semanas',
+    species: 32,
+    liters: '∞',
     description:
-      'Una catedral viva de algas gigantes, refugio de tiburones leopardo, garibaldis y nutrias marinas.',
+      'Plataformas internas, ERPs ligeros, dashboards de operaciones. Angular + Nx + Firebase, monorepo escalable, deploy continuo. Construidos para crecer con la empresa.',
     accent: 'kelp',
     image: '/biomas/bosque-de-kelp.png',
   },
   {
-    slug: 'arrecife-coral',
-    name: 'Arrecife de Coral',
-    zone: 'Nivel +1',
-    depth: '4 m',
-    species: 312,
-    liters: '780 K',
+    slug: 'integraciones-ia',
+    name: 'Integraciones de IA',
+    zone: 'Inteligencia',
+    depth: '4 — 10 semanas',
+    species: 18,
+    liters: 'Multi-modelo',
     description:
-      'Un Indo-Pacífico íntegro: 312 especies coexistiendo en una geometría imposible de luz, color y simbiosis.',
-    accent: 'coral',
+      'Agentes Claude, RAG sobre documentación interna, asistentes de soporte, generación de contenido y automatización de tickets. La IA pegada a tu proceso real.',
+    accent: 'bioluminescent',
     image: '/biomas/arrecife-de-coral.png',
   },
   {
-    slug: 'tunel-azul',
-    name: 'Túnel Azul',
-    zone: 'Nivel 0',
-    depth: '9 m',
-    species: 24,
-    liters: '3.6 M',
+    slug: 'apps-walmart',
+    name: 'Apps proveedores Walmart',
+    zone: 'Vertical',
+    depth: '6 — 12 semanas',
+    species: 22,
+    liters: 'Retail Link',
     description:
-      'Sesenta metros de tránsito bajo el océano abierto. Tiburones tigre de arena, mantarrayas y atunes patrullando en silencio.',
-    accent: 'lagoon',
+      'Aplicaciones específicas para proveedores: integración con Retail Link, OTIF, scorecards, forecast assist y conciliación automática. Built once, escala por SKU.',
+    accent: 'coral',
     image: '/biomas/tunel-azul.png',
   },
   {
-    slug: 'manglar',
-    name: 'Manglar',
-    zone: 'Nivel +1',
-    depth: '1.5 m',
-    species: 58,
-    liters: '320 K',
+    slug: 'landing-premium',
+    name: 'Landing premium',
+    zone: 'Brand',
+    depth: '3 — 6 semanas',
+    species: 9,
+    liters: 'Lighthouse 95+',
     description:
-      'Frontera entre tierra y mar. Un ecosistema híbrido donde se reproduce la mayoría de la vida marina costera.',
-    accent: 'kelp',
+      'Páginas de marca con presupuesto editorial — animaciones canvas, glass-morphism real, performance auditado. La que estás viendo es de las nuestras.',
+    accent: 'lagoon',
     image: '/biomas/manglar.png',
   },
   {
-    slug: 'polo-sur',
-    name: 'Polo Sur',
-    zone: 'Nivel −1',
-    depth: '−1.8 °C',
-    species: 19,
-    liters: '640 K',
+    slug: 'automatizacion-procesos',
+    name: 'Automatización de procesos',
+    zone: 'Operaciones',
+    depth: '4 — 8 semanas',
+    species: 16,
+    liters: 'n8n · Zapier · Make',
     description:
-      'Recreación criogénica del mar de Ross con pingüinos emperador, focas de Weddell y peces dragón antárticos.',
-    accent: 'bioluminescent',
+      'Pipelines que conectan tus herramientas — ETL ligeros, sync entre sistemas, alertas inteligentes. Reducimos trabajo manual sin reemplazar lo que ya funciona.',
+    accent: 'kelp',
     image: '/biomas/polo-sur.png',
   },
 ];
 
+// ---- Servicios (carrusel del home) ----------------------------------------
+// `Species` se reutiliza como "Service" dentro del marquee del home: el
+// componente ya consume `common`, `scientific`, `habitat`, `status`, `depth`.
+// Re-mapeo conceptual:
+//   common      → nombre del servicio
+//   scientific  → tagline editorial
+//   habitat     → categoría
+//   status      → estado/etiqueta de disponibilidad
+//   depth       → alcance/escala
+//   diet        → entregable principal
+//   image       → reutilizada como icono de fallback (no se mostrará en el card)
+//
+// Se agrega `icon` para el ng-icon que reemplaza la imagen.
 export type SpeciesStatus = 'Estable' | 'Vulnerable' | 'En peligro' | 'Crítico';
 
 export type Species = {
@@ -102,102 +130,131 @@ export type Species = {
   depth: string;
   diet: string;
   image: string;
-  // Custom focal point per species — needed because each photo has its
-  // subject in a different spot. Format: any valid CSS object-position.
   imagePosition?: string;
+  icon?: string;
 };
 
+// Status → mapping a "tono" visual existente:
+//   'Estable'    = Disponible      (kelp / verde — todo verde, listo para arrancar)
+//   'Vulnerable' = En arranque     (coral suave — recién lanzado)
+//   'En peligro' = Cupo limitado   (coral fuerte — pocas plazas)
+//   'Crítico'    = Premium         (coral intenso — el caro)
+// El mapping es un detalle de UI; los strings los lee `STATUS_TONES` en el
+// marquee.
 export const species: Species[] = [
   {
-    slug: 'tiburon-ballena',
-    common: 'Tiburón ballena',
-    scientific: 'Rhincodon typus',
-    habitat: 'Aguas tropicales abiertas',
-    status: 'En peligro',
-    depth: '0 — 1.928 m',
-    diet: 'Plancton, krill',
+    slug: 'auditoria-tech',
+    common: 'Auditoría tecnológica',
+    scientific: 'Diagnóstico 360°',
+    habitat: 'Discovery',
+    status: 'Estable',
+    depth: '2 — 4 sem',
+    diet: 'Roadmap accionable',
     image: '/especies/tiburon-ballena.jpg',
-    imagePosition: 'center 40%',
+    icon: 'phosphorMagnifyingGlassBold',
   },
   {
-    slug: 'pulpo-mimo',
-    common: 'Pulpo mimo',
-    scientific: 'Thaumoctopus mimicus',
-    habitat: 'Indo-Pacífico fangoso',
-    status: 'Vulnerable',
-    depth: '2 — 30 m',
-    diet: 'Crustáceos pequeños',
+    slug: 'sistemas-medida',
+    common: 'Sistemas a medida',
+    scientific: 'Plataformas internas · ERP ligero',
+    habitat: 'Build',
+    status: 'Estable',
+    depth: '12+ sem',
+    diet: 'App productiva en 90 días',
     image: '/especies/pulpo-mimo.jpg',
-    imagePosition: 'center 35%',
+    icon: 'phosphorTerminalWindowBold',
   },
   {
-    slug: 'medusa-luna',
-    common: 'Medusa luna',
-    scientific: 'Aurelia aurita',
-    habitat: 'Mares templados costeros',
-    status: 'Estable',
-    depth: '0 — 200 m',
-    diet: 'Zooplancton',
-    image: '/especies/medusa-luna.jpg',
-    imagePosition: 'center 35%',
-  },
-  {
-    slug: 'pez-dragon',
-    common: 'Pez dragón',
-    scientific: 'Stomias boa',
-    habitat: 'Zona mesopelágica',
-    status: 'Estable',
-    depth: '200 — 1.500 m',
-    diet: 'Peces e invertebrados',
-    image: '/especies/pez-dragon.jpg',
-    imagePosition: 'center 40%',
-  },
-  {
-    slug: 'manta-gigante',
-    common: 'Manta gigante',
-    scientific: 'Mobula birostris',
-    habitat: 'Océano abierto tropical',
-    status: 'En peligro',
-    depth: '0 — 1.000 m',
-    diet: 'Plancton, kril',
-    image: '/especies/manta-gigante.jpg',
-    imagePosition: 'center center',
-  },
-  {
-    slug: 'caballito-leafy',
-    common: 'Dragón marino foliáceo',
-    scientific: 'Phycodurus eques',
-    habitat: 'Bosques de algas australes',
+    slug: 'integraciones-ia',
+    common: 'Integraciones de IA',
+    scientific: 'Agentes Claude · RAG · Automatización',
+    habitat: 'Inteligencia',
     status: 'Vulnerable',
-    depth: '8 — 30 m',
-    diet: 'Misidáceos',
+    depth: '4 — 10 sem',
+    diet: 'Workflows con IA en producción',
+    image: '/especies/medusa-luna.jpg',
+    icon: 'phosphorRobotBold',
+  },
+  {
+    slug: 'apps-walmart',
+    common: 'Apps proveedores Walmart',
+    scientific: 'Retail Link · OTIF · Forecast',
+    habitat: 'Vertical · Retail',
+    status: 'En peligro',
+    depth: '6 — 12 sem',
+    diet: 'Conciliación automatizada',
+    image: '/especies/pez-dragon.jpg',
+    icon: 'phosphorShoppingBagBold',
+  },
+  {
+    slug: 'landing-premium',
+    common: 'Landing premium',
+    scientific: 'Marca, performance, conversión',
+    habitat: 'Brand',
+    status: 'Estable',
+    depth: '3 — 6 sem',
+    diet: 'Lighthouse 95+ garantizado',
+    image: '/especies/manta-gigante.jpg',
+    icon: 'phosphorBrowsersBold',
+  },
+  {
+    slug: 'apps-moviles',
+    common: 'Apps móviles',
+    scientific: 'iOS · Android · Multiplataforma',
+    habitat: 'Mobile',
+    status: 'Vulnerable',
+    depth: '8 — 16 sem',
+    diet: 'Stores listos en una entrega',
     image: '/especies/caballito-leafy.png',
-    imagePosition: 'center 35%',
+    icon: 'phosphorDeviceMobileBold',
   },
   {
-    slug: 'calamar-vampiro',
-    common: 'Calamar vampiro',
-    scientific: 'Vampyroteuthis infernalis',
-    habitat: 'Zona afótica',
+    slug: 'analisis-flujos',
+    common: 'Análisis de flujos',
+    scientific: 'Procesos · Métricas · Cuellos de botella',
+    habitat: 'Operaciones',
     status: 'Estable',
-    depth: '600 — 1.200 m',
-    diet: 'Detritos marinos',
+    depth: '2 — 6 sem',
+    diet: 'Mapa de fricciones priorizado',
     image: '/especies/calamar-vampiro.webp',
-    imagePosition: 'center 30%',
+    icon: 'phosphorFlowArrowBold',
   },
   {
-    slug: 'nudibranquio-azul',
-    common: 'Nudibranquio azul',
-    scientific: 'Glaucus atlanticus',
-    habitat: 'Superficie pelágica',
+    slug: 'automatizacion',
+    common: 'Automatización',
+    scientific: 'ETL · Webhooks · Pipelines',
+    habitat: 'Integración',
     status: 'Estable',
-    depth: '0 — 5 m',
-    diet: 'Cnidarios',
+    depth: '4 — 8 sem',
+    diet: 'Horas-hombre liberadas',
     image: '/especies/nudibranquio-azul.jpg',
-    imagePosition: 'center 40%',
+    icon: 'phosphorLightningBold',
+  },
+  {
+    slug: 'consultoria-cloud',
+    common: 'Consultoría cloud',
+    scientific: 'Firebase · Google Cloud · Edge',
+    habitat: 'Infraestructura',
+    status: 'Estable',
+    depth: '2 — 8 sem',
+    diet: 'Costos optimizados, deploys verdes',
+    image: '/especies/tiburon-ballena.jpg',
+    icon: 'phosphorCloudCheckBold',
+  },
+  {
+    slug: 'consultoria-estrategica',
+    common: 'Consultoría estratégica',
+    scientific: 'CTO fraccional · Acompañamiento',
+    habitat: 'Advisory',
+    status: 'En peligro',
+    depth: 'Mensual',
+    diet: 'Decisiones técnicas con respaldo',
+    image: '/especies/pulpo-mimo.jpg',
+    icon: 'phosphorCompassBold',
   },
 ];
 
+// ---- Métricas de la empresa (sustituyen "ConservationStat") ---------------
 export type ConservationStat = {
   label: string;
   value: string;
@@ -205,23 +262,30 @@ export type ConservationStat = {
 };
 
 export const conservationStats: ConservationStat[] = [
-  { label: 'Especies bajo cuidado', value: '1.247', suffix: '' },
-  { label: 'Hectáreas marinas protegidas', value: '38.420', suffix: ' ha' },
-  { label: 'Tortugas rehabilitadas', value: '2.612', suffix: ' desde 2003' },
-  { label: 'Investigación abierta', value: '94', suffix: ' papers' },
+  { label: 'Proyectos entregados', value: '120', suffix: '+ desde 2019' },
+  { label: 'Uptime promedio', value: '99.97', suffix: ' % anual' },
+  { label: 'Integraciones IA productivas', value: '34', suffix: '' },
+  { label: 'Equipos acompañados', value: '46', suffix: ' empresas' },
 ];
 
+// ---- Info de contacto / disponibilidad ------------------------------------
+// `visitInfo` se mantiene; cambia el contenido: en lugar de horarios de un
+// acuario, muestra disponibilidad de la consultoría para reuniones de
+// descubrimiento.
 export const visitInfo = {
   hours: [
-    { day: 'Lunes — Jueves', hours: '10:00 — 19:30' },
-    { day: 'Viernes', hours: '10:00 — 22:00 · Noche bioluminiscente' },
-    { day: 'Sábado — Domingo', hours: '09:00 — 21:00' },
+    { day: 'Lunes — Jueves', hours: '08:00 — 19:00' },
+    { day: 'Viernes', hours: '08:00 — 16:00 · Cierre temprano' },
+    { day: 'Sábado — Domingo', hours: 'Bajo demanda · proyectos críticos' },
   ],
-  address: 'Paseo Marítimo 1492, San José',
+  address: 'Costa Rica · Operación 100 % remota · LATAM y USA',
   ticketingNote:
-    'La capacidad es limitada. Las entradas se liberan en olas cada 30 minutos para mantener la inmersión.',
+    'Trabajamos por cohortes: arrancamos máximo dos proyectos nuevos por mes para mantener el nivel de atención. Pedí tu reunión de descubrimiento — sin costo y sin compromiso.',
 } as const;
 
+// ---- Modelos de engagement (sustituyen "Tickets") -------------------------
+// `Ticket` se reutiliza para describir cómo se contrata el trabajo:
+// auditoría puntual, proyecto cerrado, partnership recurrente.
 export type Ticket = {
   name: string;
   price: string;
@@ -234,45 +298,45 @@ export type Ticket = {
 
 export const tickets: Ticket[] = [
   {
-    name: 'General',
-    price: '$28',
-    cadence: 'por persona',
+    name: 'Auditoría',
+    price: 'Desde $1.8K',
+    cadence: 'engagement de 2-4 sem',
     description:
-      'Acceso a todas las galerías permanentes y al Túnel Azul. Audioguía incluida.',
+      'Diagnóstico tecnológico completo. Mapeo de stack, riesgos, oportunidades de automatización e IA, y un roadmap priorizado por impacto.',
     perks: [
-      'Acceso a 6 galerías',
-      'Túnel Azul de 60 m',
-      'Audioguía multi-idioma',
-      'Reentrada el mismo día',
+      'Discovery con stakeholders',
+      'Inventario de stack y procesos',
+      'Roadmap accionable a 12 meses',
+      'Sesión de cierre con C-level',
     ],
     accent: 'foam',
   },
   {
-    name: 'Inmersión',
-    price: '$74',
-    cadence: 'por persona',
+    name: 'Proyecto cerrado',
+    price: 'Desde $14K',
+    cadence: 'alcance fijo',
     description:
-      'Recorrido guiado por curador, acceso anticipado y observación tras-bambalinas del laboratorio de coral.',
+      'Construcción end-to-end de una solución concreta. Estimación cerrada, hitos quincenales, demo viva en cada sprint y handoff documentado.',
     perks: [
-      'Acceso anticipado · 09:00',
-      'Tour curador (90 min)',
-      'Laboratorio coralino',
-      'Catálogo editorial firmado',
+      'Alcance y precio cerrados',
+      'Sprints de 2 semanas con demo',
+      'Stack premium (Angular · Firebase · IA)',
+      'Documentación y handoff incluidos',
     ],
     accent: 'lagoon',
     highlight: true,
   },
   {
-    name: 'Patronato',
-    price: '$1.840',
-    cadence: 'anual',
+    name: 'Partnership',
+    price: 'Desde $4.5K',
+    cadence: 'mensual',
     description:
-      'Membresía fundadora. Acceso ilimitado, expediciones anuales y créditos en el programa de conservación.',
+      'Acompañamiento continuo: equipo de producto fraccional, sprints rolling, soporte 24/7 y prioridad en agenda. Ideal para empresas en crecimiento sostenido.',
     perks: [
-      'Entrada ilimitada x2',
-      'Cena anual con curaduría',
-      'Crédito 1 ha en reserva marina',
-      'Eventos privados',
+      'Equipo dedicado fraccional',
+      'Soporte y guardia 24/7',
+      'Prioridad en agenda',
+      'CTO fraccional incluido',
     ],
     accent: 'coral',
   },

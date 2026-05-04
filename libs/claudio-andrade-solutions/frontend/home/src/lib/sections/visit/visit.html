@@ -4,10 +4,10 @@
       <!-- LEFT — manifiesto sticky -->
       <div class="visit__lead">
         <div appReveal>
-          <app-eyebrow>Capítulo 05 · Visita</app-eyebrow>
+          <app-eyebrow>Capítulo 05 · Empezar</app-eyebrow>
         </div>
         <h2 appReveal [delay]="0.08" class="visit__title">
-          Llegás cuando quieras.
+          Llegás cuando querés.
           <span class="visit__title-italic">Te quedás cuanto necesites.</span>
         </h2>
         <p appReveal [delay]="0.16" class="visit__copy">
@@ -15,16 +15,16 @@
         </p>
 
         <div appReveal [delay]="0.24" class="visit__ctas">
-          <a routerLink="/entradas" class="visit__cta glass-bubble">
-            <span class="visit__cta-label">Comprar entradas</span>
+          <a routerLink="/contacto" class="visit__cta glass-bubble">
+            <span class="visit__cta-label">Pedir reunión</span>
             <span class="visit__cta-icon glass-bubble-icon">
               <ng-icon name="phosphorArrowUpRightBold" size="14" />
             </span>
           </a>
-          <a routerLink="/visita" class="visit__cta glass-bubble">
-            <span class="visit__cta-label">Cómo llegar</span>
+          <a routerLink="/exhibiciones" class="visit__cta glass-bubble">
+            <span class="visit__cta-label">Ver productos</span>
             <span class="visit__cta-icon glass-bubble-icon">
-              <ng-icon name="phosphorMapPin" size="14" />
+              <ng-icon name="phosphorBrowsersBold" size="14" />
             </span>
           </a>
         </div>
@@ -32,7 +32,7 @@
 
       <!-- RIGHT — info rows -->
       <div class="visit__info">
-        <!-- Horarios -->
+        <!-- Disponibilidad -->
         <div appReveal class="info-row glass-shell">
           <div class="info-row__inner glass-core">
             <div class="info-row__head">
@@ -40,9 +40,9 @@
                 <span class="info-row__icon">
                   <ng-icon name="phosphorClock" size="16" />
                 </span>
-                <h3 class="info-row__title">Horarios</h3>
+                <h3 class="info-row__title">Disponibilidad</h3>
               </div>
-              <span class="info-row__helper">Reentrada el mismo día</span>
+              <span class="info-row__helper">Reuniones de descubrimiento</span>
             </div>
             <div class="info-row__body">
               <ul class="info-row__hours">
@@ -57,7 +57,7 @@
           </div>
         </div>
 
-        <!-- Ubicación -->
+        <!-- Ubicación · operación -->
         <div appReveal [delay]="0.1" class="info-row glass-shell">
           <div class="info-row__inner glass-core">
             <div class="info-row__head">
@@ -65,31 +65,31 @@
                 <span class="info-row__icon">
                   <ng-icon name="phosphorMapPin" size="16" />
                 </span>
-                <h3 class="info-row__title">Ubicación</h3>
+                <h3 class="info-row__title">Operación</h3>
               </div>
-              <span class="info-row__helper">A 12 min del centro</span>
+              <span class="info-row__helper">100 % remoto</span>
             </div>
             <div class="info-row__body">
               <p class="info-row__address">{{ visitInfo.address }}</p>
               <div class="info-row__transport">
                 <div>
-                  <p class="info-row__transport-label">Tren</p>
-                  <p class="info-row__transport-value">Línea Costa</p>
+                  <p class="info-row__transport-label">Husos</p>
+                  <p class="info-row__transport-value">CST · EST · PT</p>
                 </div>
                 <div>
-                  <p class="info-row__transport-label">Bus</p>
-                  <p class="info-row__transport-value">14 · 22 · 81</p>
+                  <p class="info-row__transport-label">Idiomas</p>
+                  <p class="info-row__transport-value">ES · EN</p>
                 </div>
                 <div>
-                  <p class="info-row__transport-label">Bici</p>
-                  <p class="info-row__transport-value">6 estaciones</p>
+                  <p class="info-row__transport-label">Cobertura</p>
+                  <p class="info-row__transport-value">LATAM · USA</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Entrada general -->
+        <!-- Discovery sin costo -->
         <div appReveal [delay]="0.16" class="info-row glass-shell">
           <div class="info-row__inner glass-core">
             <div class="info-row__head">
@@ -97,18 +97,19 @@
                 <span class="info-row__icon">
                   <ng-icon name="phosphorTicket" size="16" />
                 </span>
-                <h3 class="info-row__title">Entrada general</h3>
+                <h3 class="info-row__title">Discovery</h3>
               </div>
-              <span class="info-row__helper">Capacidad limitada</span>
+              <span class="info-row__helper">Cupos por mes</span>
             </div>
             <div class="info-row__body">
               <div class="info-row__price-row">
-                <span class="info-row__price">$28</span>
-                <span class="info-row__price-cadence">por persona</span>
+                <span class="info-row__price">Sin costo</span>
+                <span class="info-row__price-cadence">primera reunión</span>
               </div>
               <p class="info-row__price-note">
-                Niños menores de 6 años entran libres. Estudiantes con carné
-                vigente: $14.
+                90 minutos para entender tu negocio, mapear el problema y
+                proponer un primer plan. Si no encajamos, te lo decimos
+                directo y te recomendamos a alguien que sí.
               </p>
             </div>
           </div>

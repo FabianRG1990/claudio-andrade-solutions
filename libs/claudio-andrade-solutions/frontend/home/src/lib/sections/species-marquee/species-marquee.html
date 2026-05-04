@@ -3,16 +3,16 @@
     <div class="species-marquee__head">
       <div>
         <div appReveal>
-          <app-eyebrow tone="kelp">Capítulo 02 · Habitantes</app-eyebrow>
+          <app-eyebrow tone="kelp">Capítulo 02 · Lo que ofrecemos</app-eyebrow>
         </div>
         <p appReveal [delay]="0.05" class="species-marquee__count">
-          1.247 especies bajo cuidado
+          10 servicios bajo demanda
         </p>
       </div>
       <h2 appReveal [delay]="0.1" class="species-marquee__title">
-        Cada criatura tiene un nombre,
-        <span class="species-marquee__title-italic">una historia</span>
-        y un protocolo de cuidado propio.
+        Cada solución a medida —
+        <span class="species-marquee__title-italic">una arquitectura</span>
+        y un beneficio claro de negocio.
       </h2>
     </div>
   </div>
@@ -23,38 +23,35 @@
 
     <div class="species-marquee__reel animate-marquee">
       @for (sp of reel(); track sp.reelKey) {
-        <article class="species-card glass-shell">
-          <div class="species-card__media">
-            <img
-              appImgFade
-              [src]="sp.image"
-              [alt]="sp.common"
-              class="species-card__image"
-              [style.object-position]="sp.imagePosition || 'center 38%'"
-              loading="lazy"
-            />
-            <div class="species-card__tint"></div>
-            <div class="species-card__gradient"></div>
+        <article class="service-card glass-shell">
+          <div class="service-card__head">
+            <span class="service-card__icon glass-bubble-icon">
+              @if (sp.icon) {
+                <ng-icon [name]="sp.icon" size="22" />
+              }
+            </span>
             <span
-              class="species-card__status"
+              class="service-card__status"
               [attr.data-status]="statusToneAttr(sp.status)"
             >
-              {{ sp.status }}
+              {{ statusLabel(sp.status) }}
             </span>
-            <div class="species-card__caption">
-              <p class="species-card__scientific">{{ sp.scientific }}</p>
-              <h3 class="species-card__name">{{ sp.common }}</h3>
-            </div>
           </div>
 
-          <dl class="species-card__meta">
+          <div class="service-card__body">
+            <p class="service-card__category">{{ sp.habitat }}</p>
+            <h3 class="service-card__name">{{ sp.common }}</h3>
+            <p class="service-card__tagline">{{ sp.scientific }}</p>
+          </div>
+
+          <dl class="service-card__meta">
             <div>
-              <dt class="species-card__meta-label">Hábitat</dt>
-              <dd class="species-card__meta-value">{{ sp.habitat }}</dd>
+              <dt class="service-card__meta-label">Alcance</dt>
+              <dd class="service-card__meta-value">{{ sp.depth }}</dd>
             </div>
             <div>
-              <dt class="species-card__meta-label">Profundidad</dt>
-              <dd class="species-card__meta-value">{{ sp.depth }}</dd>
+              <dt class="service-card__meta-label">Beneficio</dt>
+              <dd class="service-card__meta-value">{{ sp.diet }}</dd>
             </div>
           </dl>
         </article>

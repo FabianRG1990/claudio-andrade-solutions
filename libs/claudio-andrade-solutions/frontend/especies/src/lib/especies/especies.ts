@@ -14,40 +14,39 @@ interface Program {
 
 const PROGRAMS: ReadonlyArray<Program> = [
   {
-    code: 'PR-01',
-    title: 'Reefscape · Cultivo de coral',
-    region: 'Caribe · Tela, Honduras',
-    body: 'Cultivamos 38 cepas de coral en laboratorio para repoblar arrecifes degradados. En 2025 reintroducimos 12.400 colonias.',
+    code: 'CS-01',
+    title: 'Plataforma de proveedores · retail enterprise',
+    region: 'Sector retail · LATAM',
+    body: 'Sistema de conciliación automatizada para proveedores Walmart con integración Retail Link, OTIF tracking y forecast assist. 4 países, 80+ usuarios concurrentes, sin un downtime crítico desde el go-live.',
     image: 'https://picsum.photos/seed/cas-pr1/1200/900',
   },
   {
-    code: 'PR-02',
-    title: 'Tortuga Verde · Rehabilitación',
-    region: 'Pacífico · Guanacaste',
-    body: 'Recibimos tortugas heridas por colisiones, redes fantasma y ingesta de plásticos. 2.612 ejemplares devueltos al mar desde 2003.',
+    code: 'CS-02',
+    title: 'Asistente IA · soporte interno',
+    region: 'Empresa de logística · México',
+    body: 'Agente Claude con RAG sobre 14.000 documentos internos: políticas, procedimientos y casuística. Resuelve el 62 % de las consultas L1 sin escalado humano y aprende de cada feedback.',
     image: 'https://picsum.photos/seed/cas-pr2/1200/900',
   },
   {
-    code: 'PR-03',
-    title: 'Bioluminiscencia · Investigación',
-    region: 'Mar abierto · 1.200 m',
-    body: 'Cinco expediciones anuales para estudiar comunidades abisales. Todos los datasets se publican abiertos bajo licencia CC-BY.',
+    code: 'CS-03',
+    title: 'Auditoría tecnológica · fintech regional',
+    region: 'Sector fintech · Centroamérica',
+    body: 'Diagnóstico completo de stack legacy. Identificamos 26 puntos de riesgo y un roadmap de migración a Angular + Firebase priorizado por impacto. Ahorro proyectado: 38 % anual en infra.',
     image: 'https://picsum.photos/seed/cas-pr3/1200/900',
   },
   {
-    code: 'PR-04',
-    title: 'Educación pública',
-    region: 'Toda Centroamérica',
-    body: '84 escuelas en programa anual. Cada estudiante visita el instituto al menos una vez sin costo durante el ciclo lectivo.',
+    code: 'CS-04',
+    title: 'Landing premium + analytics',
+    region: 'B2B SaaS · Costa Rica',
+    body: 'Página de marca construida desde cero con animaciones canvas y glass-morphism real. Lighthouse 98, conversión a demo +47 % vs. la versión anterior, todo el deploy en Firebase Hosting.',
     image: 'https://picsum.photos/seed/cas-pr4/1200/900',
   },
 ];
 
 /**
- * GaleriaPage — solo header + 4 programas activos. Antes tenía 4 segmentos
- * (catálogo de especies, bridge editorial, stats de impacto, programas);
- * los 3 primeros se quitaron por decisión de producto. Si vuelven a hacer
- * falta, el git history conserva la versión anterior.
+ * EspeciesPage — página "Acerca de nosotros". Header con manifiesto de la
+ * empresa + grid de 4 casos recientes. El componente conserva el nombre
+ * "EspeciesPage" por inercia con el routing; conceptualmente es About Us.
  */
 @Component({
   selector: 'app-especies-page',

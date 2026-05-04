@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { phosphorArrowUpRightBold } from '@ng-icons/phosphor-icons/bold';
 
@@ -8,14 +9,13 @@ import { PageHeader } from '@cas-ui-shared/components/page-header/page-header';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 
 /**
- * ExhibicionesPage — recorrido editorial por los 6 biomas. Header (100dvh,
- * solo en la vista inicial) + grid alternado (imagen ↔ texto) con stats
- * por exhibit. El header ocupa la viewport entera al cargar; el listado
- * aparece en cuanto el usuario scrollea, sin gap muerto en el medio.
+ * ExhibicionesPage — catálogo editorial de los 6 productos premium. Header
+ * (100dvh) + grid alternado (imagen ↔ texto) con métricas por producto.
+ * Cada CTA dirige a /contacto para iniciar el proceso de propuesta.
  */
 @Component({
   selector: 'app-exhibiciones-page',
-  imports: [ImgFadeDirective, NgIcon, PageHeader, RevealDirective],
+  imports: [ImgFadeDirective, NgIcon, PageHeader, RevealDirective, RouterLink],
   providers: [provideIcons({ phosphorArrowUpRightBold })],
   templateUrl: './exhibiciones.html',
   styleUrl: './exhibiciones.scss',

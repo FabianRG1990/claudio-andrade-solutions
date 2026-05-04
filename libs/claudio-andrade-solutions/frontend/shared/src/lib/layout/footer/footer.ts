@@ -24,17 +24,17 @@ export class Footer {
   protected readonly currentYear = new Date().getFullYear();
 
   protected readonly navLinks: readonly NavLink[] = [
-    { label: 'Exhibiciones', href: '/exhibiciones' },
-    { label: 'Galería', href: '/especies' },
-    { label: 'Conservación', href: '/especies' },
-    { label: 'Investigación', href: '/especies' },
-    { label: 'Noche bioluminiscente', href: '/exhibiciones' },
+    { label: 'Productos', href: '/exhibiciones' },
+    { label: 'Casos', href: '/especies' },
+    { label: 'Acerca de nosotros', href: '/especies' },
+    { label: 'Auditoría', href: '/contacto' },
+    { label: 'Contáctenos', href: '/contacto' },
   ];
 
   protected readonly metaItems: readonly string[] = [
     'Aviso legal',
     'Privacidad',
-    'Sostenibilidad',
+    'Términos',
     'Prensa',
   ];
 }

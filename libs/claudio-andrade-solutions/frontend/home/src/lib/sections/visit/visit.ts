@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { phosphorArrowUpRightBold } from '@ng-icons/phosphor-icons/bold';
+import {
+  phosphorArrowUpRightBold,
+  phosphorBrowsersBold,
+} from '@ng-icons/phosphor-icons/bold';
 import {
   phosphorClock,
   phosphorMapPin,
@@ -13,8 +16,10 @@ import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 
 /**
- * Visit — capítulo 05. Columna izquierda sticky con manifiesto + CTAs;
- * columna derecha con 3 cards informativas (Horarios, Ubicación, Entrada).
+ * Visit — capítulo 05 "Empezar". Columna izquierda sticky con manifiesto +
+ * CTAs (pedir reunión, ver productos); columna derecha con 3 cards
+ * informativas: disponibilidad para discovery, operación remota, y la
+ * propuesta del discovery sin costo.
  */
 @Component({
   selector: 'app-visit',
@@ -22,6 +27,7 @@ import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directi
   providers: [
     provideIcons({
       phosphorArrowUpRightBold,
+      phosphorBrowsersBold,
       phosphorClock,
       phosphorMapPin,
       phosphorTicket,
