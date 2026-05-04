@@ -268,7 +268,51 @@ export const species: Species[] = [
   },
 ];
 
-// ---- Métricas de la empresa (sustituyen "ConservationStat") ---------------
+// ---- Slides del caso destacado (capítulo 04) ------------------------------
+// Carrusel de capturas de moofy.vip que demuestra alcance y profundidad
+// del producto. Cada slide tiene una caption corta que se muestra como
+// chip en la esquina superior derecha del frame durante su visibilidad,
+// reforzando el mensaje "esto es lo que está mostrando ahora mismo".
+export type CaseSlide = {
+  src: string;
+  alt: string;
+  caption: string;
+};
+
+export const moofyCaseSlides: ReadonlyArray<CaseSlide> = [
+  {
+    src: '/casos/moofy-landing.png',
+    alt: 'Pantalla de acceso de moofy.vip — entrada con cuatro módulos: órdenes, estadísticas, ajustes y buscador',
+    caption: 'Acceso · 4 módulos',
+  },
+  {
+    src: '/casos/moofy-dashboard.png',
+    alt: 'Dashboard de Órdenes de Compra de moofy.vip — monitoreo del scraper en Cloud Run con ocho corridas exitosas',
+    caption: 'Monitoreo · scraper Cloud Run',
+  },
+  {
+    src: '/casos/moofy-stats.png',
+    alt: 'Estadísticas de moofy.vip — comparador mensual con $781 millones acumulados y ranking de rutas',
+    caption: 'Analytics · $781 M acumulados',
+  },
+  {
+    src: '/casos/moofy-settings.png',
+    alt: 'Ajustes de Rutas en moofy.vip — 20 rutas con 349 locales asignados y editor de cobertura',
+    caption: 'Cobertura · 20 rutas · 349 locales',
+  },
+  {
+    src: '/casos/moofy-search.png',
+    alt: 'Buscador global de moofy.vip — filtros por productos, rutas, supercenters y órdenes de compra',
+    caption: 'Búsqueda · filtros multi-axis',
+  },
+];
+
+// ---- Métricas del caso destacado (capítulo 04) ----------------------------
+// `ConservationStat` se reusa por inercia tipográfica con el componente.
+// Hoy las cifras describen el resultado de moofy.vip — la plataforma que
+// CAS construyó para proveedores de Walmart. Los datos son verificables
+// desde el dashboard público del propio cliente (8 corridas, 0 fallidas,
+// sync ~3h en Cloud Run; el resto se infiere del trabajo manual reemplazado).
 export type ConservationStat = {
   label: string;
   value: string;
@@ -276,10 +320,10 @@ export type ConservationStat = {
 };
 
 export const conservationStats: ConservationStat[] = [
-  { label: 'Proyectos entregados', value: '120', suffix: '+ desde 2019' },
-  { label: 'Uptime promedio', value: '99.97', suffix: ' % anual' },
-  { label: 'Integraciones IA productivas', value: '34', suffix: '' },
-  { label: 'Equipos acompañados', value: '46', suffix: ' empresas' },
+  { label: 'Ahorro mensual', value: '$1.2K', suffix: ' en mano de obra' },
+  { label: 'Horas liberadas', value: '120', suffix: ' al mes · operativas' },
+  { label: 'Actualización automática', value: '8×', suffix: ' al día · sin fallas' },
+  { label: 'Trazabilidad', value: '100%', suffix: ' de cada cambio' },
 ];
 
 // ---- Info de contacto / disponibilidad ------------------------------------

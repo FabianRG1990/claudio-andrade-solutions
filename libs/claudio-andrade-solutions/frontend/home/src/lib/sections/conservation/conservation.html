@@ -3,41 +3,76 @@
     <!-- Header: title + CTA -->
     <div class="conservation__head">
       <app-section-heading
-        eyebrow="Capítulo 04 · Compromiso"
-        title="Construir lo que perdura."
-        italic="Medir lo que importa."
+        eyebrow="Capítulo 04 · Caso destacado"
+        title="Lo construimos."
+        italic="Ellos lo operan."
         tone="lagoon"
       />
       <div appReveal [delay]="0.2">
-        <app-pill-button href="/especies">Conoce a CAS</app-pill-button>
+        <app-pill-button href="/especies">Ver casos completos</app-pill-button>
       </div>
     </div>
 
-    <!-- Grid: imagen + stats -->
+    <!-- Grid: carrusel del caso a la izquierda · métricas reales a la derecha -->
     <div class="conservation__grid">
-      <!-- Programa destacado -->
-      <div appReveal class="conservation__program glass-shell">
-        <div class="conservation__program-frame">
-          <img
-            appImgFade
-            src="/conservacion/lab-coralino.png"
-            alt="Cultivo de coral en laboratorio"
-            class="conservation__program-image"
-            loading="lazy"
-          />
+      <!-- Caso destacado · moofy.vip — 5 capturas en cross-fade.
+           Pause on hover, click en una bar del indicador para saltar.
+           El @for stackea las 5 imágenes en el mismo position:absolute;
+           solo la activa tiene opacity 1 + ken-burns. -->
+      <div
+        appReveal
+        class="conservation__program glass-shell"
+      >
+        <div
+          class="conservation__program-frame"
+          (pointerenter)="pause()"
+          (pointerleave)="resume()"
+        >
+          @for (slide of slides; track slide.src; let i = $index) {
+            <img
+              appImgFade
+              [src]="slide.src"
+              [alt]="slide.alt"
+              class="conservation__program-image"
+              [class.is-active]="currentIndex() === i"
+              decoding="async"
+              [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+              [attr.fetchpriority]="i === 0 ? 'high' : 'auto'"
+            />
+          }
           <div class="conservation__program-tint"></div>
           <div class="conservation__program-gradient"></div>
 
+          <!-- Top-left: estado live (constante). El pulso bioluminescent
+               lo mantiene "respirando" para reforzar que es producción. -->
           <div class="conservation__program-badge">
             <span class="conservation__program-pulse" aria-hidden="true"></span>
-            Caso activo · En producción
+            Live · 0 fallas en 8 corridas
           </div>
 
+          <!-- Top-right: contador editorial + caption del slide. Sustituye
+               la barra Stories que se sentía poco elegante. El contador
+               va en font-mono (Times) como detalle de catálogo y la caption
+               cambia con cada transición. -->
+          <div
+            class="conservation__program-slide-label"
+            aria-live="polite"
+          >
+            <span class="conservation__program-slide-counter">
+              {{ pad(currentIndex() + 1) }} / {{ pad(slides.length) }}
+            </span>
+            <span class="conservation__program-slide-divider" aria-hidden="true">·</span>
+            <span class="conservation__program-slide-caption">
+              {{ slides[currentIndex()].caption }}
+            </span>
+          </div>
+
+          <!-- Bottom: identidad del caso (constante a lo largo del ciclo). -->
           <div class="conservation__program-caption">
             <div>
-              <p class="conservation__program-label">Caso · CS-01</p>
+              <p class="conservation__program-label">Caso · moofy.vip</p>
               <p class="conservation__program-name">
-                Plataforma de proveedores · retail enterprise
+                Plataforma operativa para proveedores Walmart
               </p>
             </div>
             <span class="conservation__program-year">2026</span>
@@ -45,11 +80,11 @@
         </div>
       </div>
 
-      <!-- Stats tipográficos -->
+      <!-- Métricas tipográficas del caso -->
       <div class="conservation__stats">
         <div appReveal class="conservation__stats-head">
-          <span class="conservation__stats-eyebrow">Resultados · 2026</span>
-          <span class="conservation__stats-meta">04 indicadores</span>
+          <span class="conservation__stats-eyebrow">Resultados · moofy.vip</span>
+          <span class="conservation__stats-meta">04 métricas clave</span>
         </div>
 
         <dl appReveal [delay]="0.1" class="conservation__stats-grid">
@@ -65,11 +100,12 @@
         </dl>
 
         <p appReveal [delay]="0.2" class="conservation__manifesto">
-          <span class="conservation__manifesto-pct">El 100%</span>
-          de los proyectos arrancan con un discovery sin costo. Te entregamos
-          un diagnóstico claro
-          <span class="conservation__manifesto-license">accionable</span>
-          — decidís vos si seguís con nosotros o no.
+          <span class="conservation__manifesto-pct">120 horas/mes</span>
+          que el equipo dejó de quemar en consolidación manual sobre Retail
+          Link. Actualización automática cada 3 horas, bitácora completa de
+          cada cambio y búsqueda global por SKU, ruta o supercenter.
+          <span class="conservation__manifesto-license">En producción</span>
+          con cero fallas en las últimas corridas.
         </p>
       </div>
     </div>

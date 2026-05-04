@@ -26,6 +26,11 @@
   }
 }
 
+// Sin `align-items` → default `stretch`. La columna de stats se estira
+// al alto de la card portrait y `.conservation__stats` (flex column con
+// `justify-content: space-between`) distribuye head, grid y manifesto a
+// lo largo de ese alto — head arriba, stats centrados, manifesto abajo.
+// Visualmente queda equilibrado conforme a la card, sin huecos.
 .conservation__grid {
   margin-top: 4rem;
   display: grid;
@@ -37,7 +42,12 @@
   }
 }
 
-// ─── Programa destacado ──────────────────────────────────────────────────────
+// ─── Caso destacado · carrusel ─────────────────────────────────────────────
+// Frame portrait 4/5 — el formato original de la sección. Las capturas
+// vienen ahora en viewport mobile (414×896, naturalmente vertical), así
+// que en lugar de obligar al frame a estirar landscape, dejamos que el
+// formato vertical respire y mostramos vistas mobile reales del producto:
+// cada slide es exactamente lo que vería un usuario en su teléfono.
 .conservation__program {
   border-radius: var(--radius-squircle);
   padding: 0.5rem;
@@ -49,21 +59,87 @@
   overflow: hidden;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
   background: rgb(var(--tide));
+  isolation: isolate;
 }
 
+// ─── Image stack · cinematic transition ───────────────────────────────────
+// Antes era cross-fade simple (solo opacity). El usuario lo encontró
+// insuficiente — pidió algo "genuinamente premium". Ahora cada slide
+// orquesta cuatro propiedades en simultáneo, con curva Apple keynote
+// (`cubic-bezier(0.22, 1, 0.36, 1)` = ease-out-quint), durante 1.0-1.2 s:
+//
+//   • OPACITY      0 → 1
+//   • SCALE        1.08 → 1.0    (incoming "settles in" desde más cerca)
+//   • BLUR         8px → 0       (entra fuera de foco, gana nitidez)
+//   • BRIGHTNESS   0.82 → 1.0    (entra en penumbra, gana spotlight)
+//
+// La imagen saliente hace el camino inverso — recede, se desenfoca, se
+// oscurece y se desvanece — durante el mismo 1 s de overlap. Resultado:
+// momento cinemático tipo "cambio de plano" donde dos imágenes coexisten
+// brevemente en distinto plano focal. Plus, el ken-burns ambient sigue
+// arrastrando la activa entre transiciones para que no quede estática.
+//
+// `z-index` se eleva en .is-active para que la incoming siempre vaya por
+// encima de la outgoing durante el overlap, sin importar el orden DOM —
+// crítico si en futuro agregamos navegación manual hacia atrás.
 .conservation__program-image {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(0.92);
+  // `top` mantiene siempre visible el header (logo, tabs, primera card o
+  // primer stat). Las capturas mobile son 414×896 (más altas que el frame
+  // 4/5), así que ~30% del fondo se recorta — ese fondo es siempre menos
+  // crítico que el header, así que sale.
+  object-position: center top;
+  // Estado inactivo: lejano, fuera de foco, en penumbra. Cualquier slide
+  // que no es el activo aterriza acá. La saliente transiciona a este
+  // estado al perder .is-active; la entrante parte de acá al ganarlo.
+  filter: blur(8px) saturate(0.7) brightness(0.82);
+  opacity: 0;
+  transform: scale(1.08);
+  transform-origin: center center;
+  // Durations escalonadas: opacity y filter terminan en 1000 ms; transform
+  // sigue 200 ms más. Ese desfase final crea sensación de "settle"
+  // — la imagen aparece nítida y luego asienta su última décima de zoom.
+  transition:
+    opacity 1000ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 1000ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1200ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  z-index: 0;
+  // Hint al compositor: estas tres propiedades se animan; promueve la
+  // capa a GPU para evitar repaint en el cross-fade.
+  will-change: opacity, transform, filter;
+
+  &.is-active {
+    opacity: 1;
+    transform: scale(1.0);
+    filter: blur(0) saturate(0.92) brightness(1);
+    z-index: 1;
+    // Ken-burns ambient: scale 1.0 → 1.04 con delay de 1200 ms (igual al
+    // transition de entrada) — empieza después del settle para no chocar
+    // con la transición. Mantiene la imagen "respirando" durante los
+    // ~2.3 s que dura activa entre transiciones.
+    animation: program-ken-burns 4500ms ease-out 1200ms forwards;
+  }
 }
 
+@keyframes program-ken-burns {
+  from { transform: scale(1.0); }
+  to { transform: scale(1.04); }
+}
+
+// ─── Overlays (tint + gradient) ────────────────────────────────────────────
+// Mantienen contraste para badges y caption sobre cualquier imagen,
+// independiente de su luminancia. z-index 1 los sienta sobre las imágenes
+// pero bajo los chips/caption.
 .conservation__program-tint {
   pointer-events: none;
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     to bottom,
     rgb(var(--abyss) / 0.15),
@@ -77,6 +153,7 @@
   pointer-events: none;
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     to top,
     rgb(var(--abyss)),
@@ -85,16 +162,66 @@
   );
 }
 
+// ─── Slide label (top-right) · contador editorial + caption ────────────────
+// Reemplaza la barra Stories que se sentía poco premium. Pill de glass
+// con el contador "01 / 05" en font-mono (Times) seguido de la caption
+// del slide actual. `aria-live="polite"` lo hace anunciable a screen
+// readers cuando la caption muta.
+.conservation__program-slide-label {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  max-width: calc(100% - 2.5rem - 18rem); // deja espacio para el badge a la izquierda
+  border-radius: 9999px;
+  background: rgb(var(--abyss) / 0.55);
+  padding: 0.4375rem 1rem;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.92);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.16);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.conservation__program-slide-counter {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgb(var(--foam) / 0.65);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.conservation__program-slide-divider {
+  color: rgb(var(--foam) / 0.30);
+  font-size: 10px;
+}
+
+.conservation__program-slide-caption {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ─── Status badge (top-left, constante) ────────────────────────────────────
 .conservation__program-badge {
   position: absolute;
   left: 1.25rem;
   top: 1.25rem;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   border-radius: 9999px;
   background: rgb(var(--abyss) / 0.55);
-  padding: 0.25rem 0.75rem;
+  padding: 0.4375rem 0.875rem;
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
@@ -113,11 +240,13 @@
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+// ─── Caption inferior (constante: identidad del caso) ──────────────────────
 .conservation__program-caption {
   position: absolute;
   bottom: 1.25rem;
   left: 1.25rem;
   right: 1.25rem;
+  z-index: 3;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -151,7 +280,28 @@
   color: rgb(var(--foam) / 0.5);
 }
 
-// ─── Stats column ────────────────────────────────────────────────────────────
+// ─── Reduced-motion · accessibility ────────────────────────────────────────
+// Sin auto-advance (gateado en TS) + sin ken-burns + cross-fade reducido a
+// un fade simple.
+@media (prefers-reduced-motion: reduce) {
+  .conservation__program-image {
+    transition: opacity 250ms ease;
+    transform: none;
+    filter: saturate(0.92);
+
+    &.is-active {
+      animation: none;
+      transform: none;
+      filter: saturate(0.92);
+    }
+  }
+
+  .conservation__program-pulse {
+    animation: none;
+  }
+}
+
+// ─── Stats column ──────────────────────────────────────────────────────────
 .conservation__stats {
   display: flex;
   flex-direction: column;
