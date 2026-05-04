@@ -135,6 +135,70 @@
   padding: 1.75rem;
 }
 
+// ─── Halo de color por accent ────────────────────────────────────────────────
+// Mismo patrón que las service-cards del capítulo 2. Vive bajo el contenido
+// (z-index 0) y se recorta al border-radius del glass-core (overflow:hidden).
+// Cada plan (foam/lagoon/coral) tiene su propio resplandor en la esquina
+// superior derecha — refuerza la identidad de cada modelo de engagement.
+.ticket-card__glow {
+  position: absolute;
+  top: -3.5rem;
+  right: -3.5rem;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(28px);
+  opacity: 0.6;
+  z-index: 0;
+  transition:
+    opacity 800ms var(--ease-fluid),
+    transform 800ms var(--ease-fluid);
+}
+
+.ticket-card[data-accent='foam'] .ticket-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(245 241 232 / 0.18) 0%,
+    rgb(245 241 232 / 0.06) 38%,
+    transparent 72%
+  );
+}
+.ticket-card[data-accent='lagoon'] .ticket-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--lagoon) / 0.42) 0%,
+    rgb(var(--lagoon) / 0.12) 38%,
+    transparent 72%
+  );
+}
+.ticket-card[data-accent='coral'] .ticket-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--coral) / 0.40) 0%,
+    rgb(var(--coral) / 0.10) 38%,
+    transparent 72%
+  );
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ticket-card:hover .ticket-card__glow {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+
+// Todos los hijos del inner viven en z-index 1+ para sentarse sobre el
+// halo (que está en z-index 0 del mismo stacking context).
+.ticket-card__head,
+.ticket-card__price-row,
+.ticket-card__description,
+.ticket-card__perks,
+.ticket-card__cta-wrap {
+  position: relative;
+  z-index: 1;
+}
+
 .ticket-card__head {
   display: flex;
   align-items: center;

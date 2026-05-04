@@ -108,13 +108,82 @@
 // InfoRow card
 // =============================================================================
 .info-row {
+  position: relative;
   border-radius: var(--radius-squircle);
   padding: 0.5rem;
 }
 
 .info-row__inner {
+  position: relative;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
   padding: 1.75rem;
+}
+
+// ─── Halo de color por accent ────────────────────────────────────────────────
+// Mismo patrón que las service-cards del capítulo 2 + ticket-cards del
+// capítulo 3. Cada info-row tiene su accent inline en el HTML — aquí en
+// visit son lagoon/kelp/bioluminescent (Disponibilidad/Operación/Discovery).
+.info-row__glow {
+  position: absolute;
+  top: -3rem;
+  right: -3rem;
+  width: 12rem;
+  height: 12rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(24px);
+  opacity: 0.55;
+  z-index: 0;
+  transition:
+    opacity 800ms var(--ease-fluid),
+    transform 800ms var(--ease-fluid);
+}
+
+.info-row[data-accent='lagoon'] .info-row__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--lagoon) / 0.40) 0%,
+    rgb(var(--lagoon) / 0.10) 38%,
+    transparent 72%
+  );
+}
+.info-row[data-accent='kelp'] .info-row__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--kelp) / 0.45) 0%,
+    rgb(var(--kelp) / 0.12) 38%,
+    transparent 72%
+  );
+}
+.info-row[data-accent='coral'] .info-row__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--coral) / 0.38) 0%,
+    rgb(var(--coral) / 0.10) 38%,
+    transparent 72%
+  );
+}
+.info-row[data-accent='bioluminescent'] .info-row__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--bioluminescent) / 0.38) 0%,
+    rgb(var(--bioluminescent) / 0.10) 38%,
+    transparent 72%
+  );
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .info-row:hover .info-row__glow {
+    opacity: 0.80;
+    transform: scale(1.06);
+  }
+}
+
+// Hijos del inner sobre el halo.
+.info-row__head,
+.info-row__body {
+  position: relative;
+  z-index: 1;
 }
 
 .info-row__head {

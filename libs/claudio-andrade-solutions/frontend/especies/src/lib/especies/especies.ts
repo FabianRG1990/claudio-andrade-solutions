@@ -10,6 +10,7 @@ interface Program {
   region: string;
   body: string;
   image: string;
+  accent: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
 }
 
 const PROGRAMS: ReadonlyArray<Program> = [
@@ -19,6 +20,7 @@ const PROGRAMS: ReadonlyArray<Program> = [
     region: 'Sector retail · LATAM',
     body: 'Sistema de conciliación automatizada para proveedores Walmart con integración Retail Link, OTIF tracking y forecast assist. 4 países, 80+ usuarios concurrentes, sin un downtime crítico desde el go-live.',
     image: 'https://picsum.photos/seed/cas-pr1/1200/900',
+    accent: 'coral',
   },
   {
     code: 'CS-02',
@@ -26,6 +28,7 @@ const PROGRAMS: ReadonlyArray<Program> = [
     region: 'Empresa de logística · México',
     body: 'Agente Claude con RAG sobre 14.000 documentos internos: políticas, procedimientos y casuística. Resuelve el 62 % de las consultas L1 sin escalado humano y aprende de cada feedback.',
     image: 'https://picsum.photos/seed/cas-pr2/1200/900',
+    accent: 'bioluminescent',
   },
   {
     code: 'CS-03',
@@ -33,6 +36,7 @@ const PROGRAMS: ReadonlyArray<Program> = [
     region: 'Sector fintech · Centroamérica',
     body: 'Diagnóstico completo de stack legacy. Identificamos 26 puntos de riesgo y un roadmap de migración a Angular + Firebase priorizado por impacto. Ahorro proyectado: 38 % anual en infra.',
     image: 'https://picsum.photos/seed/cas-pr3/1200/900',
+    accent: 'lagoon',
   },
   {
     code: 'CS-04',
@@ -40,6 +44,7 @@ const PROGRAMS: ReadonlyArray<Program> = [
     region: 'B2B SaaS · Costa Rica',
     body: 'Página de marca construida desde cero con animaciones canvas y glass-morphism real. Lighthouse 98, conversión a demo +47 % vs. la versión anterior, todo el deploy en Firebase Hosting.',
     image: 'https://picsum.photos/seed/cas-pr4/1200/900',
+    accent: 'kelp',
   },
 ];
 

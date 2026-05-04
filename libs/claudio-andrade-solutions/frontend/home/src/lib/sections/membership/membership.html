@@ -24,12 +24,17 @@
           [delay]="0.05 * i"
           class="ticket-card glass-shell"
           [class.ticket-card--highlight]="t.highlight"
+          [attr.data-accent]="t.accent"
         >
           @if (t.highlight) {
             <div class="ticket-card__overlay" aria-hidden="true"></div>
             <div class="ticket-card__overlay-edge" aria-hidden="true"></div>
           }
           <div class="ticket-card__inner glass-core">
+            <!-- Halo de color por accent — mismo lenguaje visual que las
+                 service-cards del capítulo 2. Vive bajo el contenido y se
+                 recorta al border-radius del glass-core. -->
+            <span class="ticket-card__glow" aria-hidden="true"></span>
             <div class="ticket-card__head">
               <h3 class="ticket-card__name">{{ t.name }}</h3>
               @if (t.highlight) {
