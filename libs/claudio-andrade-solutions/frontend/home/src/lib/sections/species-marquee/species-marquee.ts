@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorBrowsersBold,
+  phosphorCheckBold,
   phosphorCloudCheckBold,
   phosphorCompassBold,
   phosphorDeviceMobileBold,
@@ -12,15 +13,14 @@ import {
   phosphorShoppingBagBold,
   phosphorTerminalWindowBold,
 } from '@ng-icons/phosphor-icons/bold';
+import { phosphorClock } from '@ng-icons/phosphor-icons/regular';
 
 import { Species, SpeciesStatus, species } from '@cas-ui-shared/data/data';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 
-// Mapeo del enum visual (`SpeciesStatus`) que sobrevive del schema antiguo a
-// la semántica nueva: cada estado es un nivel de disponibilidad del servicio.
-// El `data-status` del DOM sigue cayendo en los mismos selectores SCSS, así
-// los tonos (kelp/coral) ya pintan las etiquetas sin tocar estilos.
+// `SpeciesStatus` se conserva como enum del schema viejo. Acá lo mapeamos
+// a tonos SCSS y a etiquetas humanas para el chip de la card.
 const STATUS_TONES: Record<SpeciesStatus, string> = {
   Estable: 'estable',          // verde · disponible al instante
   Vulnerable: 'vulnerable',    // coral suave · arrancando
@@ -28,8 +28,6 @@ const STATUS_TONES: Record<SpeciesStatus, string> = {
   Crítico: 'critico',          // coral intenso · premium
 };
 
-// Etiqueta de UI para el chip — el enum interno se mantiene por compatibilidad
-// con el tipo, pero al usuario le mostramos algo coherente con "servicios".
 const STATUS_LABEL: Record<SpeciesStatus, string> = {
   Estable: 'Disponible',
   Vulnerable: 'En arranque',
@@ -39,16 +37,22 @@ const STATUS_LABEL: Record<SpeciesStatus, string> = {
 
 interface ReelItem extends Species {
   reelKey: string;
+  // sequence: "01", "02", ..., "10". Calculado a partir del índice módulo
+  // total de servicios — así el segundo set duplicado vuelve a 01..10 y
+  // el lector ve la misma numeración cada vuelta del carrusel.
+  sequence: string;
 }
 
 /**
- * SpeciesMarquee — capítulo 02 "Lo que ofrecemos". Carrusel CSS infinito de
- * cards de servicio (10 únicos × 2 = 20 frames) con duración 50s. Antes
- * mostraba especies con foto; ahora muestra servicios con icono + texto.
+ * SpeciesMarquee — capítulo 02 "Lo que ofrecemos". Carrusel infinito con
+ * cards premium estilo glass-shell + glass-core (mismo lenguaje que las
+ * tarjetas de membership) más un halo de color por categoría que vive en
+ * la esquina superior. Sin imágenes: la lectura es 100 % editorial — icono
+ * grande, número de secuencia, nombre, tagline y dos highlights con check.
  *
- * El loop seamless funciona igual: lista duplicada → keyframe -50% → al
- * volver a 0 los frames visibles son los mismos. Velocidad y composición
- * viven en SCSS / `_keyframes.scss`.
+ * El loop CSS sigue funcionando igual: `[...species, ...species]` duplica
+ * la lista, el keyframe -50% recorre las 10 únicas y al volver a 0 los
+ * frames 11..20 son réplicas exactas → loop seamless.
  */
 @Component({
   selector: 'app-species-marquee',
@@ -56,6 +60,8 @@ interface ReelItem extends Species {
   providers: [
     provideIcons({
       phosphorBrowsersBold,
+      phosphorCheckBold,
+      phosphorClock,
       phosphorCloudCheckBold,
       phosphorCompassBold,
       phosphorDeviceMobileBold,
@@ -76,6 +82,7 @@ export class SpeciesMarquee {
     [...species, ...species].map((sp, i) => ({
       ...sp,
       reelKey: `${sp.slug}-${i}`,
+      sequence: `${(i % species.length) + 1}`.padStart(2, '0'),
     })),
   );
 

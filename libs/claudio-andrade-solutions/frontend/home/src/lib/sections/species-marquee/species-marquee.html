@@ -6,13 +6,12 @@
           <app-eyebrow tone="kelp">Capítulo 02 · Lo que ofrecemos</app-eyebrow>
         </div>
         <p appReveal [delay]="0.05" class="species-marquee__count">
-          10 servicios bajo demanda
+          Capacidades a medida · sin lista cerrada
         </p>
       </div>
       <h2 appReveal [delay]="0.1" class="species-marquee__title">
-        Cada solución a medida —
-        <span class="species-marquee__title-italic">una arquitectura</span>
-        y un beneficio claro de negocio.
+        Cualquier desafío.
+        <span class="species-marquee__title-italic">Un mismo cuidado.</span>
       </h2>
     </div>
   </div>
@@ -23,37 +22,59 @@
 
     <div class="species-marquee__reel animate-marquee">
       @for (sp of reel(); track sp.reelKey) {
-        <article class="service-card glass-shell">
-          <div class="service-card__head">
-            <span class="service-card__icon glass-bubble-icon">
-              @if (sp.icon) {
-                <ng-icon [name]="sp.icon" size="22" />
-              }
-            </span>
-            <span
-              class="service-card__status"
-              [attr.data-status]="statusToneAttr(sp.status)"
-            >
-              {{ statusLabel(sp.status) }}
-            </span>
-          </div>
+        <article
+          class="service-card glass-shell glass-shell-hover"
+          [attr.data-accent]="sp.accent || 'lagoon'"
+        >
+          <div class="service-card__inner glass-core">
+            <!-- Halo de color por categoría — vive bajo el contenido como
+                 capa cero. `.glass-core` ya tiene overflow:hidden, así que
+                 el resplandor se recorta limpio al borde de la card. -->
+            <span class="service-card__glow" aria-hidden="true"></span>
 
-          <div class="service-card__body">
-            <p class="service-card__category">{{ sp.habitat }}</p>
-            <h3 class="service-card__name">{{ sp.common }}</h3>
-            <p class="service-card__tagline">{{ sp.scientific }}</p>
-          </div>
+            <!-- HEAD: icono protagonista + secuencia editorial + status -->
+            <header class="service-card__hero">
+              <span class="service-card__icon glass-bubble-icon">
+                @if (sp.icon) {
+                  <ng-icon [name]="sp.icon" size="24" />
+                }
+              </span>
+              <div class="service-card__hero-meta">
+                <span class="service-card__sequence">{{ sp.sequence }} / 10</span>
+                <span
+                  class="service-card__status"
+                  [attr.data-status]="statusToneAttr(sp.status)"
+                >
+                  {{ statusLabel(sp.status) }}
+                </span>
+              </div>
+            </header>
 
-          <dl class="service-card__meta">
-            <div>
-              <dt class="service-card__meta-label">Alcance</dt>
-              <dd class="service-card__meta-value">{{ sp.depth }}</dd>
+            <!-- BODY: categoría + nombre grande + tagline editorial -->
+            <div class="service-card__body">
+              <p class="service-card__category">{{ sp.habitat }}</p>
+              <h3 class="service-card__name">{{ sp.common }}</h3>
+              <p class="service-card__tagline">{{ sp.scientific }}</p>
             </div>
-            <div>
-              <dt class="service-card__meta-label">Beneficio</dt>
-              <dd class="service-card__meta-value">{{ sp.diet }}</dd>
-            </div>
-          </dl>
+
+            <!-- HIGHLIGHTS: 2 bullets con icono — el alcance temporal y el
+                 entregable principal. Reemplaza el grid plano de 2 columnas
+                 por una lectura de "qué te llevás" más contundente. -->
+            <ul class="service-card__highlights">
+              <li class="service-card__highlight">
+                <span class="service-card__highlight-icon">
+                  <ng-icon name="phosphorClock" size="11" />
+                </span>
+                <span>{{ sp.depth }}</span>
+              </li>
+              <li class="service-card__highlight">
+                <span class="service-card__highlight-icon service-card__highlight-icon--check">
+                  <ng-icon name="phosphorCheckBold" size="10" />
+                </span>
+                <span>{{ sp.diet }}</span>
+              </li>
+            </ul>
+          </div>
         </article>
       }
     </div>

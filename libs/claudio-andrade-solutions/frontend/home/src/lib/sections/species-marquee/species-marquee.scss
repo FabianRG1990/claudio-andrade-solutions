@@ -13,6 +13,13 @@
   padding-inline: var(--container-px);
 }
 
+// ─── Header ────────────────────────────────────────────────────────────────
+// Antes este header tenía 3 ideas en el title ("Cada solución a medida —
+// una arquitectura y un beneficio claro de negocio.") que con `text-wrap:
+// balance` quebraba en líneas torcidas. Ahora el title usa el patrón
+// editorial estándar del proyecto: oración corta + cierre italic — la
+// misma forma que el hero ("Soluciones / que escalan."). Lectura limpia
+// en cualquier ancho.
 .species-marquee__head {
   display: grid;
   gap: 3rem;
@@ -33,14 +40,19 @@
 
 .species-marquee__title {
   text-wrap: balance;
+  max-width: 18ch;
   font-family: var(--font-display);
   font-size: var(--type-h2-lg);
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.05;
   letter-spacing: var(--tracking-tight);
 }
 
 .species-marquee__title-italic {
+  display: block; // fuerza salto de línea entre las dos oraciones —
+                  // garantiza que "Una obsesión." viva en su propia línea
+                  // sin depender de balance/wrap.
+  margin-top: 0.25rem;
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
@@ -48,18 +60,16 @@
 }
 
 // =============================================================================
-// Reel — carrusel CSS infinito: el reel se duplica en TS y el keyframe lo
-// translatea -50% (= longitud de las 8 únicas) → al volver a 0 el contenido
+// Reel — carrusel CSS infinito. La cinta se duplica en TS y el keyframe la
+// translatea -50% (= longitud de las 10 únicas) → al volver a 0 el contenido
 // visible es idéntico, sin saltos perceptibles.
 // =============================================================================
 .species-marquee__reel-wrap {
   position: relative;
   margin-top: 5rem;
-  // CRÍTICO: contiene la cinta del marquee (~4800px de ancho) dentro del
-  // viewport. Sin esto la cinta desbordaba el body y se filtraba al `html`
-  // como scroll horizontal global. `clip` (en lugar de `hidden`) garantiza
-  // que ni siquiera scrollLeft programático abra ese eje. `hidden` en la
-  // primera línea es fallback para Safari <16.
+  // Confina la cinta (~6800px ahora con cards de 340px × 20) dentro del
+  // viewport. `clip` (en lugar de `hidden`) bloquea scrollLeft programático.
+  // `hidden` queda como fallback para Safari <16.
   overflow-x: hidden;
   overflow-x: clip;
 }
@@ -85,27 +95,24 @@
 
 .species-marquee__reel {
   display: flex;
+  align-items: stretch;
   // `width: max-content` es CRÍTICO. Sin esto el reel hereda el ancho del
-  // wrap (~360px en mobile) y el keyframe `translateX(0% → -50%)` calcula
-  // el % sobre el ancho propio del reel, así -50% = -180px = apenas medio
-  // card antes de loopear. Con `max-content` el reel mide los ~4800px
-  // reales de las 16 cards (8 × 2 duplicado), -50% = -2400px = exactamente
-  // las 8 únicas → al volver a 0 el contenido visible es el mismo (porque
-  // los frames 9-16 son duplicados de 1-8) → loop infinito seamless.
+  // wrap, el keyframe -50% calcula sobre ~360px = casi nada, y el loop
+  // se rompe. `max-content` deja que mida sus ~6800px reales (340 × 20)
+  // y el -50% viaje exactamente las 10 únicas.
   width: max-content;
+  padding-block: 1rem; // espacio para que la sombra-drop de las cards
+                       // (translateY(-2px) en hover) no se recorte arriba.
   will-change: transform;
 
-  // 5s por imagen × 8 = 40s para una pasada completa. La duración base
-  // del `.animate-marquee` (50s, en _keyframes.scss) se override aquí.
-  // `linear` es vital — cualquier easing crea aceleración visible al
-  // inicio/final del ciclo y rompe la sensación de loop continuo.
+  // 5 s × 10 cards = 50 s para una pasada completa. Linear es vital — un
+  // easing crearía aceleración perceptible al rebobinar y rompería el loop.
   &.animate-marquee {
-    animation-duration: 40s;
+    animation-duration: 50s;
     animation-timing-function: linear;
   }
 }
 
-// Respeta usuarios con preferencia de movimiento reducido.
 @media (prefers-reduced-motion: reduce) {
   .species-marquee__reel.animate-marquee {
     animation: none;
@@ -113,43 +120,148 @@
 }
 
 // =============================================================================
-// Service card — antes el reel mostraba especies con foto. Ahora cada card
-// es un servicio: icono glass-bubble (top-left) + status pill (top-right) +
-// nombre + tagline + dos métricas pareadas en pie. Sin <img>: por decisión
-// del usuario las imágenes se quitan y la lectura es 100% tipográfica + un
-// único catchlight (el icono). Esto da menos saturación visual y enfoca al
-// lector en el servicio en sí.
+// Service card · Premium tier
+//
+// Estructura: `.service-card` (glass-shell outer + drop shadow) → padding
+// 0.5rem → `.service-card__inner` (glass-core inner con noise texture +
+// overflow:hidden) → contenido en 3 zonas verticales.
+//
+// El upgrade vs la versión anterior:
+//  • Doble capa glass (mismo lenguaje que ticket-cards de Membership) —
+//    el inner "flota" dentro del outer = lectura de objeto sólido, no card
+//    plana.
+//  • Halo de color por categoría (data-accent) en la esquina superior
+//    derecha — lagoon/kelp/coral/bioluminescent. Cada producto se siente
+//    único sin tener que cambiar la composición.
+//  • Icono protagonista en `.glass-bubble-icon` 4rem (antes 3rem).
+//  • Secuencia editorial "01 / 10" en font-mono — detalle premium.
+//  • Highlights como bullets con check-icon en vez de grid plano.
+//  • Altura fija (480px) → ritmo visual constante en el carrusel.
 // =============================================================================
 .service-card {
   position: relative;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  width: 320px;
-  min-height: 360px;
-  margin-right: 1.25rem;
-  padding: 1.5rem;
-  border-radius: var(--radius-squircle-sm);
-  gap: 1.5rem;
-  isolation: isolate;
+  width: 340px;
+  height: 480px;
+  margin-right: 1.5rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-squircle);
 }
 
-.service-card__head {
+.service-card__inner {
+  position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  height: 100%;
+  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  padding: 1.75rem 1.625rem 1.5rem;
+  gap: 1.5rem;
+}
+
+// ─── Halo de color por categoría ───────────────────────────────────────────
+// Vive como sibling del contenido dentro de `.glass-core` (que ya tiene
+// overflow:hidden) → se recorta solo a la silueta de la card. z-index 0
+// para sentarse debajo del catchlight superior pero sobre la base oscura
+// del glass-core.
+.service-card__glow {
+  position: absolute;
+  top: -3.5rem;
+  right: -3.5rem;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(28px);
+  opacity: 0.65;
+  z-index: 0;
+  transition: opacity 800ms var(--ease-fluid), transform 800ms var(--ease-fluid);
+}
+
+[data-accent='lagoon'] .service-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--lagoon) / 0.40) 0%,
+    rgb(var(--lagoon) / 0.10) 38%,
+    transparent 72%
+  );
+}
+[data-accent='kelp'] .service-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--kelp) / 0.45) 0%,
+    rgb(var(--kelp) / 0.12) 38%,
+    transparent 72%
+  );
+}
+[data-accent='coral'] .service-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--coral) / 0.38) 0%,
+    rgb(var(--coral) / 0.10) 38%,
+    transparent 72%
+  );
+}
+[data-accent='bioluminescent'] .service-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--bioluminescent) / 0.38) 0%,
+    rgb(var(--bioluminescent) / 0.10) 38%,
+    transparent 72%
+  );
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .service-card:hover .service-card__glow {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+
+// Todo el contenido vive en z-index 1+ para sentarse sobre el halo y la
+// textura de noise de glass-core.
+.service-card__hero,
+.service-card__body,
+.service-card__highlights {
+  position: relative;
+  z-index: 1;
+}
+
+// ─── HEAD: icono + secuencia + status ──────────────────────────────────────
+.service-card__hero {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgb(var(--foam) / 0.08);
 }
 
 .service-card__icon {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3rem;
-  height: 3rem;
+  width: 3.25rem;
+  height: 3.25rem;
   border-radius: 9999px;
   color: rgb(var(--foam));
-  flex-shrink: 0;
+}
+
+.service-card__hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.625rem;
+  padding-top: 0.25rem;
+}
+
+.service-card__sequence {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  color: rgb(var(--foam) / 0.45);
 }
 
 .service-card__status {
@@ -166,76 +278,115 @@
   white-space: nowrap;
 
   &[data-status='estable'] {
-    background: rgb(var(--kelp) / 0.2);
+    background: rgb(var(--kelp) / 0.20);
     color: rgb(var(--bioluminescent));
-    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.3);
+    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.30);
   }
   &[data-status='vulnerable'] {
     background: rgb(var(--coral) / 0.15);
     color: rgb(var(--coral));
-    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.3);
+    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.30);
   }
   &[data-status='en-peligro'] {
     background: rgb(var(--coral) / 0.25);
     color: rgb(var(--coral));
-    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.4);
+    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.40);
   }
   &[data-status='critico'] {
     background: rgb(var(--coral) / 0.35);
     color: rgb(var(--foam));
-    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.6);
+    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.60);
   }
 }
 
+// ─── BODY: categoría + nombre + tagline ────────────────────────────────────
 .service-card__body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 .service-card__category {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--lagoon) / 0.85);
+  color: rgb(var(--foam) / 0.55);
 }
+
+// Acento de categoría — un punto chico en el color del accent antes del
+// texto. Detalle premium que vincula la card al halo sin competir con él.
+[data-accent='lagoon'] .service-card__category::before,
+[data-accent='kelp'] .service-card__category::before,
+[data-accent='coral'] .service-card__category::before,
+[data-accent='bioluminescent'] .service-card__category::before {
+  content: '';
+  display: inline-block;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 9999px;
+  margin-right: 0.5rem;
+  vertical-align: 0.1em;
+}
+[data-accent='lagoon'] .service-card__category::before { background: rgb(var(--lagoon)); box-shadow: 0 0 6px rgb(var(--lagoon) / 0.6); }
+[data-accent='kelp'] .service-card__category::before { background: rgb(var(--bioluminescent)); box-shadow: 0 0 6px rgb(var(--bioluminescent) / 0.6); }
+[data-accent='coral'] .service-card__category::before { background: rgb(var(--coral)); box-shadow: 0 0 6px rgb(var(--coral) / 0.6); }
+[data-accent='bioluminescent'] .service-card__category::before { background: rgb(var(--bioluminescent)); box-shadow: 0 0 8px rgb(var(--bioluminescent) / 0.7); }
 
 .service-card__name {
   font-family: var(--font-display);
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   font-weight: 500;
-  line-height: 1.15;
+  line-height: 1.1;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
+  text-wrap: balance;
 }
 
 .service-card__tagline {
   font-size: 0.875rem;
-  line-height: 1.5;
-  color: rgb(var(--foam) / 0.65);
+  line-height: 1.55;
+  color: rgb(var(--foam) / 0.68);
   text-wrap: pretty;
 }
 
-.service-card__meta {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+// ─── HIGHLIGHTS: bullets con check ─────────────────────────────────────────
+.service-card__highlights {
+  margin: 0;
+  padding: 1.25rem 0 0 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  padding-top: 1rem;
   border-top: 1px solid rgb(var(--foam) / 0.08);
 }
 
-.service-card__meta-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.45);
+.service-card__highlight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgb(var(--foam) / 0.88);
 }
 
-.service-card__meta-value {
-  margin-top: 0.25rem;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.3;
-  color: rgb(var(--foam) / 0.88);
+.service-card__highlight-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  background: rgb(var(--foam) / 0.06);
+  color: rgb(var(--foam) / 0.65);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.10);
+}
+
+// El "check" del entregable se distingue del clock con tinte lagoon —
+// señal visual de "esto te llevás" vs "esto demora".
+.service-card__highlight-icon--check {
+  background: rgb(var(--lagoon) / 0.18);
+  color: rgb(var(--bioluminescent));
+  box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.30);
 }
