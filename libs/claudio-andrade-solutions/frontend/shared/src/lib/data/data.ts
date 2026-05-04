@@ -155,7 +155,7 @@ export const species: Species[] = [
     depth: '2 — 4 semanas',
     diet: 'Roadmap accionable a 12 meses',
     image: '/especies/tiburon-ballena.jpg',
-    icon: 'phosphorMagnifyingGlassBold',
+    icon: 'phosphorPulseBold',
     accent: 'lagoon',
   },
   {
@@ -191,7 +191,7 @@ export const species: Species[] = [
     depth: '6 — 12 semanas',
     diet: 'Conciliación automatizada por SKU',
     image: '/especies/pez-dragon.jpg',
-    icon: 'phosphorShoppingBagBold',
+    icon: 'phosphorPackageBold',
     accent: 'coral',
   },
   {
@@ -227,7 +227,7 @@ export const species: Species[] = [
     depth: '2 — 6 semanas',
     diet: 'Fricciones priorizadas por impacto',
     image: '/especies/calamar-vampiro.webp',
-    icon: 'phosphorFlowArrowBold',
+    icon: 'phosphorChartLineUpBold',
     accent: 'bioluminescent',
   },
   {
@@ -239,7 +239,7 @@ export const species: Species[] = [
     depth: '4 — 8 semanas',
     diet: 'Horas-hombre liberadas',
     image: '/especies/nudibranquio-azul.jpg',
-    icon: 'phosphorLightningBold',
+    icon: 'phosphorGearBold',
     accent: 'coral',
   },
   {
@@ -263,7 +263,7 @@ export const species: Species[] = [
     depth: 'Mensual',
     diet: 'Decisiones técnicas con respaldo',
     image: '/especies/pulpo-mimo.jpg',
-    icon: 'phosphorCompassBold',
+    icon: 'phosphorBrainBold',
     accent: 'kelp',
   },
 ];

@@ -1,16 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  phosphorBrainBold,
   phosphorBrowsersBold,
+  phosphorChartLineUpBold,
   phosphorCheckBold,
   phosphorCloudCheckBold,
-  phosphorCompassBold,
   phosphorDeviceMobileBold,
-  phosphorFlowArrowBold,
-  phosphorLightningBold,
-  phosphorMagnifyingGlassBold,
+  phosphorGearBold,
+  phosphorPackageBold,
+  phosphorPulseBold,
   phosphorRobotBold,
-  phosphorShoppingBagBold,
   phosphorTerminalWindowBold,
 } from '@ng-icons/phosphor-icons/bold';
 import { phosphorClock } from '@ng-icons/phosphor-icons/regular';
@@ -59,17 +59,17 @@ interface ReelItem extends Species {
   imports: [Eyebrow, NgIcon, RevealDirective],
   providers: [
     provideIcons({
+      phosphorBrainBold,
       phosphorBrowsersBold,
+      phosphorChartLineUpBold,
       phosphorCheckBold,
       phosphorClock,
       phosphorCloudCheckBold,
-      phosphorCompassBold,
       phosphorDeviceMobileBold,
-      phosphorFlowArrowBold,
-      phosphorLightningBold,
-      phosphorMagnifyingGlassBold,
+      phosphorGearBold,
+      phosphorPackageBold,
+      phosphorPulseBold,
       phosphorRobotBold,
-      phosphorShoppingBagBold,
       phosphorTerminalWindowBold,
     }),
   ],
