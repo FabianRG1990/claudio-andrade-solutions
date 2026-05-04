@@ -14,7 +14,7 @@ const MILESTONES: ReadonlyArray<Milestone> = [
   { year: '2023', body: 'Integraciones con Walmart Retail Link para 12 proveedores LATAM.' },
   { year: '2024', body: 'Lanzamiento de la práctica de IA: agentes Claude, RAG sobre documentación interna.' },
   { year: '2025', body: 'Equipo distribuido en 4 países. 80+ proyectos productivos sin un solo rollback crítico.' },
-  { year: '2026', body: 'Lanzamiento del modelo Partnership: CTO fraccional + soporte 24/7 para empresas en crecimiento.' },
+  { year: '2026', body: 'Lanzamiento del modelo Acompañamiento: CTO fraccional + soporte 24/7 para empresas en crecimiento.' },
 ];
 
 /**

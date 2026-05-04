@@ -132,7 +132,9 @@
   flex-direction: column;
   height: 100%;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
-  padding: 1.75rem;
+  // padding compactado de 1.75rem → 1.5rem (top/bottom): ahorra ~0.5rem
+  // de altura sin que las cards se sientan cramped.
+  padding: 1.5rem 1.5rem 1.25rem;
 }
 
 // ─── Halo de color por accent ────────────────────────────────────────────────
@@ -240,7 +242,7 @@
 }
 
 .ticket-card__price-row {
-  margin-top: 1.5rem;
+  margin-top: 1.125rem;
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
@@ -267,20 +269,20 @@
 }
 
 .ticket-card__description {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   text-wrap: pretty;
   color: rgb(var(--foam) / 0.7);
-  line-height: 1.625;
+  line-height: 1.55;
 }
 
 .ticket-card__perks {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
   list-style: none;
   border-top: 1px solid rgb(var(--foam) / 0.1);
-  padding-top: 1.5rem;
+  padding-top: 1.125rem;
 
   > li + li {
-    margin-top: 0.75rem;
+    margin-top: 0.5rem;
   }
 }
 
@@ -315,12 +317,13 @@
 }
 
 .ticket-card__perk-label {
-  font-size: 16px;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .ticket-card__cta-wrap {
   margin-top: auto;
-  padding-top: 2rem;
+  padding-top: 1.5rem;
 }
 
 .ticket-card__cta {
