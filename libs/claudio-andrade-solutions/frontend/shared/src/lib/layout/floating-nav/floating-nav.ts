@@ -4,7 +4,6 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  HostListener,
   PLATFORM_ID,
   afterNextRender,
   effect,
@@ -37,13 +36,15 @@ const LINKS: ReadonlyArray<NavLink> = [
 ];
 
 /**
- * FloatingNav — header flotante con:
- *  - Brand (emblema + wordmark)
+ * FloatingNav — split en dos contenedores:
+ *  - Brand-bar (position: fixed) con emblema + wordmark, persistente arriba.
+ *  - Rail (position: absolute) con la pill desktop y el burger móvil; al
+ *    scrollear se va con la página (no es fixed).
+ *
  *  - Pill desktop con `<app-glass-pill-canvas>` Three.js detrás de los links
  *  - Indicador del link activo (fade-in via clase, sustituye `layoutId`)
  *  - Burger + bottom-sheet móvil con stagger en los items
  *  - Cursor spotlight escrito como CSS vars (`--mx`, `--my`, `--m-opacity`)
- *  - Detección de scroll (>24 px → escala 0.97 + glass-shell-scrolled)
  *  - Cierre automático del menú al cambiar de ruta
  *  - Body scroll lock cuando el menú móvil está abierto
  */
@@ -62,7 +63,6 @@ export class FloatingNav {
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   protected readonly links = LINKS;
-  protected readonly scrolled = signal(false);
   protected readonly menuOpen = signal(false);
   // pillVisible: refleja si el pill desktop/tablet está realmente en pantalla
   // (≥880px, breakpoint del SCSS). Se usa para gatear el `<app-glass-pill-canvas>`
@@ -87,6 +87,15 @@ export class FloatingNav {
   protected isActive(link: NavLink): boolean {
     const url = this.currentUrl();
     return link.href === '/' ? url === '/' : url.startsWith(link.href);
+  }
+
+  /**
+   * `true` cuando la ruta actual es la home — el brand (logo + wordmark)
+   * solo se renderiza ahí porque vive anclado al Hero, y el Hero solo
+   * existe en la home.
+   */
+  protected isHome(): boolean {
+    return this.currentUrl() === '/';
   }
 
   /**
@@ -166,12 +175,6 @@ export class FloatingNav {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(() => this.menuOpen.set(false));
-  }
-
-  @HostListener('window:scroll')
-  protected onScroll(): void {
-    if (!this.isBrowser) return;
-    this.scrolled.set(window.scrollY > 24);
   }
 
   protected toggleMenu(): void {

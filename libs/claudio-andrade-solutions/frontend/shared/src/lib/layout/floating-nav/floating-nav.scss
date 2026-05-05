@@ -1,40 +1,77 @@
 // =============================================================================
-// FloatingNav — header flotante + bottom-sheet móvil.
+// FloatingNav — brand anclado al Hero + rail sticky.
 // =============================================================================
-
-// ─── Header ──────────────────────────────────────────────────────────────────
-// IMPORTANT: el contenedor `.floating-nav` NO debe tener transform (ni siquiera
-// animation que termine en translateY(0)). Cualquier transform en el ancestor
-// crea un containing block que rompe `backdrop-filter` en Chrome para los
-// descendientes — el blur intentaría samplear lo que hay dentro del header en
-// vez de la página detrás. Firefox lo tolera; Chrome no. La animación de
-// entrada se mueve a cada hijo (brand, pill, burger), aplicada sobre el mismo
-// elemento con backdrop-filter — eso sí funciona en ambos navegadores.
 //
-// Layout: GRID de 3 columnas (`auto 1fr auto`). La marca queda anclada a la
-// columna 1 con `justify-self: start` SIEMPRE — aunque pill o burger se
-// muestren u oculten, la marca nunca se mueve. Esto reemplaza el anterior
-// `flex + justify-content: space-between`, que dejaba la marca "viajando"
-// cuando el orden o visibilidad de los siblings cambiaba.
-.floating-nav {
-  position: fixed;
+// Estructura:
+//   .floating-nav-brand → position: absolute. Logo + wordmark.
+//                         Vive al tope del documento (= tope del Hero en
+//                         home). Scrollea con la página y desaparece cuando
+//                         el usuario scrollea más allá del Hero. NO sigue
+//                         al usuario por el resto del sitio.
+//   .floating-nav-rail  → position: fixed. Pill desktop + burger móvil.
+//                         Persistente — sigue al usuario por todo el sitio
+//                         a cualquier altura del scroll.
+//
+// IMPORTANT: ningún ancestor de los elementos con backdrop-filter
+// (.glass-bubble del burger, .glass-nav-shell del pill) puede tener
+// transform — Chrome rompe el blur si lo tienen.
+
+// ─── Brand (absolute, anclado al Hero) ──────────────────────────────────────
+// position: absolute al documento (sin ancestor positioned, cae a la ICB).
+// top: 1rem queda alineado con el rail al cargar; al scrollear, scrollea con
+// la página y desaparece — comportamiento "se queda en el Hero, no me sigue
+// por el resto del sitio".
+.floating-nav-brand {
+  position: absolute;
+  top: 1rem;
   left: 0;
   right: 0;
-  top: 1rem;
-  // z-index 70 — arriba del .grain::before (z:60) que vive en `<body>` con
-  // mix-blend-mode:overlay. A z:50 el grain estaba dim-eando el nav en home
-  // (donde el hero tiene gradient layers) al punto de hacerlo invisible.
-  z-index: 70;
+  // 69 — un punto debajo del rail-fixed (70) para que cualquier solapamiento
+  // accidental al cargar deje el rail al frente (la nav es la persistente).
+  z-index: 69;
   margin-inline: auto;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: center;
   width: 100%;
   max-width: 80rem;
   // Padding fluido — alineado al `.hero__container` para que la marca quede
-  // a la misma X que el título. Antes era 1.5rem fijo, lo que en phones con
-  // viewport <360px sentía la marca "pegada" al borde.
+  // a la misma X que el título del hero.
   padding-inline: var(--container-px);
+  // El bar deja pasar clicks por el espacio que no ocupa el brand link;
+  // solo el hijo visible captura eventos (vía pointer-events: auto puntual).
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+
+  @media (min-width: 1024px) {
+    top: 1.5rem;
+  }
+}
+
+// ─── Rail (fixed, sticky a la viewport) ─────────────────────────────────────
+// Persistente arriba del viewport en todas las rutas y a cualquier scroll.
+.floating-nav-rail {
+  position: fixed;
+  top: 1rem;
+  left: 0;
+  right: 0;
+  // z-index 70 — arriba del .grain::before (z:60) que vive en `<body>` con
+  // mix-blend-mode:overlay.
+  z-index: 70;
+  margin-inline: auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: var(--container-px);
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
 
   @media (min-width: 1024px) {
     top: 1.5rem;
@@ -42,40 +79,24 @@
 }
 
 // ─── Brand: emblema + wordmark ───────────────────────────────────────────────
-// IMPORTANT: SIN animation de entrada. La animación de entrada con
-// `animation-fill-mode: both` + delay de 0.3s dejaba la marca con
-// `opacity: 0` durante esos primeros 300ms — el usuario lo percibía como
-// "el logo desaparece" cada vez que el browser re-aplicaba estilos. Se
-// quitó del todo: la marca debe estar visible desde el primer paint.
+// SIN animation de entrada — `animation-fill-mode: both` + delay deja la
+// marca con `opacity: 0` los primeros ms y se percibe como flicker. La
+// marca debe estar visible desde el primer paint.
 .floating-nav__brand {
-  grid-column: 1;
-  justify-self: start;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  // El gap se cierra junto con el wordmark al scrollear — sin esto, el
-  // emblema queda con un "hueco" del tamaño del gap a su derecha cuando
-  // el wordmark colapsa.
-  transition: gap 600ms var(--ease-fluid);
-
-  .floating-nav.is-scrolled & {
-    gap: 0;
-  }
 }
 
-// Wordmark: visible al tope, se esconde con transición fluida al scrollear.
-// Combinación opacity (fade) + max-width (colapso real del ancho) +
-// transform (sutil deslizamiento horizontal) — la curva `ease-fluid`
-// (cubic-bezier 0.32, 0.72, 0, 1) da la sensación de movimiento "asentado"
-// como una puerta que cierra suave, sin rebote. Al volver al tope la
-// transición se reproduce inversa.
+// Wordmark: visible mientras el brand está en pantalla. Antes colapsaba con
+// .is-scrolled (opacity 0 + max-width 0 + translate); el usuario pidió que
+// persista en el Hero, así que sin transiciones de scroll — al scrollear,
+// el brand entero (incluido este wordmark) se va con la página.
 .floating-nav__brand-wordmark {
   display: inline-block;
-  // Excepción tipográfica: el wordmark de la marca conserva Times (serif)
-  // mientras el resto del sitio usa Roboto Medium. Decisión del usuario
-  // — la firma editorial de "Claudio Andrade Solutions" debe leerse con
-  // tipografía distinta al UI para que se sienta como marca, no como
-  // título de sección.
+  // Excepción tipográfica: el wordmark conserva Times (serif). El resto del
+  // sitio usa Roboto Medium. La firma editorial debe leerse como marca, no
+  // como título de sección.
   font-family: var(--font-times);
   font-size: clamp(0.875rem, 0.7rem + 0.7vw, 1.25rem);
   font-weight: 500;
@@ -83,40 +104,21 @@
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
   white-space: nowrap;
-  overflow: hidden;
-  max-width: 26ch;
-  opacity: 1;
-  transform: translateX(0);
-  transform-origin: left center;
-  transition:
-    opacity 450ms var(--ease-fluid),
-    max-width 600ms var(--ease-fluid),
-    transform 600ms var(--ease-fluid);
 
-  .floating-nav.is-scrolled & {
-    opacity: 0;
-    max-width: 0;
-    transform: translateX(-0.5rem);
-  }
-
-  // En phones chicos donde el espacio es premium, ocultamos el wordmark
-  // (queda solo el emblema como ancla visual) — el burger ya identifica
-  // la app y sumar 26ch de texto rompía el layout.
+  // En phones <480px ocultamos el wordmark — el ancho no alcanza para
+  // emblema + nombre cómodamente. El emblema ya identifica la app a esa
+  // escala.
   @media (max-width: 479.98px) {
     display: none;
   }
 }
 
 // ─── Pill desktop / tablet ──────────────────────────────────────────────────
-// Breakpoints:
-//   • <880px (phone): pill oculto → burger visible
-//   • 880-1023px (tablet): pill visible al tope; cuando .is-scrolled, se
-//     oculta y aparece el burger en su lugar (libera el ancho para que el
-//     contenido respire mientras el usuario lee).
-//   • ≥1024px (desktop): pill siempre visible; burger siempre oculto.
+// La pill vive dentro del rail; al scrollear se va con la página
+// automáticamente (no necesita reglas .is-scrolled).
+//   • <880px (phone): oculta — burger toma el rol de nav
+//   • ≥880px: visible al tope, scrollea hacia arriba con la página
 .floating-nav__pill {
-  grid-column: 3;
-  justify-self: end;
   position: relative;
   display: none;
   align-items: center;
@@ -124,31 +126,11 @@
   border-radius: 9999px;
   padding: 0.5rem;
 
-  // Sin entrance animation — ver nota en `.floating-nav__brand`. El pill
-  // debe ser visible desde frame 1.
-  transition: transform 600ms var(--ease-fluid);
-
   @media (min-width: 880px) {
     display: flex;
   }
-
-  // Tablet: oculto cuando se hace scroll para que el burger aparezca y libere
-  // espacio horizontal sobre el contenido.
-  @media (min-width: 880px) and (max-width: 1023.98px) {
-    .floating-nav.is-scrolled & {
-      display: none;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    // Desktop: solo escala suave — pill siempre visible.
-    .floating-nav.is-scrolled & {
-      transform: scale(0.97);
-    }
-  }
 }
 
-// Cada link del pill.
 .floating-nav__link {
   position: relative;
   z-index: 10;
@@ -169,9 +151,9 @@
 }
 
 // Indicador del link activo. Variante sutil — NO usa .glass-bubble-icon porque
-// ese trae un catchlight blanco al 65% y un ring claro pensados para botones,
-// no para ribbon de nav. Aquí solo un wash apenas perceptible: linear gradient
-// muy bajo + hairline ring foam, sin highlight superior brillante.
+// ese trae un catchlight blanco al 65% y un ring claro pensados para botones.
+// Aquí solo un wash apenas perceptible: linear gradient muy bajo + hairline
+// ring foam, sin highlight superior brillante.
 .floating-nav__link-indicator {
   position: absolute;
   inset: 0;
@@ -196,10 +178,13 @@
   position: relative;
 }
 
-// ─── Burger móvil / tablet-scroll ───────────────────────────────────────────
+// ─── Burger móvil ───────────────────────────────────────────────────────────
+// Vive dentro del rail (no del brand-bar). En mobile se ve al cargar, y al
+// scrollear se va con la página junto con la pill — el usuario pierde acceso
+// al menú post-scroll en mobile. Decisión consciente del usuario.
+//   • <880px (phone): visible al tope, scrollea fuera con el rail
+//   • ≥880px: oculto — la pill cubre la nav
 .floating-nav__burger {
-  grid-column: 3;
-  justify-self: end;
   position: relative;
   display: flex;
   // 44×44 px = mínimo táctil de Apple HIG / WCAG 2.2 SC 2.5.8 (Target Size).
@@ -209,24 +194,9 @@
   justify-content: center;
   border-radius: 9999px;
   color: rgb(var(--foam));
-  // Sin animation — ver nota en `.floating-nav__brand`. Crítico aquí: el
-  // burger se reinsertaba en el DOM cuando el viewport cruzaba 880px o 1024px
-  // (display: none ↔ flex), reactivando la animación y dejándolo invisible
-  // 300ms. Quitada, el burger es estable durante resize.
   touch-action: manipulation;
 
-  // Tablet: oculto al tope, aparece SOLO cuando se hace scroll (reemplaza al
-  // pill que se ocultó).
-  @media (min-width: 880px) and (max-width: 1023.98px) {
-    display: none;
-
-    .floating-nav.is-scrolled & {
-      display: flex;
-    }
-  }
-
-  // Desktop: nunca aparece — el pill ya cubre la navegación.
-  @media (min-width: 1024px) {
+  @media (min-width: 880px) {
     display: none;
   }
 }
@@ -238,14 +208,10 @@
 .mobile-menu {
   position: fixed;
   inset: 0;
-  // z-index 65 — encima del .grain (60) pero debajo del nav header (70) para
-  // que cuando se abra el sheet el nav siga visible y el botón X se pueda
-  // tocar para cerrar.
+  // z-index 65 — encima del .grain (60) pero debajo del brand-bar (70).
   z-index: 65;
-  // Background opacity 0.92 (antes 0.85) compensa la pérdida visual de
-  // bajar el blur — la legibilidad del overlay no se degrada. blur(20px)
-  // (antes 40px) corta el peso GPU del compositor a la mitad. El sheet
-  // cubre el viewport entero, así que cada pixel del blur es caro.
+  // Background opacity 0.92 + blur(20px) — calibrado para legibilidad sin
+  // disparar el peso GPU del compositor (el sheet cubre todo el viewport).
   background: rgb(var(--abyss) / 0.92);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
@@ -261,10 +227,8 @@
     pointer-events: auto;
   }
 
-  // El sheet móvil puede aparecer hasta el desktop: en tablet (880-1023) el
-  // burger sí existe (cuando scrollado) y debe poder abrir el menú. Solo en
-  // desktop (≥1024) se oculta porque ahí no hay burger.
-  @media (min-width: 1024px) {
+  // El sheet móvil solo aparece donde existe el burger (<880px).
+  @media (min-width: 880px) {
     display: none;
   }
 }
@@ -287,8 +251,8 @@
 }
 
 .mobile-menu__item {
-  // Stagger fade-up por item (0.1s + index * 0.05s) — equivalente al
-  // motion.li per-item con delay incremental del original.
+  // Stagger fade-up por item — equivalente al motion.li per-item con delay
+  // incremental del original.
   opacity: 0;
   transform: translateY(24px);
   filter: blur(6px);

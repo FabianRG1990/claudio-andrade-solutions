@@ -1,20 +1,28 @@
-<header class="floating-nav" [class.is-scrolled]="scrolled()">
-  <!-- LEFT — brand: emblema + wordmark. Sin glass; la marca respira. -->
-  <a
-    routerLink="/"
-    class="floating-nav__brand"
-    aria-label="Claudio Andrade Solutions · Inicio"
-    (click)="onLinkClick('/', $event)"
-  >
-    <app-emblem-mark [size]="96" />
-    <span class="floating-nav__brand-wordmark">Claudio Andrade Solutions</span>
-  </a>
+<!-- Brand — position: absolute. Logo + wordmark anclados al Hero (tope del
+     documento en home). Solo se renderiza en la home — en otras rutas no
+     hay Hero al que pertenecer, así que no aparece. -->
+@if (isHome()) {
+  <header class="floating-nav-brand">
+    <a
+      routerLink="/"
+      class="floating-nav__brand"
+      aria-label="Claudio Andrade Solutions · Inicio"
+      (click)="onLinkClick('/', $event)"
+    >
+      <app-emblem-mark [size]="96" />
+      <span class="floating-nav__brand-wordmark">Claudio Andrade Solutions</span>
+    </a>
+  </header>
+}
 
-  <!-- RIGHT — pill desktop con cristal 3D + links activos. -->
+<!-- Rail — position: absolute. Anclada al top del documento (no al
+     viewport): al scrollear baja con la página y desaparece. Pill desktop +
+     burger móvil viven aquí — todo el "navbar" (links + acceso a menú) se
+     va con el scroll. Decisión consciente: sin nav post-scroll en mobile. -->
+<div class="floating-nav-rail">
   <nav
     #navRef
     class="floating-nav__pill glass-nav-shell"
-    [class.glass-nav-shell-scrolled]="scrolled()"
     aria-label="Navegación principal"
   >
     @if (pillVisible()) {
@@ -38,7 +46,6 @@
     }
   </nav>
 
-  <!-- Burger móvil — mismo lenguaje glass que el resto. -->
   <button
     type="button"
     class="floating-nav__burger glass-bubble"
@@ -52,7 +59,7 @@
       <ng-icon name="phosphorList" size="16" />
     }
   </button>
-</header>
+</div>
 
 <!-- Bottom sheet móvil. Se queda renderizado y conmuta vía clase para que
      las animaciones CSS de entrada/salida fluyan en ambas direcciones. -->
