@@ -1,3 +1,30 @@
+// =============================================================================
+// Conservation · capítulo 04 — TEASER de 3 casos.
+//
+// Decisiones de diseño (ninguna improvisada — referencias en cada bloque):
+//
+// • Card aspect 1/1 (square) en desktop · ~20 % menos altura que 4/5 portrait
+//   del segmento de productos. Razón: el usuario pidió cards más compactos
+//   porque productos detalla; este capítulo invita. Match con teaser cards
+//   tipo Stripe customer stories (foto + tagline + 2-3 stats).
+//
+// • Densidad reducida — sin manifesto, 3 stats máx, título 22-24 px.
+//   Best-practice card UI 2025: simple typography, body 14-16 px, stats
+//   destacadas como callouts (UX Pin · DeveloperUX · Stryve). Títulos h2
+//   en cards teaser violan jerarquía: quedan en h3.
+//
+// • Pill collision fix — el badge live (top-left) y el contador (top-right)
+//   ya no compiten por el mismo ancho con caption variable. La caption del
+//   slide se movió al pie del card como banda glass; arriba solo viven dos
+//   pills cortas (status ≤ 24 chars, contador "01/03").
+//
+// • Carrusel sin hover-pause. La hover-pause con pointerenter/leave es
+//   frágil (pointerleave no siempre dispara → carrusel queda pausado para
+//   siempre). Pattern 2025: IntersectionObserver para start/stop on-screen
+//   + document.visibilitychange para tab oculta. Sin hover-pause el ciclo
+//   no puede quedarse pegado.
+// =============================================================================
+
 .conservation {
   position: relative;
   padding-block: 8rem;
@@ -26,91 +53,82 @@
   }
 }
 
-// Sin `align-items` → default `stretch`. La columna de stats se estira
-// al alto de la card portrait y `.conservation__stats` (flex column con
-// `justify-content: space-between`) distribuye head, grid y manifesto a
-// lo largo de ese alto — head arriba, stats centrados, manifesto abajo.
-// Visualmente queda equilibrado conforme a la card, sin huecos.
-.conservation__grid {
+.conservation__cases {
   margin-top: 4rem;
-  display: grid;
-  gap: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4.5rem;
 
   @media (min-width: 1024px) {
-    grid-template-columns: 1.1fr 1fr;
+    gap: 5.5rem;
+  }
+}
+
+// ─── Case row · grid 2-col con alternancia ─────────────────────────────────
+.case-row {
+  display: grid;
+  gap: 2rem;
+
+  @media (min-width: 1024px) {
+    // Imagen un toque más chica que productos (1.1fr 1fr) — 1fr 1fr da una
+    // proporción más teaser-friendly (50/50 visual vs textual).
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
     gap: 3.5rem;
   }
 }
 
-// ─── Caso destacado · carrusel ─────────────────────────────────────────────
-// Frame portrait 4/5 — el formato original de la sección. Las capturas
-// vienen ahora en viewport mobile (414×896, naturalmente vertical), así
-// que en lugar de obligar al frame a estirar landscape, dejamos que el
-// formato vertical respire y mostramos vistas mobile reales del producto:
-// cada slide es exactamente lo que vería un usuario en su teléfono.
-.conservation__program {
+// Alternancia: la fila impar invierte vía `order` (no `direction: rtl` para
+// no romper el alineamiento del texto del body).
+.case-row--reverse {
+  @media (min-width: 1024px) {
+    .case-row__media {
+      order: 2;
+    }
+  }
+}
+
+// ─── Media · glass-shell + carrusel ────────────────────────────────────────
+.case-row__media {
   border-radius: var(--radius-squircle);
   padding: 0.5rem;
 }
 
-.conservation__program-frame {
+.case-row__media-inner {
   position: relative;
-  aspect-ratio: 4 / 5;
+  // Mobile: 5/6 (un toque más square que el original 4/5 — más teaser).
+  // Desktop: 1/1 cuadrado · ≈ 20 % menos alto que el 4/5 de productos.
+  // Cuadrado funciona porque las capturas mobile (header arriba) siguen
+  // mostrando la zona crítica con object-position: center top.
+  aspect-ratio: 5 / 6;
   overflow: hidden;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
   background: rgb(var(--tide));
   isolation: isolate;
+
+  @media (min-width: 1024px) {
+    aspect-ratio: 1 / 1;
+  }
 }
 
-// ─── Image stack · cinematic transition ───────────────────────────────────
-// Antes era cross-fade simple (solo opacity). El usuario lo encontró
-// insuficiente — pidió algo "genuinamente premium". Ahora cada slide
-// orquesta cuatro propiedades en simultáneo, con curva Apple keynote
-// (`cubic-bezier(0.22, 1, 0.36, 1)` = ease-out-quint), durante 1.0-1.2 s:
-//
-//   • OPACITY      0 → 1
-//   • SCALE        1.08 → 1.0    (incoming "settles in" desde más cerca)
-//   • BLUR         8px → 0       (entra fuera de foco, gana nitidez)
-//   • BRIGHTNESS   0.82 → 1.0    (entra en penumbra, gana spotlight)
-//
-// La imagen saliente hace el camino inverso — recede, se desenfoca, se
-// oscurece y se desvanece — durante el mismo 1 s de overlap. Resultado:
-// momento cinemático tipo "cambio de plano" donde dos imágenes coexisten
-// brevemente en distinto plano focal. Plus, el ken-burns ambient sigue
-// arrastrando la activa entre transiciones para que no quede estática.
-//
-// `z-index` se eleva en .is-active para que la incoming siempre vaya por
-// encima de la outgoing durante el overlap, sin importar el orden DOM —
-// crítico si en futuro agregamos navegación manual hacia atrás.
-.conservation__program-image {
+// ─── Image stack · cinemática de cross-fade ───────────────────────────────
+.case-row__image {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  // `top` mantiene siempre visible el header (logo, tabs, primera card o
-  // primer stat). Las capturas mobile son 414×896 (más altas que el frame
-  // 4/5), así que ~30% del fondo se recorta — ese fondo es siempre menos
-  // crítico que el header, así que sale.
   object-position: center top;
-  // Estado inactivo: lejano, fuera de foco, en penumbra. Cualquier slide
-  // que no es el activo aterriza acá. La saliente transiciona a este
-  // estado al perder .is-active; la entrante parte de acá al ganarlo.
   filter: blur(8px) saturate(0.7) brightness(0.82);
   opacity: 0;
   transform: scale(1.08);
   transform-origin: center center;
-  // Durations escalonadas: opacity y filter terminan en 1000 ms; transform
-  // sigue 200 ms más. Ese desfase final crea sensación de "settle"
-  // — la imagen aparece nítida y luego asienta su última décima de zoom.
   transition:
     opacity 1000ms cubic-bezier(0.22, 1, 0.36, 1),
     filter 1000ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 1200ms cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
   z-index: 0;
-  // Hint al compositor: estas tres propiedades se animan; promueve la
-  // capa a GPU para evitar repaint en el cross-fade.
   will-change: opacity, transform, filter;
 
   &.is-active {
@@ -118,110 +136,46 @@
     transform: scale(1.0);
     filter: blur(0) saturate(0.92) brightness(1);
     z-index: 1;
-    // Ken-burns ambient: scale 1.0 → 1.04 con delay de 1200 ms (igual al
-    // transition de entrada) — empieza después del settle para no chocar
-    // con la transición. Mantiene la imagen "respirando" durante los
-    // ~2.3 s que dura activa entre transiciones.
-    animation: program-ken-burns 4500ms ease-out 1200ms forwards;
+    animation: case-ken-burns 4500ms ease-out 1200ms forwards;
   }
 }
 
-@keyframes program-ken-burns {
+@keyframes case-ken-burns {
   from { transform: scale(1.0); }
   to { transform: scale(1.04); }
 }
 
-// ─── Overlays (tint + gradient) ────────────────────────────────────────────
-// Mantienen contraste para badges y caption sobre cualquier imagen,
-// independiente de su luminancia. z-index 1 los sienta sobre las imágenes
-// pero bajo los chips/caption.
-.conservation__program-tint {
+// ─── Tint overlay ──────────────────────────────────────────────────────────
+.case-row__media-tint {
   pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(
-    to bottom,
-    rgb(var(--abyss) / 0.15),
-    transparent,
-    rgb(var(--abyss) / 0.35)
-  );
-  mix-blend-mode: multiply;
+  background:
+    // Top: oscurece para que el badge + contador resalten
+    linear-gradient(to bottom,
+      rgb(var(--abyss) / 0.45),
+      rgb(var(--abyss) / 0) 28%,
+      rgb(var(--abyss) / 0) 70%,
+      rgb(var(--abyss) / 0.55) 100%
+    );
 }
 
-.conservation__program-gradient {
-  pointer-events: none;
+// ─── Badge live (top-left) · pill compacta ─────────────────────────────────
+// Texto en data ≤ 24 chars — `max-width: 50%` garantiza que aunque crezca,
+// no invada el espacio del contador a la derecha.
+.case-row__badge {
   position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    to top,
-    rgb(var(--abyss)),
-    rgb(var(--abyss) / 0.3),
-    transparent
-  );
-}
-
-// ─── Slide label (top-right) · contador editorial + caption ────────────────
-// Reemplaza la barra Stories que se sentía poco premium. Pill de glass
-// con el contador "01 / 05" en font-mono (Times) seguido de la caption
-// del slide actual. `aria-live="polite"` lo hace anunciable a screen
-// readers cuando la caption muta.
-.conservation__program-slide-label {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
+  left: 0.875rem;
+  top: 0.875rem;
   z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  max-width: calc(100% - 2.5rem - 18rem); // deja espacio para el badge a la izquierda
-  border-radius: 9999px;
-  background: rgb(var(--abyss) / 0.55);
-  padding: 0.4375rem 1rem;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.92);
-  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.16);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-}
-
-.conservation__program-slide-counter {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  color: rgb(var(--foam) / 0.65);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.conservation__program-slide-divider {
-  color: rgb(var(--foam) / 0.30);
-  font-size: 10px;
-}
-
-.conservation__program-slide-caption {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-// ─── Status badge (top-left, constante) ────────────────────────────────────
-.conservation__program-badge {
-  position: absolute;
-  left: 1.25rem;
-  top: 1.25rem;
-  z-index: 3;
+  max-width: calc(100% - 4.5rem); // deja ~4.5rem para el contador derecho
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   border-radius: 9999px;
-  background: rgb(var(--abyss) / 0.55);
-  padding: 0.4375rem 0.875rem;
+  background: rgb(var(--abyss) / 0.62);
+  padding: 0.375rem 0.75rem;
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
@@ -229,9 +183,13 @@
   box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.15);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.conservation__program-pulse {
+.case-row__pulse {
+  flex-shrink: 0;
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 9999px;
@@ -240,51 +198,55 @@
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-// ─── Caption inferior (constante: identidad del caso) ──────────────────────
-.conservation__program-caption {
+// ─── Contador (top-right) · "01/03" mono · ancho fijo predecible ──────────
+.case-row__counter {
   position: absolute;
-  bottom: 1.25rem;
-  left: 1.25rem;
-  right: 1.25rem;
+  top: 0.875rem;
+  right: 0.875rem;
   z-index: 3;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgb(var(--foam) / 0.85);
+  font-variant-numeric: tabular-nums;
+  border-radius: 9999px;
+  background: rgb(var(--abyss) / 0.62);
+  padding: 0.375rem 0.625rem;
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.15);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  white-space: nowrap;
 }
 
-.conservation__program-label {
-  font-size: 10px;
+// ─── Caption (bottom · banda glass) · muta con cada slide ─────────────────
+.case-row__caption {
+  position: absolute;
+  bottom: 0.875rem;
+  left: 0.875rem;
+  right: 0.875rem;
+  z-index: 3;
+  margin: 0;
+  border-radius: 0.625rem;
+  background: rgb(var(--abyss) / 0.62);
+  padding: 0.5rem 0.875rem;
+  font-size: 11px;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.55);
-}
-
-.conservation__program-name {
-  margin-top: 0.5rem;
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  line-height: 1.1;
-  letter-spacing: var(--tracking-tight);
-  color: rgb(var(--foam));
-
-  @media (min-width: 768px) {
-    font-size: 1.25rem;
-  }
-}
-
-.conservation__program-year {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.5);
+  color: rgb(var(--foam) / 0.92);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.15);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // ─── Reduced-motion · accessibility ────────────────────────────────────────
-// Sin auto-advance (gateado en TS) + sin ken-burns + cross-fade reducido a
-// un fade simple.
 @media (prefers-reduced-motion: reduce) {
-  .conservation__program-image {
+  .case-row__image {
     transition: opacity 250ms ease;
     transform: none;
     filter: saturate(0.92);
@@ -296,94 +258,85 @@
     }
   }
 
-  .conservation__program-pulse {
+  .case-row__pulse {
     animation: none;
   }
 }
 
-// ─── Stats column ──────────────────────────────────────────────────────────
-.conservation__stats {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.conservation__stats-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  border-bottom: 1px solid rgb(var(--foam) / 0.1);
-  padding-bottom: 1rem;
-}
-
-.conservation__stats-eyebrow {
+// ─── Body · texto + 3 stats compactas ─────────────────────────────────────
+// Densidad baja: zone (10 px) + título (~24 px h3) + tagline (14 px) +
+// 3 stats grid 3-col con value (1.5 rem mono) + label (10 px). Sin manifesto.
+.case-row__zone {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.45);
+  color: rgb(var(--lagoon));
 }
 
-.conservation__stats-meta {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.3);
-}
-
-.conservation__stats-grid {
-  margin-top: 2rem;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  column-gap: 1.5rem;
-  row-gap: 2.5rem;
-}
-
-.conservation__stat-label {
-  font-size: 12px;
+.case-row__title {
+  margin-top: 0.875rem;
+  font-family: var(--font-display);
+  // Tamaños teaser-card · NO h2-lg (ese es para encabezados de página).
+  // Referencia: Stripe customer story cards 22-26 px / Linear changelog 20 px.
+  font-size: 1.375rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.9);
-}
-
-.conservation__stat-value {
-  margin-top: 1rem;
-  font-family: var(--font-mono);
-  font-size: 1.875rem;
-  line-height: 1;
+  line-height: 1.15;
   letter-spacing: var(--tracking-tight);
-  color: rgb(var(--foam));
-  font-variant-numeric: tabular-nums;
+  text-wrap: balance;
 
   @media (min-width: 768px) {
-    font-size: 42px;
+    font-size: 1.5rem;
+  }
+
+  @media (min-width: 1280px) {
+    font-size: 1.625rem;
   }
 }
 
-.conservation__stat-suffix {
-  margin-top: 0.5rem;
-  color: rgb(var(--foam) / 0.45);
-  font-size: 0.875rem;
-  line-height: 1.375;
-}
-
-.conservation__manifesto {
-  margin-top: 3rem;
-  border-top: 1px solid rgb(var(--foam) / 0.1);
-  padding-top: 1.5rem;
+.case-row__copy {
+  margin-top: 0.75rem;
+  max-width: 48ch;
   text-wrap: pretty;
   color: rgb(var(--foam) / 0.65);
-  line-height: 1.625;
+  line-height: 1.5;
+  font-size: 0.9375rem;
 }
 
-.conservation__manifesto-pct {
+// 3 stats inline en una grid horizontal 3-col en desktop, 3-col también en
+// mobile (el contenido es corto, cabe). Es la unidad de "callout" del card —
+// pequeña pero destacada visualmente con value en mono.
+.case-row__stats {
+  margin: 1.75rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgb(var(--foam) / 0.12);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 1rem;
+  row-gap: 1rem;
+}
+
+.case-row__stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+  line-height: 1.2;
+}
+
+.case-row__stat-value {
+  margin: 0.4rem 0 0;
   font-family: var(--font-mono);
-  color: rgb(var(--foam) / 0.95);
+  font-size: 1.25rem;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
-}
+  color: rgb(var(--foam));
 
-.conservation__manifesto-license {
-  font-family: var(--font-editorial);
-  font-style: italic;
-  color: rgb(var(--foam) / 0.85);
+  @media (min-width: 768px) {
+    font-size: 1.375rem;
+  }
+
+  @media (min-width: 1280px) {
+    font-size: 1.5rem;
+  }
 }

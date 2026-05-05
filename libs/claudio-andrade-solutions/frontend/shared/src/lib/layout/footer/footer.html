@@ -16,18 +16,36 @@
         </div>
       </div>
 
-      <!-- Navegación secundaria -->
-      <nav class="footer__nav" aria-label="Pie de página">
-        <ul class="footer__nav-list">
-          @for (link of navLinks; track link.label) {
-            <li>
-              <a [routerLink]="link.href" class="footer__nav-link">
-                {{ link.label }}
-              </a>
-            </li>
-          }
-        </ul>
-      </nav>
+      <!-- Acciones de la derecha: navegación secundaria arriba + WhatsApp
+           debajo (cierra la columna como punto de contacto directo).
+           Alineado a la derecha en desktop; en mobile fluye al ancho
+           disponible. -->
+      <div class="footer__actions">
+        <nav class="footer__nav" aria-label="Pie de página">
+          <ul class="footer__nav-list">
+            @for (link of navLinks; track link.label) {
+              <li>
+                <a [routerLink]="link.href" class="footer__nav-link">
+                  {{ link.label }}
+                </a>
+              </li>
+            }
+          </ul>
+        </nav>
+
+        <a
+          class="footer__whatsapp"
+          [href]="whatsappHref"
+          target="_blank"
+          rel="noopener noreferrer"
+          [attr.aria-label]="'Contactar por WhatsApp al ' + whatsappNumber"
+        >
+          <span class="footer__whatsapp-icon" aria-hidden="true">
+            <ng-icon name="phosphorWhatsappLogoBold" size="14" />
+          </span>
+          <span class="footer__whatsapp-text">{{ whatsappNumber }}</span>
+        </a>
+      </div>
     </div>
 
     <!-- Bottom bar legal -->

@@ -3,40 +3,50 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   PLATFORM_ID,
   afterNextRender,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 
-import {
-  conservationStats,
-  moofyCaseSlides,
-} from '@cas-ui-shared/data/data';
-import { ImgFadeDirective } from '@cas-ui-shared/directives/img-fade/img-fade.directive';
+import { featuredCases } from '@cas-ui-shared/data/data';
 import { PillButton } from '@cas-ui-shared/components/pill-button/pill-button';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 import { SectionHeading } from '@cas-ui-shared/components/section-heading/section-heading';
 
-// Duración por slide (ms). 3.5 s: ritmo punzante pero da tiempo a leer
-// el counter y el caption del slide-label antes de que cambie la imagen.
+// Cadencia por slide (ms). 3.5 s permite leer caption + asentar ken-burns
+// (4.5 s con 1.2 s delay = ~3.3 s de movimiento visible) antes del siguiente
+// cross-fade.
 const SLIDE_INTERVAL_MS = 3500;
+// Stagger entre carruseles para que los 3 cards no avancen sincronizados.
+const STAGGER_OFFSET_MS = 700;
 
 /**
- * Conservation — capítulo 04 reconvertido a "Caso destacado". Antes
- * mostraba un único programa de conservación; hoy es un showcase del
- * trabajo real: carrusel de 5 capturas de moofy.vip (la plataforma para
- * proveedores de Walmart construida por CAS) con cross-fade + ken-burns
- * y barra de progreso Stories-style. La transición misma demuestra el
- * nivel de detalle del estudio: matar dos pájaros — caso real + skill
- * de animación premium en una sola lectura.
+ * Conservation — capítulo 04 · "Casos destacados" (×3).
  *
- * El carrusel se gatea estrictamente a browser (sin auto-advance en SSR)
- * y respeta `prefers-reduced-motion` apagando el interval.
+ * Carrusel autopaced. Best-practice 2025 (web research):
+ *   • setInterval para advance (industry standard, simple, predecible).
+ *   • IntersectionObserver para start/stop según visibilidad de la sección
+ *     en viewport — ahorra CPU + evita avance fantasma cuando el usuario no
+ *     está mirando.
+ *   • document.visibilitychange para pausar cuando la pestaña queda en bg
+ *     (los browsers throttlean setInterval a 1 Hz en hidden, lo que rompe
+ *     la cadencia visual al volver al foreground).
+ *   • prefers-reduced-motion gate.
+ *   • SIN hover-pause (pointerenter/leave). Investigación: el patrón
+ *     pointer-pause es frágil — `pointerleave` no siempre dispara cuando
+ *     el cursor sale por focus, scroll o page transition, y deja el
+ *     interval cancelado de forma permanente. Sin hover-pause + IO el
+ *     usuario puede tener mouse sobre el card horas y el ciclo continúa.
+ *
+ * Cada caso lleva su propio interval id; el stagger inicial garantiza que
+ * los tres carruseles no laten a la vez.
  */
 @Component({
   selector: 'app-conservation',
-  imports: [ImgFadeDirective, PillButton, RevealDirective, SectionHeading],
+  imports: [PillButton, RevealDirective, SectionHeading],
   templateUrl: './conservation.html',
   styleUrl: './conservation.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,17 +54,17 @@ const SLIDE_INTERVAL_MS = 3500;
 export class Conservation {
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly hostEl = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
-  protected readonly stats = conservationStats;
-  protected readonly slides = moofyCaseSlides;
-  protected readonly currentIndex = signal(0);
+  protected readonly cases = featuredCases;
+  protected readonly indices = featuredCases.map(() => signal(0));
 
-  // Mantenemos referencia al timer para poder reiniciarlo cuando el
-  // usuario hace click en una bar (queremos darle 4 s frescos en su
-  // selección, no terminar el contador previo) o pausarlo en hover.
-  private intervalId: number | null = null;
+  private readonly intervalIds: Array<number | null> = featuredCases.map(() => null);
+  private readonly staggerIds: Array<number | null> = featuredCases.map(() => null);
   private prefersReducedMotion = false;
+  private intersectionObs: IntersectionObserver | null = null;
+  private isOnScreen = false;
 
   constructor() {
     afterNextRender(() => {
@@ -62,38 +72,80 @@ export class Conservation {
       this.prefersReducedMotion = window.matchMedia(
         '(prefers-reduced-motion: reduce)',
       ).matches;
-      this.startInterval();
-      this.destroyRef.onDestroy(() => this.stopInterval());
+
+      // 1) IntersectionObserver — start/stop según viewport. threshold 0.1
+      //    porque la sección es alta; con 0.5 tardaría mucho en disparar.
+      this.intersectionObs = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            this.isOnScreen = e.isIntersecting;
+            if (e.isIntersecting) {
+              this.startAll();
+            } else {
+              this.stopAll();
+            }
+          }
+        },
+        { threshold: 0.1 },
+      );
+      this.intersectionObs.observe(this.hostEl.nativeElement);
+
+      // 2) visibilitychange — pestaña en background pausa, vuelve al
+      //    foreground re-arranca con stagger fresco (timestamps reseteados).
+      document.addEventListener('visibilitychange', this.onVisibilityChange);
+
+      this.destroyRef.onDestroy(() => {
+        this.stopAll();
+        this.intersectionObs?.disconnect();
+        this.intersectionObs = null;
+        document.removeEventListener('visibilitychange', this.onVisibilityChange);
+      });
     });
   }
 
-  /** Formato "01", "02"... para el contador editorial del slide-label. */
   protected pad(n: number): string {
     return n.toString().padStart(2, '0');
   }
 
-  /** Pointer enter sobre el frame: pausa el avance automático. */
-  protected pause(): void {
-    this.stopInterval();
+  /** Visibilidad de pestaña — `document.hidden` es la fuente de verdad. */
+  private readonly onVisibilityChange = (): void => {
+    if (document.hidden) {
+      this.stopAll();
+    } else if (this.isOnScreen) {
+      this.startAll();
+    }
+  };
+
+  private startAll(): void {
+    if (this.prefersReducedMotion) return;
+    this.cases.forEach((_, i) => this.startOne(i));
   }
 
-  /** Pointer leave: retoma el ciclo desde donde está. */
-  protected resume(): void {
-    this.startInterval();
+  private stopAll(): void {
+    this.cases.forEach((_, i) => this.stopOne(i));
   }
 
-  private startInterval(): void {
+  private startOne(i: number): void {
     if (!this.isBrowser || this.prefersReducedMotion) return;
-    this.stopInterval();
-    this.intervalId = window.setInterval(() => {
-      this.currentIndex.update((i) => (i + 1) % this.slides.length);
-    }, SLIDE_INTERVAL_MS);
+    // Idempotente — limpia antes de re-armar.
+    this.stopOne(i);
+    this.staggerIds[i] = window.setTimeout(() => {
+      this.staggerIds[i] = null;
+      this.intervalIds[i] = window.setInterval(() => {
+        const sig = this.indices[i];
+        sig.update((idx) => (idx + 1) % this.cases[i].slides.length);
+      }, SLIDE_INTERVAL_MS);
+    }, STAGGER_OFFSET_MS * i);
   }
 
-  private stopInterval(): void {
-    if (this.intervalId !== null) {
-      window.clearInterval(this.intervalId);
-      this.intervalId = null;
+  private stopOne(i: number): void {
+    if (this.intervalIds[i] !== null) {
+      window.clearInterval(this.intervalIds[i] as number);
+      this.intervalIds[i] = null;
+    }
+    if (this.staggerIds[i] !== null) {
+      window.clearTimeout(this.staggerIds[i] as number);
+      this.staggerIds[i] = null;
     }
   }
 }

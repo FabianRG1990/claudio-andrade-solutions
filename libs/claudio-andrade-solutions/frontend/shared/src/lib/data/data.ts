@@ -268,62 +268,165 @@ export const species: Species[] = [
   },
 ];
 
-// ---- Slides del caso destacado (capítulo 04) ------------------------------
-// Carrusel de capturas de moofy.vip que demuestra alcance y profundidad
-// del producto. Cada slide tiene una caption corta que se muestra como
-// chip en la esquina superior derecha del frame durante su visibilidad,
-// reforzando el mensaje "esto es lo que está mostrando ahora mismo".
+// ---- Casos destacados (capítulo 04) ---------------------------------------
+// El capítulo 04 dejó de ser un único showcase para volverse una fila de tres
+// casos reales — moofy / acuario / adrian — con layout alternado (imagen
+// izquierda · stats derecha, luego espejo, luego espejo). Cada caso conserva
+// la dramaturgia del original: hero landscape grande + mini-carrusel de
+// capturas mobile que ciclan + métricas verificables al lado opuesto.
 export type CaseSlide = {
   src: string;
   alt: string;
   caption: string;
+  /**
+   * `object-position` opcional para cuando el aspect de la captura difiere
+   * del estándar 414×896 mobile (header arriba). Útil cuando el contenido
+   * crítico vive en el medio o abajo de la imagen — ej. anatomy renders
+   * que tienen muscle diagrams al pie. Default: `center top`.
+   */
+  position?: string;
 };
 
-export const moofyCaseSlides: ReadonlyArray<CaseSlide> = [
-  {
-    src: '/casos/moofy-landing.png',
-    alt: 'Pantalla de acceso de moofy.vip — entrada con cuatro módulos: órdenes, estadísticas, ajustes y buscador',
-    caption: 'Acceso · 4 módulos',
-  },
-  {
-    src: '/casos/moofy-dashboard.png',
-    alt: 'Dashboard de Órdenes de Compra de moofy.vip — monitoreo del scraper en Cloud Run con ocho corridas exitosas',
-    caption: 'Monitoreo · scraper Cloud Run',
-  },
-  {
-    src: '/casos/moofy-stats.png',
-    alt: 'Estadísticas de moofy.vip — comparador mensual con $781 millones acumulados y ranking de rutas',
-    caption: 'Analytics · $781 M acumulados',
-  },
-  {
-    src: '/casos/moofy-settings.png',
-    alt: 'Ajustes de Rutas en moofy.vip — 20 rutas con 349 locales asignados y editor de cobertura',
-    caption: 'Cobertura · 20 rutas · 349 locales',
-  },
-  {
-    src: '/casos/moofy-search.png',
-    alt: 'Buscador global de moofy.vip — filtros por productos, rutas, supercenters y órdenes de compra',
-    caption: 'Búsqueda · filtros multi-axis',
-  },
-];
-
-// ---- Métricas del caso destacado (capítulo 04) ----------------------------
-// `ConservationStat` se reusa por inercia tipográfica con el componente.
-// Hoy las cifras describen el resultado de moofy.vip — la plataforma que
-// CAS construyó para proveedores de Walmart. Los datos son verificables
-// desde el dashboard público del propio cliente (8 corridas, 0 fallidas,
-// sync ~3h en Cloud Run; el resto se infiere del trabajo manual reemplazado).
 export type ConservationStat = {
   label: string;
   value: string;
   suffix: string;
 };
 
-export const conservationStats: ConservationStat[] = [
-  { label: 'Ahorro mensual', value: '$1.2K', suffix: ' en mano de obra' },
-  { label: 'Horas liberadas', value: '120', suffix: ' al mes · operativas' },
-  { label: 'Actualización automática', value: '8×', suffix: ' al día · sin fallas' },
-  { label: 'Trazabilidad', value: '100%', suffix: ' de cada cambio' },
+export type FeaturedCase = {
+  slug: string;
+  badgeLabel: string;          // "Caso · moofy.vip"
+  name: string;                // título card (línea principal, ~20-24 px)
+  tagline: string;             // subtítulo card (1 línea)
+  year: string;                // "2026"
+  status: string;              // pill "Live · …" (constante por caso, ≤24 chars)
+  slides: ReadonlyArray<CaseSlide>;
+  stats: ReadonlyArray<ConservationStat>;  // 3 métricas máx — más es densidad
+  resultsEyebrow: string;      // "Resultados · moofy.vip"
+  accent: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
+};
+
+export const featuredCases: ReadonlyArray<FeaturedCase> = [
+  // ─── 01 · moofy.vip — plataforma operativa para proveedores Walmart ──────
+  {
+    slug: 'moofy',
+    badgeLabel: 'Caso · moofy.vip',
+    name: 'Plataforma para proveedores Walmart',
+    tagline: 'Retail Link · scraper Cloud Run · analytics',
+    year: '2026',
+    status: 'Live · sin fallas',
+    slides: [
+      {
+        src: '/casos/moofy-landing.png',
+        alt: 'Pantalla de acceso de moofy.vip — entrada con cuatro módulos: órdenes, estadísticas, ajustes y buscador',
+        caption: 'Acceso · 4 módulos',
+      },
+      {
+        src: '/casos/moofy-dashboard.png',
+        alt: 'Dashboard de Órdenes de Compra — monitoreo del scraper en Cloud Run con ocho corridas exitosas',
+        caption: 'Monitoreo · scraper Cloud Run',
+      },
+      {
+        src: '/casos/moofy-stats.png',
+        alt: 'Estadísticas — comparador mensual de rutas, métricas y períodos',
+        caption: 'Analytics · comparador mensual',
+      },
+      {
+        src: '/casos/moofy-settings.png',
+        alt: 'Ajustes de Rutas — editor con búsqueda, asignación de supercenters y configuración por ruta',
+        caption: 'Cobertura · editor de rutas',
+      },
+    ],
+    stats: [
+      { label: 'Horas liberadas', value: '120', suffix: ' al mes · operativas' },
+      { label: 'Sincronización', value: '8×', suffix: ' al día · sin fallas' },
+      { label: 'Trazabilidad', value: '100%', suffix: ' de cada cambio' },
+    ],
+    resultsEyebrow: 'Resultados · moofy.vip',
+    accent: 'lagoon',
+  },
+
+  // ─── 02 · acuario — landing inmersiva con storytelling editorial ─────────
+  {
+    slug: 'acuario',
+    badgeLabel: 'Caso · acuario.cr',
+    name: 'Landing inmersiva editorial',
+    tagline: 'Angular SSR · cinemática · tipografía editorial',
+    year: '2026',
+    status: 'Online · cinemática',
+    slides: [
+      {
+        src: '/casos/acuario-home.png',
+        alt: 'Hero mobile del acuario — "Inmersión en lo profundo" con próxima ola y métricas live',
+        caption: 'Hero · 1.247 especies',
+      },
+      {
+        src: '/casos/acuario-exhibiciones.png',
+        alt: 'Card de bioma "Manglar" — fotografía split underwater de raíces sumergidas y garza posada en mangle, con ficha de especies y capacidad',
+        caption: 'Exhibiciones · Manglar',
+        position: 'center top',
+      },
+      {
+        src: '/casos/acuario-contacto.png',
+        alt: 'Formulario de contacto — diseño glass sobre la paleta abisal',
+        caption: 'Contacto · form glass',
+      },
+    ],
+    stats: [
+      { label: 'Capítulos narrativos', value: '04', suffix: ' secciones inmersivas' },
+      { label: 'Especies catalogadas', value: '1.247', suffix: ' en seis biomas' },
+      { label: 'Lighthouse', value: '95+', suffix: ' SSR · imágenes diferidas' },
+    ],
+    resultsEyebrow: 'Resultados · acuario.cr',
+    accent: 'bioluminescent',
+  },
+
+  // ─── 03 · adrian-badilla.com — coach digital + auth + panel ──────────────
+  {
+    slug: 'adrian',
+    badgeLabel: 'Caso · adrian-badilla.com',
+    name: 'Plataforma de coaching digital',
+    tagline: 'Angular 21 · Firebase Auth · NgRx Signals',
+    year: '2026',
+    status: 'Live · auth + panel',
+    slides: [
+      {
+        src: '/casos/adrian-ejercicio.png',
+        alt: 'Detalle de ejercicio — render anatómico con posición inicial y mapa de músculos trabajados (glúteos, isquiotibiales, lumbares)',
+        caption: 'Ejercicio · anatomía',
+        // Imagen 372×558 (≈2/3) con render arriba y muscle diagrams abajo;
+        // `center` en lugar de `top` mantiene visible la posición inicial +
+        // los muscle diagrams (ambos críticos para vender el detalle).
+        position: 'center',
+      },
+      {
+        src: '/casos/adrian-auth.png',
+        alt: 'Pantalla de login — correo, contraseña, Google SSO y registro',
+        caption: 'Auth · 5 flujos Firebase',
+      },
+      {
+        src: '/casos/adrian-rutinas.png',
+        alt: 'Vista de Rutinas Semanales — tarjetas detalladas: masa muscular, tonificación, fuerza funcional, metabolismo',
+        caption: 'Rutinas · plan semanal',
+      },
+      {
+        src: '/casos/adrian-planes.png',
+        alt: 'Sección Físico y Nutrición — planes de Nutrición y Estilo de Vida + Fuerza y Musculación con bullets y precio',
+        caption: 'Planes · físico y nutrición',
+        // Imagen 414×876 muy alta (≈9/19) con título arriba, foto al medio
+        // y card de plan abajo; `25%` (un cuarto del top) deja ver el título
+        // + foto sin perder por completo el inicio de la card de plan.
+        position: 'center 25%',
+      },
+    ],
+    stats: [
+      { label: 'Stack', value: 'NG 21', suffix: ' + Material + Firebase' },
+      { label: 'Flujos auth', value: '05', suffix: ' login · register · reset · verify · SSO' },
+      { label: 'Módulos lazy', value: '06', suffix: ' landing · auth · panel · rutinas · dietas' },
+    ],
+    resultsEyebrow: 'Resultados · adrian-badilla.com',
+    accent: 'coral',
+  },
 ];
 
 // ---- Info de contacto / disponibilidad ------------------------------------

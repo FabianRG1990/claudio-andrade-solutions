@@ -3,9 +3,9 @@
     <!-- Header: title + CTA -->
     <div class="conservation__head">
       <app-section-heading
-        eyebrow="Capítulo 04 · Caso destacado"
-        title="Lo construimos."
-        italic="Ellos lo operan."
+        eyebrow="Capítulo 04 · Casos destacados"
+        title="Tres casos."
+        italic="Tres dramatúrgicas."
         tone="lagoon"
       />
       <div appReveal [delay]="0.2">
@@ -13,101 +13,73 @@
       </div>
     </div>
 
-    <!-- Grid: carrusel del caso a la izquierda · métricas reales a la derecha -->
-    <div class="conservation__grid">
-      <!-- Caso destacado · moofy.vip — 5 capturas en cross-fade.
-           Pause on hover, click en una bar del indicador para saltar.
-           El @for stackea las 5 imágenes en el mismo position:absolute;
-           solo la activa tiene opacity 1 + ken-burns. -->
-      <div
-        appReveal
-        class="conservation__program glass-shell"
-      >
-        <div
-          class="conservation__program-frame"
-          (pointerenter)="pause()"
-          (pointerleave)="resume()"
+    <!-- Lista de casos. Estos son TEASER cards (gustito), no detalle de
+         producto: imagen + título corto + tagline + 3 stats. Sin manifesto.
+         Densidad baja a propósito — el detalle vive en `/exhibiciones`. -->
+    <div class="conservation__cases">
+      @for (c of cases; track c.slug; let i = $index) {
+        <article
+          appReveal
+          class="case-row"
+          [class.case-row--reverse]="i % 2 === 1"
+          [attr.data-accent]="c.accent"
         >
-          @for (slide of slides; track slide.src; let i = $index) {
-            <img
-              appImgFade
-              [src]="slide.src"
-              [alt]="slide.alt"
-              class="conservation__program-image"
-              [class.is-active]="currentIndex() === i"
-              decoding="async"
-              [attr.loading]="i === 0 ? 'eager' : 'lazy'"
-              [attr.fetchpriority]="i === 0 ? 'high' : 'auto'"
-            />
-          }
-          <div class="conservation__program-tint"></div>
-          <div class="conservation__program-gradient"></div>
+          <!-- Media · imagen square con carrusel de slides -->
+          <div class="case-row__media glass-shell">
+            <div class="case-row__media-inner">
+              @for (slide of c.slides; track slide.src; let si = $index) {
+                <img
+                  [src]="slide.src"
+                  [alt]="slide.alt"
+                  class="case-row__image"
+                  [class.is-active]="indices[i]() === si"
+                  [style.object-position]="slide.position || null"
+                  decoding="async"
+                  loading="eager"
+                />
+              }
+              <div class="case-row__media-tint" aria-hidden="true"></div>
 
-          <!-- Top-left: estado live (constante). El pulso bioluminescent
-               lo mantiene "respirando" para reforzar que es producción. -->
-          <div class="conservation__program-badge">
-            <span class="conservation__program-pulse" aria-hidden="true"></span>
-            Live · 0 fallas en 8 corridas
-          </div>
+              <!-- Top-left: status pill (corta · ≤24 chars en data) -->
+              <div class="case-row__badge">
+                <span class="case-row__pulse" aria-hidden="true"></span>
+                {{ c.status }}
+              </div>
 
-          <!-- Top-right: contador editorial + caption del slide. Sustituye
-               la barra Stories que se sentía poco elegante. El contador
-               va en font-mono (Times) como detalle de catálogo y la caption
-               cambia con cada transición. -->
-          <div
-            class="conservation__program-slide-label"
-            aria-live="polite"
-          >
-            <span class="conservation__program-slide-counter">
-              {{ pad(currentIndex() + 1) }} / {{ pad(slides.length) }}
-            </span>
-            <span class="conservation__program-slide-divider" aria-hidden="true">·</span>
-            <span class="conservation__program-slide-caption">
-              {{ slides[currentIndex()].caption }}
-            </span>
-          </div>
+              <!-- Top-right: contador "01/03". La caption del slide pasó
+                   al pie de la card (bottom-left) para no chocar con el
+                   badge live. -->
+              <div class="case-row__counter" aria-hidden="true">
+                {{ pad(indices[i]() + 1) }} / {{ pad(c.slides.length) }}
+              </div>
 
-          <!-- Bottom: identidad del caso (constante a lo largo del ciclo). -->
-          <div class="conservation__program-caption">
-            <div>
-              <p class="conservation__program-label">Caso · moofy.vip</p>
-              <p class="conservation__program-name">
-                Plataforma operativa para proveedores Walmart
+              <!-- Bottom: caption del slide actual — texto corto que muta
+                   con cada transición. aria-live polite. -->
+              <p class="case-row__caption" aria-live="polite">
+                {{ c.slides[indices[i]()].caption }}
               </p>
             </div>
-            <span class="conservation__program-year">2026</span>
           </div>
-        </div>
-      </div>
 
-      <!-- Métricas tipográficas del caso -->
-      <div class="conservation__stats">
-        <div appReveal class="conservation__stats-head">
-          <span class="conservation__stats-eyebrow">Resultados · moofy.vip</span>
-          <span class="conservation__stats-meta">04 métricas clave</span>
-        </div>
+          <!-- Body · título corto + tagline + 3 stats compactas -->
+          <div class="case-row__body">
+            <p class="case-row__zone">
+              {{ c.badgeLabel }} · {{ c.year }}
+            </p>
+            <h3 class="case-row__title">{{ c.name }}</h3>
+            <p class="case-row__copy">{{ c.tagline }}</p>
 
-        <dl appReveal [delay]="0.1" class="conservation__stats-grid">
-          @for (s of stats; track s.label) {
-            <div>
-              <dt class="conservation__stat-label">{{ s.label }}</dt>
-              <dd class="conservation__stat-value">{{ s.value }}</dd>
-              @if (s.suffix) {
-                <p class="conservation__stat-suffix">{{ s.suffix.trim() }}</p>
+            <dl class="case-row__stats">
+              @for (s of c.stats; track s.label) {
+                <div class="case-row__stat">
+                  <dt class="case-row__stat-label">{{ s.label }}</dt>
+                  <dd class="case-row__stat-value">{{ s.value }}</dd>
+                </div>
               }
-            </div>
-          }
-        </dl>
-
-        <p appReveal [delay]="0.2" class="conservation__manifesto">
-          <span class="conservation__manifesto-pct">120 horas/mes</span>
-          que el equipo recuperó de la consolidación manual sobre Retail
-          Link. Actualización automática cada 3 horas, bitácora completa de
-          cada cambio y búsqueda global por SKU, ruta o supercenter.
-          <span class="conservation__manifesto-license">En producción</span>
-          con cero fallas en las últimas corridas.
-        </p>
-      </div>
+            </dl>
+          </div>
+        </article>
+      }
     </div>
   </div>
 </section>

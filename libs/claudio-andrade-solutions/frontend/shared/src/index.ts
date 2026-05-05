@@ -35,7 +35,7 @@ export { ImgFadeDirective } from './lib/directives/img-fade/img-fade.directive';
 export {
   exhibits,
   species,
-  conservationStats,
+  featuredCases,
   visitInfo,
   tickets,
 } from './lib/data/data';
@@ -44,5 +44,7 @@ export type {
   Species,
   SpeciesStatus,
   ConservationStat,
+  CaseSlide,
+  FeaturedCase,
   Ticket,
 } from './lib/data/data';
