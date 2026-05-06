@@ -12,13 +12,9 @@
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
-
-  // whileTap del original (scale: 0.97 con spring)
-  transition: transform 200ms var(--ease-spring);
-
-  &:active {
-    transform: scale(0.97);
-  }
+  // El transform/transition del tap-feedback vive en `.glass-button` (active
+  // state con translateY(0) + scale(0.98) + 120ms). No duplicamos acá para
+  // que no compitan dos transforms encadenados en :active.
 }
 
 .pill-button__label {

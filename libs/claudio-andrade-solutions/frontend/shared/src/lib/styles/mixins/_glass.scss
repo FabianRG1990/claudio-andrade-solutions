@@ -203,6 +203,105 @@
   }
 }
 
+// ---- glass-button --------------------------------------------------------
+// CTA principal del sistema — "vidrio líquido 3D" inspirado en `.glass-nav`
+// del navbar pero escalado a tamaño botón. Reemplaza a `.glass-bubble` en
+// CTAs (bubble usa un catchlight diagonal arriba/izquierda al 32%/14% que
+// se leía como esfera reflectiva; acá el 3D vive en *bordes* — top brillante
+// continuo + bottom contraluz + laterales — que es como se ve el vidrio
+// real cuando lo cortás en una pieza pequeña, no como burbuja con punto de
+// luz). Usar emparejado con `.glass-button-icon` para la esferita interior
+// del icono cuando el CTA tenga uno (ej. pill-button con flecha).
+.glass-button {
+  position: relative;
+  // Wash vertical foam — gradient con leve "respiro" en el medio (0.10 → 0.02
+  // → 0.06) que sugiere refracción curva, sin tirar a un punto concreto.
+  background:
+    linear-gradient(
+      180deg,
+      rgb(245 241 232 / 0.10) 0%,
+      rgb(245 241 232 / 0.02) 50%,
+      rgb(245 241 232 / 0.06) 100%
+    );
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  color: rgb(245 241 232 / 0.97);
+  box-shadow:
+    // Drop atmosférico (mismo lenguaje que `glass-nav-shell`, escalado).
+    0 24px 48px -16px rgb(0 0 0 / 0.55),
+    0 8px 16px -8px rgb(0 0 0 / 0.40),
+    // Ring exterior hairline foam — define silueta del vidrio cortado.
+    0 0 0 1px rgb(245 241 232 / 0.12),
+    // Top edge — franja brillante CONTINUA al borde superior (no point).
+    // 1.5px hairline + 4px de difusión hacia adentro = "vidrio mojado arriba".
+    inset 0 1.5px 0 rgb(255 255 255 / 0.35),
+    inset 0 4px 10px -4px rgb(255 255 255 / 0.18),
+    // Bottom edge — contraluz tenue + sombra negra interior. La luz tenue
+    // (0.18) se lee como "iluminado por debajo"; la sombra (0.40) le da peso.
+    inset 0 -1.5px 0 rgb(255 255 255 / 0.18),
+    inset 0 -8px 16px -10px rgb(0 0 0 / 0.40),
+    // Laterales — finos highlights de "vidrio cortado".
+    inset 2px 0 4px -3px rgb(255 255 255 / 0.10),
+    inset -2px 0 4px -3px rgb(255 255 255 / 0.10);
+  transition:
+    transform 600ms var(--ease-fluid),
+    background 600ms var(--ease-fluid),
+    box-shadow 600ms var(--ease-fluid);
+  touch-action: manipulation;
+
+  // Hover: amplifica los bordes (vidrio "mojado más"). Sin alterar la
+  // posición de la luz — sigue viviendo en bordes, no en puntos.
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-1px);
+      background:
+        linear-gradient(
+          180deg,
+          rgb(245 241 232 / 0.14) 0%,
+          rgb(245 241 232 / 0.04) 50%,
+          rgb(245 241 232 / 0.10) 100%
+        );
+      box-shadow:
+        0 32px 64px -18px rgb(0 0 0 / 0.68),
+        0 12px 22px -10px rgb(0 0 0 / 0.50),
+        0 0 0 1px rgb(245 241 232 / 0.20),
+        inset 0 1.5px 0 rgb(255 255 255 / 0.50),
+        inset 0 5px 12px -4px rgb(255 255 255 / 0.26),
+        inset 0 -1.5px 0 rgb(255 255 255 / 0.24),
+        inset 0 -8px 16px -10px rgb(0 0 0 / 0.42),
+        inset 2px 0 4px -3px rgb(255 255 255 / 0.14),
+        inset -2px 0 4px -3px rgb(255 255 255 / 0.14);
+    }
+  }
+
+  // Tap feedback — funciona en mouse y touch (no gateado).
+  &:active {
+    transform: translateY(0) scale(0.98);
+    transition: transform 120ms var(--ease-fluid);
+  }
+}
+
+// ---- glass-button-icon ---------------------------------------------------
+// Esferita interior para el icono dentro de un `.glass-button`. Mismo
+// lenguaje (luz en bordes, no en puntos), más concentrado por tamaño chico.
+.glass-button-icon {
+  position: relative;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(245 241 232 / 0.16) 0%,
+      rgb(245 241 232 / 0.06) 50%,
+      rgb(245 241 232 / 0.10) 100%
+    );
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.42),
+    inset 0 3px 8px -3px rgb(255 255 255 / 0.22),
+    inset 0 -1.5px 0 rgb(255 255 255 / 0.20),
+    inset 0 -4px 8px -5px rgb(0 0 0 / 0.32),
+    0 0 0 1px rgb(245 241 232 / 0.18),
+    0 4px 10px -3px rgb(6 9 26 / 0.45);
+}
+
 // ---- glass-bubble-icon ---------------------------------------------------
 // Versión interior tipo esfera concentrada — usada dentro de pill-buttons.
 .glass-bubble-icon {

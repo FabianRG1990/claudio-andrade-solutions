@@ -296,8 +296,10 @@
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: rgb(var(--foam));
-  color: rgb(var(--abyss));
+  // Mismo lenguaje que el `.glass-button-icon` del CTA "Ver los 6 productos":
+  // vidrio líquido 3D con luz en bordes (sin disco foam macizo). El color foam
+  // del icono asegura contraste sobre el cristal translúcido.
+  color: rgb(var(--foam));
   transition: transform 700ms var(--ease-fluid);
 
   @media (min-width: 768px) {

@@ -68,13 +68,13 @@
                 routerLink="/contacto"
                 class="ticket-card__cta"
                 [class.ticket-card__cta--highlight]="t.highlight"
-                [class.glass-bubble]="!t.highlight"
+                [class.glass-button]="!t.highlight"
               >
                 <span class="ticket-card__cta-label">Elegir {{ t.name }}</span>
                 <span
                   class="ticket-card__cta-icon"
                   [class.ticket-card__cta-icon--highlight]="t.highlight"
-                  [class.glass-bubble-icon]="!t.highlight"
+                  [class.glass-button-icon]="!t.highlight"
                 >
                   <ng-icon name="phosphorArrowUpRightBold" size="12" />
                 </span>

@@ -10,12 +10,12 @@
       />
       <a
         routerLink="/exhibiciones"
-        class="featured-exhibits__cta glass-bubble"
+        class="featured-exhibits__cta glass-button"
         appReveal
         [delay]="0.2"
       >
         <span class="featured-exhibits__cta-label">Ver los 6 productos</span>
-        <span class="featured-exhibits__cta-icon glass-bubble-icon">
+        <span class="featured-exhibits__cta-icon glass-button-icon">
           <ng-icon name="phosphorArrowUpRightBold" size="14" />
         </span>
       </a>
@@ -61,7 +61,7 @@
                   <h3 class="exhibit-card__title">{{ ex.name }}</h3>
                   <p class="exhibit-card__description">{{ ex.description }}</p>
                 </div>
-                <span class="exhibit-card__arrow" aria-hidden="true">
+                <span class="exhibit-card__arrow glass-button-icon" aria-hidden="true">
                   <ng-icon name="phosphorArrowUpRightBold" size="14" />
                 </span>
               </div>
