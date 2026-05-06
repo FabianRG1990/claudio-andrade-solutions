@@ -8761,6 +8761,7 @@ __metadata:
     jsdom: "npm:~22.1.0"
     jsonc-eslint-parser: "npm:^2.1.0"
     nx: "patch:nx@npm%3A22.7.0#~/.yarn/patches/nx-npm-22.7.0-93822c10a7.patch"
+    pngjs: "npm:^7.0.0"
     prettier: "npm:^3.8.1"
     rxjs: "npm:~7.8.0"
     sharp: "npm:^0.34.5"
@@ -14757,6 +14758,13 @@ __metadata:
   bin:
     playwright: cli.js
   checksum: 10c0/dfe38396e616e5c4f98825ce90037bb96e477c5a2bd9258a24854f8ce72a8a41427b19098863866f85aa0216e70287dd537c4438d761aca93995e31ae099c533
+  languageName: node
+  linkType: hard
+
+"pngjs@npm:^7.0.0":
+  version: 7.0.0
+  resolution: "pngjs@npm:7.0.0"
+  checksum: 10c0/0d4c7a0fd476a9c33df7d0a2a73e1d56537628a668841f6995c2bca070cf30819f9254a64363266bc14ef2fee47659dd3b4f2b18eec7ab65143015139f497b38
   languageName: node
   linkType: hard
 

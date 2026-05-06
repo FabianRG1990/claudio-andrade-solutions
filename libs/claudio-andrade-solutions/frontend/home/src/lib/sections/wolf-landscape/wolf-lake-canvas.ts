@@ -236,21 +236,58 @@ void main() {
   vec3 causticAdd = (vec3(1.0) - color) * causticCol * causticAlpha;
   color += causticAdd * 0.78 * mask;
 
-  // Niebla — banda mid-low del agua, lado izquierdo-centro (donde ya hay
-  // niebla en la imagen). Solo modula sutilmente lo que ya está; no crea
-  // niebla nueva donde no la hay. Loop perfecto con período uFogPeriod.
-  float fogYBand = smoothstep(0.40, 0.45, imgUV.y) *
+  // Niebla — el sample point ORBITA un círculo (radio 0.07 UV) con
+  // período uFogPeriod. La banda visual no se mueve — pero el patrón de
+  // ruido bajo ella sí, así que el ojo ve niebla flotando/circulando
+  // dentro de la banda en lugar de morfar en sitio. Sumado a domain warp
+  // (turbulencia interna) y dos octavas (estructura lenta + shimmer
+  // rápido), el movimiento se siente realista. Loop perfecto: ambos
+  // ángulos vuelven a 0 en uFogPeriod (fAfast=fA*2 → entero → seamless).
+  // Dos sub-bandas verticales: la del agua usa mask (vapor sobre la
+  // superficie), la de los pinos NO (niebla atmosférica entre los
+  // troncos, en el aire). El peso de la sub-banda de los pinos va a
+  // 0.45 porque el área de fondo es más oscura que la del agua y la
+  // niebla blanca se ve fantasmal al mismo opacity que sobre el lago;
+  // a la mitad se siente translúcida, natural, premium.
+  float ySurface = smoothstep(0.40, 0.45, imgUV.y) *
                    (1.0 - smoothstep(0.50, 0.58, imgUV.y));
+  float yPine = smoothstep(0.26, 0.33, imgUV.y) *
+                (1.0 - smoothstep(0.39, 0.44, imgUV.y));
   float fogXBand = smoothstep(0.0, 0.08, imgUV.x) *
                    (1.0 - smoothstep(0.50, 0.68, imgUV.x));
-  float fogBand = fogYBand * fogXBand * mask;
+  float fogBand = max(ySurface * mask, yPine * 0.45) * fogXBand;
 
-  float angle = (uTime / uFogPeriod) * 6.2831853;
-  float c = cos(angle) * 0.6;
-  float s = sin(angle) * 0.6;
-  float n1 = snoise4(vec4(imgUV * vec2(2.5, 4.0),       c,        s)) * 0.5 + 0.5;
-  float n2 = snoise4(vec4(imgUV * vec2(6.0, 9.0) + 3.7, c * 0.85, s * 0.85)) * 0.5 + 0.5;
-  float fogN = n1 * 0.7 + n2 * 0.3;
+  float fA = (uTime / uFogPeriod) * 6.2831853;
+  float fAfast = fA * 2.0;
+  float fCs = cos(fA);
+  float fSn = sin(fA);
+  float fCsF = cos(fAfast);
+  float fSnF = sin(fAfast);
+
+  // Orbital drift del sample point — la pieza clave que hace visible el
+  // movimiento. Un círculo de radio 0.10 UV traversa el campo de ruido y
+  // el patrón de niebla "fluye" dentro de su banda. Sin desplazamiento
+  // neto entre t=0 y t=T (regresa al punto inicial).
+  vec2 orbit = vec2(fCs, fSn) * 0.10;
+
+  // Domain warp — turbulencia adicional sobre la silueta. Frecuencia
+  // baja, amplitud pequeña; le da micro-deformación sin volverse caótico.
+  vec2 warpUV = imgUV * vec2(1.6, 2.4) + 5.1;
+  float wx = snoise4(vec4(warpUV,       fCs * 0.9, fSn * 0.9));
+  float wy = snoise4(vec4(warpUV + 7.3, fCs * 0.9, fSn * 0.9));
+  vec2 warp = vec2(wx, wy) * 0.07;
+
+  vec2 fogUV = imgUV + orbit + warp;
+
+  // Octava grande — estructura, fase lenta. Radio 0.9 en 4D garantiza
+  // que el morph cubra una vuelta completa del campo en cada ciclo.
+  float n1 = snoise4(vec4(fogUV * vec2(2.5, 4.0),
+                          fCs * 0.9, fSn * 0.9)) * 0.5 + 0.5;
+  // Octava chica — shimmer, fase rápida (2× la angular). Da el detalle
+  // de "vapor que se mueve" sin que la estructura grande pierda calma.
+  float n2 = snoise4(vec4(fogUV * vec2(6.5, 10.0) + 3.7,
+                          fCsF * 0.7, fSnF * 0.7)) * 0.5 + 0.5;
+  float fogN = n1 * 0.65 + n2 * 0.35;
 
   vec3 fogColor = vec3(0.78, 0.86, 0.92);
   color = mix(color, fogColor, fogBand * fogN * 0.30);
@@ -1011,7 +1048,11 @@ export class WolfLakeCanvas {
     // Idéntico al hero del abismo: 120 substeps/s. Las ondas se propagan
     // y rebotan al mismo ritmo que en esa sección.
     const WAVE_STEP = 1 / 120;
-    const FOG_PERIOD = 22;
+    // 26s por ciclo — orbital drift + warp + dos octavas. Más corto que
+    // 36s para que el movimiento se perciba al primer vistazo sin tener
+    // que clavarle decenas de segundos a la pantalla; aún suficientemente
+    // lento para que la silueta se sienta como respiración premium.
+    const FOG_PERIOD = 26;
 
     const start = (): void => {
       if (raf !== 0) return;
