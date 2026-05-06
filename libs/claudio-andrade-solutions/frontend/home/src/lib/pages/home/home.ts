@@ -7,15 +7,19 @@ import { Membership } from '../../sections/membership/membership';
 import { SpeciesMarquee } from '../../sections/species-marquee/species-marquee';
 import { Timeline } from '../../sections/timeline/timeline';
 import { Visit } from '../../sections/visit/visit';
+import { WolfLandscape } from '../../sections/wolf-landscape/wolf-landscape';
 
 /**
- * HomePage — composición del manifiesto en el orden original:
- *   Hero → FeaturedExhibits → SpeciesMarquee → Membership →
- *   Conservation → Visit → Timeline.
+ * HomePage — composición del manifiesto. WolfLandscape es un segmento
+ * autónomo que abre la página antes del hero (en construcción —
+ * iteramos visual con el cliente).
+ *   WolfLandscape → Hero → FeaturedExhibits → SpeciesMarquee →
+ *   Membership → Conservation → Visit → Timeline.
  */
 @Component({
   selector: 'app-home',
   imports: [
+    WolfLandscape,
     Hero,
     FeaturedExhibits,
     SpeciesMarquee,
@@ -25,6 +29,7 @@ import { Visit } from '../../sections/visit/visit';
     Timeline,
   ],
   template: `
+    <app-wolf-landscape />
     <app-hero />
     <app-featured-exhibits />
     <app-species-marquee />
