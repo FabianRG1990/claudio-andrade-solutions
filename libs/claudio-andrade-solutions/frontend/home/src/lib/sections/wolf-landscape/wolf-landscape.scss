@@ -1,14 +1,22 @@
 // =============================================================================
-// WolfLandscape — segmento autónomo que precede al hero. La sección mide
-// exactamente la altura del viewport (100dvh). El bg es UNA SOLA imagen
-// compuesta (paisaje + lobo + roca + reflejo cyan en el agua, todo nacido
-// como una única exposición) — por eso la integración de luz, sombra y
-// color es física, no apilada en CSS.
+// WolfLandscape — segmento hero de apertura. La sección mide exactamente la
+// altura del viewport (100dvh). El bg es UNA SOLA imagen compuesta (paisaje
+// + lobo + roca + reflejo cyan en el agua, todo nacido como una única
+// exposición) — por eso la integración de luz, sombra y color es física, no
+// apilada en CSS.
 //
 // El render lo maneja `WolfLakeCanvas` adentro: WebGL2 con la imagen como
 // textura, ondas con rebote en orillas, niebla en loop perfecto, y peces
 // que reaccionan al cursor. La <img> base vive dentro del componente y
 // solo se muestra como fallback si WebGL2 no está disponible.
+//
+// Sobre la escena vive una sola capa de copy:
+//   • .wolf-landscape__copy — eyebrow + título + subtítulo, anclados al
+//     cuadrante sup-izq (no compite con el lobo abajo-der ni con la marca
+//     del shell que vive arriba-izq). La legibilidad la garantizan los
+//     `text-shadow` apilados de cada elemento — NO hay vignette/scrim
+//     sobre la escena: cualquier oscurecido apaga la niebla animada y la
+//     hace ver "muerta", aunque siga corriendo en GPU.
 // =============================================================================
 
 .wolf-landscape {
@@ -20,9 +28,10 @@
   background: #06091A;
 }
 
-// Costura inferior — funde la base del bg al abismo puro (#06091A) para
-// que la siguiente sección entre sin línea visible. La AI ya dejó el
-// borde inferior oscuro; este gradient termina de cerrarlo.
+// ─── Costura inferior ────────────────────────────────────────────────────────
+// Funde la base del bg al abismo puro (#06091A) para que la siguiente sección
+// entre sin línea visible. La AI ya dejó el borde inferior oscuro; este
+// gradient termina de cerrarlo.
 .wolf-landscape__seam {
   pointer-events: none;
   position: absolute;
@@ -38,3 +47,176 @@
     #06091A 100%
   );
 }
+
+// ─── Bloque de copy del hero ─────────────────────────────────────────────────
+// Capa absolute fill, no captura clicks (los peces siguen leyendo el cursor
+// vía window listener); solo el texto en sí es seleccionable. Layout: flex
+// vertical anclado a top-left, con padding-top que despeja la marca del
+// shell (~120px) y padding-bottom que respeta la franja de niebla baja.
+.wolf-landscape__copy {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  // Padding-top fluido — clearance para .floating-nav-brand (96px emblema
+  // + 24px top + breathing). Padding-bottom amplio para no chocar con la
+  // costura del agua donde nadan los peces.
+  padding-top: clamp(7rem, 5rem + 6vw, 10rem);
+  padding-bottom: clamp(6rem, 4rem + 5vw, 9rem);
+  padding-inline: var(--container-px);
+
+  // El texto sí es seleccionable / lecturable
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.wolf-landscape__copy-inner {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  // Anclamos al inicio del flex container — el copy queda en el cuadrante
+  // sup-izq (alineado con la marca + telemetría del shell), respetando la
+  // ley editorial de "leer antes de mirar".
+}
+
+// ─── Eyebrow ─────────────────────────────────────────────────────────────────
+// Línea pequeña + tag corto. La línea horizontal (rule) es el detalle
+// editorial que delata cuidado tipográfico: ~28px de barra fina + gap +
+// texto en caps tracked. Mismo lenguaje que las telemetrías del legacy hero.
+.wolf-landscape__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.875rem;
+  color: rgb(var(--foam) / 0.78);
+}
+
+.wolf-landscape__eyebrow-rule {
+  display: block;
+  width: 1.75rem;
+  height: 1px;
+  // Sin tinte cyan — solo foam translúcido, mismo lenguaje cromático del
+  // resto del copy. La línea se siente "editorial" por la sutileza, no
+  // por el color.
+  background: linear-gradient(
+    90deg,
+    rgb(var(--foam) / 0) 0%,
+    rgb(var(--foam) / 0.7) 60%,
+    rgb(var(--foam) / 0.45) 100%
+  );
+}
+
+.wolf-landscape__eyebrow-text {
+  font-family: var(--font-display);
+  font-size: var(--type-label-md);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  // Sombra apilada — sin scrim, hasta el eyebrow chico necesita un par
+  // de capas para no perderse contra movimiento de niebla.
+  text-shadow:
+    0 2px 8px rgb(6 9 26 / 0.7),
+    0 1px 2px rgb(6 9 26 / 0.65);
+}
+
+// ─── Título ──────────────────────────────────────────────────────────────────
+// Tipografía hero (44→112px fluido). Dos líneas balanceadas con `text-wrap:
+// balance`. Paleta deliberadamente monocroma — foam puro, sin gradientes
+// hue. El acabado "3D" nace de luz y sombra, no de tinte:
+//   1) color base foam macizo (#F5F1E8) — alineado con Apple/Stripe/Linear
+//      y con la lectura cromática fría de la escena (lago + niebla + lobo
+//      cyan).
+//   2) text-shadow chain de tres capas — halo amplio de abismo
+//      (legibilidad), contorno fino (definición contra niebla) y highlight
+//      superior (luz cenital esculpida).
+//   3) peso 500 + tracking-tight — peso editorial, no display gordo.
+.wolf-landscape__title {
+  margin-top: clamp(1rem, 0.5rem + 1.2vw, 1.75rem);
+  max-width: 18ch;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-size: var(--type-h1-hero);
+  font-weight: 500;
+  line-height: 0.96;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+
+  // Sombra apilada — toda la legibilidad vive acá. Sin scrim sobre la
+  // escena, la niebla respira; el contraste lo da el chain de sombras
+  // adheridas al glifo:
+  //   a) halo ancho de abismo (24px blur, 0.7 alpha) — legibilidad real
+  //      contra niebla animada y reflejo cyan.
+  //   b) halo intermedio (8px blur, 0.6) — refuerza bordes a media
+  //      distancia, evita "borrosidad" que un solo blur grande provoca.
+  //   c) contorno fino (1px, 0.7) — define cada glifo contra cualquier
+  //      transición clara de la niebla.
+  //   d) highlight superior (-1px, foam 0.22) — luz cenital esculpida,
+  //      el matiz "3D" sin gradiente hue.
+  text-shadow:
+    0 4px 24px rgb(6 9 26 / 0.7),
+    0 2px 8px rgb(6 9 26 / 0.6),
+    0 1px 2px rgb(6 9 26 / 0.7),
+    0 -1px 0 rgb(245 241 232 / 0.22);
+}
+
+// La segunda línea aprende del salto explícito del HTML; el span ayuda a
+// que `text-wrap: balance` distribuya bien sin romperse.
+.wolf-landscape__title-line {
+  display: block;
+}
+
+.wolf-landscape__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  // Italic con menor opacidad — guía la lectura sin competir con los
+  // sustantivos. Sin tinte — sigue siendo foam, solo translúcido.
+  color: rgb(var(--foam) / 0.7);
+}
+
+// ─── Lede / subtítulo ────────────────────────────────────────────────────────
+// Una sola idea, máximo 2 líneas en desktop. Tipo body-lg, tracking neutral.
+// La sombra es más liviana que la del título (no compite por presencia).
+.wolf-landscape__lede {
+  margin-top: clamp(1.25rem, 0.8rem + 1.4vw, 2rem);
+  max-width: 44ch;
+  text-wrap: pretty;
+  font-family: var(--font-display);
+  font-size: var(--type-body-lg);
+  font-weight: 400;
+  line-height: 1.55;
+  color: rgb(var(--foam) / 0.92);
+  // Sombra del lede más densa que antes — sin scrim, el body necesita
+  // su propio contraste contra niebla. Dos capas (blur amplio + cercano)
+  // alcanzan; no requiere highlight superior porque a 18-20px no hay
+  // relieve perceptible.
+  text-shadow:
+    0 2px 14px rgb(6 9 26 / 0.7),
+    0 1px 4px rgb(6 9 26 / 0.65),
+    0 1px 1px rgb(6 9 26 / 0.55);
+}
+
+// ─── Mobile fine-tuning ──────────────────────────────────────────────────────
+// En phones, el wolf de la imagen sube en el encuadre por el cover-fit; el
+// copy se compacta y empuja el clamp del lede a 36ch para que no choque
+// contra la roca de la derecha.
+@media (max-width: 639.98px) {
+  .wolf-landscape__copy {
+    align-items: flex-start;
+    padding-top: 6.5rem;
+  }
+
+  .wolf-landscape__title {
+    max-width: 14ch;
+  }
+
+  .wolf-landscape__lede {
+    max-width: 32ch;
+  }
+}
+
+// ─── Reduced motion ──────────────────────────────────────────────────────────
+// El canvas WebGL ya hace su propio fallback. El gradiente de texto y la
+// vignette se mantienen estáticos por diseño — no animan, no requieren ajuste.

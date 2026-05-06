@@ -1,10 +1,38 @@
-<section class="wolf-landscape" aria-hidden="true">
+<section class="wolf-landscape">
   <!-- Capa viva: la imagen del lobo + lago + reflejo, animada con WebGL2.
        Niebla tenue en bucle perfecto, peces sutiles que persiguen el cursor,
        ondas que rebotan en orillas y rocas distorsionando el reflejo cuando
        pasan. Si WebGL2 no está o el usuario pidió reduced-motion, cae a la
-       <img> estática original sin perder ningún pixel del compositing. -->
-  <app-wolf-lake-canvas />
+       <img> estática original sin perder ningún pixel del compositing.
+       aria-hidden — la capa es decoración pura; el contenido semántico vive
+       en el bloque .wolf-landscape__copy. -->
+  <app-wolf-lake-canvas aria-hidden="true" />
+
+  <!-- Copy del hero — eyebrow + título editorial + subtítulo. La marca
+       (emblema + wordmark) ya vive en .floating-nav-brand del shell, así
+       que aquí solo va lo que define a la página: qué hacemos y cómo. -->
+  <div class="wolf-landscape__copy">
+    <div class="wolf-landscape__copy-inner">
+      <div class="wolf-landscape__eyebrow">
+        <span class="wolf-landscape__eyebrow-rule" aria-hidden="true"></span>
+        <span class="wolf-landscape__eyebrow-text">Consultora tecnológica</span>
+      </div>
+
+      <h1 class="wolf-landscape__title">
+        Sistemas a medida.
+        <span class="wolf-landscape__title-line">
+          Decisiones <em class="wolf-landscape__title-italic">que</em> escalan.
+        </span>
+      </h1>
+
+      <p class="wolf-landscape__lede">
+        Auditamos procesos, integramos inteligencia artificial y construimos
+        plataformas a medida — tecnología probada para empresas que ya saben
+        hacia dónde van.
+      </p>
+    </div>
+  </div>
+
   <!-- Costura inferior — funde el borde bajo del hero al abismo
        (#06091A) para que la siguiente sección entre sin línea visible. -->
   <div class="wolf-landscape__seam" aria-hidden="true"></div>
