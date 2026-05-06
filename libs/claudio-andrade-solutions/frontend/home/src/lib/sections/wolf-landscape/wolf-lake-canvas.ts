@@ -1194,10 +1194,12 @@ export class WolfLakeCanvas {
         }
       }
 
-      // Helper — recibe un target en canvas-px. Si cae en tierra, camina
-      // sobre la línea hacia "fromX/Y" hasta encontrar el primer punto en
-      // agua. Garantía: peces nunca salen del mask del lago, sin importar
-      // dónde esté el cursor. Mismo límite que los rebotes de las ondas.
+      // Helper — recibe un target en canvas-px. Si cae fuera de "agua
+      // sólida" (mask > 0.65), camina sobre la línea hacia "fromX/Y"
+      // hasta encontrar el primer punto en agua sólida. Threshold 0.65
+      // (no 0.3) garantiza que el target NUNCA cae en el feather de la
+      // orilla — el cuerpo del pez (cabeza + nariz) cabe entero adentro
+      // del lago sin asomar al bosque ni a la roca.
       const constrainTargetToWater = (
         tx: number, ty: number, fromX: number, fromY: number,
       ): Vec => {
@@ -1207,15 +1209,13 @@ export class WolfLakeCanvas {
           );
           return waves.sampleMask(iuv.x, iuv.y);
         };
-        if (sample(tx, ty) > 0.3) return { x: tx, y: ty };
-        // Walk back desde target → fish hasta encontrar agua. 10 pasos = 90px
-        // de granularidad para fish a 900px del cursor; suficiente.
+        if (sample(tx, ty) > 0.65) return { x: tx, y: ty };
+        // Walk back desde target → fish hasta encontrar agua sólida.
         for (let t = 0.85; t >= 0; t -= 0.1) {
           const px = fromX + (tx - fromX) * t;
           const py = fromY + (ty - fromY) * t;
-          if (sample(px, py) > 0.3) return { x: px, y: py };
+          if (sample(px, py) > 0.65) return { x: px, y: py };
         }
-        // Sin agua en la línea — quedarse en posición actual.
         return { x: fromX, y: fromY };
       };
 
@@ -1251,14 +1251,15 @@ export class WolfLakeCanvas {
         }
         f.update(dt);
 
-        // Defensive head clamp — si el pez logró cruzar a roca por
-        // overshoot o porque su path entre target en agua atraviesa una
-        // muesca, lo empujamos de vuelta al centro de su orbit (que vive
-        // en agua por construcción del SPAWN_UV).
+        // Defensive head clamp — si la cabeza entra al feather de la
+        // orilla (mask < 0.55), la empujamos de vuelta al orbit center.
+        // Threshold 0.55 (no 0.15) considera además que la NARIZ del pez
+        // sobresale del head ~bodyScale*0.55 px, así nada del cuerpo
+        // termina por encima de la línea de árboles ni en la roca.
         const headIuv = canvasUVToImgUV(
           { x: head.x / cw, y: head.y / ch }, cw, ch, imgW, imgH,
         );
-        if (waves.sampleMask(headIuv.x, headIuv.y) < 0.15) {
+        if (waves.sampleMask(headIuv.x, headIuv.y) < 0.55) {
           const oc = imgUVToCanvasUV(
             { x: f.orbit.cx, y: f.orbit.cy }, cw, ch, imgW, imgH,
           );
@@ -1267,10 +1268,13 @@ export class WolfLakeCanvas {
           const dx = ocx - head.x;
           const dy = ocy - head.y;
           const d = Math.hypot(dx, dy) || 1;
-          // Empuje de 6px/frame hacia el centro del orbit. Suave para que
-          // el pez no se "teleportee", se ve como si nadara de vuelta.
-          head.x += (dx / d) * 6;
-          head.y += (dy / d) * 6;
+          // Empuje proporcional a "qué tan adentro de la orilla está":
+          // entre 4 y 12 px/frame. Cuanto más cerca del bosque, más
+          // fuerte el empuje hacia el agua.
+          const m = waves.sampleMask(headIuv.x, headIuv.y);
+          const push = 4 + (1 - m / 0.55) * 8;
+          head.x += (dx / d) * push;
+          head.y += (dy / d) * push;
         }
       }
 
