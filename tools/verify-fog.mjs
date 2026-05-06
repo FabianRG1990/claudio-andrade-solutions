@@ -39,7 +39,15 @@ await page.goto('http://localhost:4290', { waitUntil: 'networkidle', timeout: 30
 // Wait for the WolfLake canvas to mount + first render
 console.log('[2/5] Waiting for canvas mount ...');
 await page.waitForSelector('canvas', { state: 'attached', timeout: 10000 });
-await page.waitForTimeout(1500);
+
+// Hide any HMR error overlays so they don't pollute the diff (HMR
+// transients aren't fog-related).
+await page.addStyleTag({ content: `
+  vite-error-overlay, ng-error-overlay,
+  [class*="error-overlay"], [data-error-overlay],
+  iframe[style*="z-index"] { display: none !important; visibility: hidden !important; }
+` });
+await page.waitForTimeout(2000);
 
 const a = resolve(outDir, 'frame_a.png');
 const b = resolve(outDir, 'frame_b.png');

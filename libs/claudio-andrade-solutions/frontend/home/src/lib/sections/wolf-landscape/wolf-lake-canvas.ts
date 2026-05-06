@@ -236,26 +236,28 @@ void main() {
   vec3 causticAdd = (vec3(1.0) - color) * causticCol * causticAlpha;
   color += causticAdd * 0.78 * mask;
 
-  // Niebla — el sample point ORBITA un círculo (radio 0.07 UV) con
-  // período uFogPeriod. La banda visual no se mueve — pero el patrón de
-  // ruido bajo ella sí, así que el ojo ve niebla flotando/circulando
-  // dentro de la banda en lugar de morfar en sitio. Sumado a domain warp
-  // (turbulencia interna) y dos octavas (estructura lenta + shimmer
-  // rápido), el movimiento se siente realista. Loop perfecto: ambos
-  // ángulos vuelven a 0 en uFogPeriod (fAfast=fA*2 → entero → seamless).
-  // Dos sub-bandas verticales: la del agua usa mask (vapor sobre la
-  // superficie), la de los pinos NO (niebla atmosférica entre los
-  // troncos, en el aire). El peso de la sub-banda de los pinos va a
-  // 0.45 porque el área de fondo es más oscura que la del agua y la
-  // niebla blanca se ve fantasmal al mismo opacity que sobre el lago;
-  // a la mitad se siente translúcida, natural, premium.
+  // Niebla — orbital drift + iterated 2-level domain warp (Inigo
+  // Quilez) para flujo turbulento natural en múltiples escalas, no
+  // movimiento monótono de una sola frecuencia. Loop seamless: todos
+  // los ángulos vuelven a 0 en uFogPeriod.
+  //
+  // Dos sub-bandas con xBands distintas:
+  //   • surface (con water mask): se extiende a la derecha hasta cubrir
+  //     "Sistemas a medida." entero. Fade ancho 0.55→0.82 — el ojo no
+  //     detecta el corte, solo niebla disolviéndose en aire.
+  //   • pine (sin mask, opacidad 0.45 para no verse fantasma): xBand
+  //     más estrecha, no llega al lobo ni a su zona de cabeza.
   float ySurface = smoothstep(0.40, 0.45, imgUV.y) *
                    (1.0 - smoothstep(0.50, 0.58, imgUV.y));
   float yPine = smoothstep(0.26, 0.33, imgUV.y) *
                 (1.0 - smoothstep(0.39, 0.44, imgUV.y));
-  float fogXBand = smoothstep(0.0, 0.08, imgUV.x) *
-                   (1.0 - smoothstep(0.50, 0.68, imgUV.x));
-  float fogBand = max(ySurface * mask, yPine * 0.45) * fogXBand;
+  float xSurface = smoothstep(0.0, 0.08, imgUV.x) *
+                   (1.0 - smoothstep(0.55, 0.82, imgUV.x));
+  float xPine = smoothstep(0.0, 0.08, imgUV.x) *
+                (1.0 - smoothstep(0.42, 0.58, imgUV.x));
+  float surfaceBand = ySurface * mask * xSurface;
+  float pineBand = yPine * 0.45 * xPine;
+  float fogBand = max(surfaceBand, pineBand);
 
   float fA = (uTime / uFogPeriod) * 6.2831853;
   float fAfast = fA * 2.0;
@@ -264,27 +266,37 @@ void main() {
   float fCsF = cos(fAfast);
   float fSnF = sin(fAfast);
 
-  // Orbital drift del sample point — la pieza clave que hace visible el
-  // movimiento. Un círculo de radio 0.10 UV traversa el campo de ruido y
-  // el patrón de niebla "fluye" dentro de su banda. Sin desplazamiento
-  // neto entre t=0 y t=T (regresa al punto inicial).
-  vec2 orbit = vec2(fCs, fSn) * 0.10;
+  // Orbital drift — círculo de radio 0.12 UV en el plano del ruido.
+  // El sample point traversa esa órbita en uFogPeriod y vuelve al
+  // punto inicial — sin traslación neta, motion claramente perceptible.
+  vec2 orbit = vec2(fCs, fSn) * 0.12;
 
-  // Domain warp — turbulencia adicional sobre la silueta. Frecuencia
-  // baja, amplitud pequeña; le da micro-deformación sin volverse caótico.
-  vec2 warpUV = imgUV * vec2(1.6, 2.4) + 5.1;
-  float wx = snoise4(vec4(warpUV,       fCs * 0.9, fSn * 0.9));
-  float wy = snoise4(vec4(warpUV + 7.3, fCs * 0.9, fSn * 0.9));
-  vec2 warp = vec2(wx, wy) * 0.07;
+  // Iterated domain warp nivel 1 — escala grande, fase lenta. Es el
+  // "viento" base: la niebla se desplaza globalmente con curvas suaves.
+  vec2 warpUV1 = imgUV * vec2(1.2, 1.8) + 5.1;
+  float w1x = snoise4(vec4(warpUV1,       fCs * 0.7, fSn * 0.7));
+  float w1y = snoise4(vec4(warpUV1 + 7.3, fCs * 0.7, fSn * 0.7));
+  vec2 warp1 = vec2(w1x, w1y) * 0.07;
 
-  vec2 fogUV = imgUV + orbit + warp;
+  // Iterated domain warp nivel 2 — opera SOBRE el warp1, frecuencia más
+  // alta, fase más rápida. Estos son los remolinos turbulentos internos
+  // que rompen la simetría del flujo y hacen que la niebla se sienta
+  // "viva", no como una textura desplazada.
+  vec2 warpUV2 = (imgUV + warp1) * vec2(2.6, 4.0) + 13.2;
+  float w2x = snoise4(vec4(warpUV2,       fCsF * 0.6, fSnF * 0.6));
+  float w2y = snoise4(vec4(warpUV2 + 9.1, fCsF * 0.6, fSnF * 0.6));
+  vec2 warp2 = vec2(w2x, w2y) * 0.04;
 
-  // Octava grande — estructura, fase lenta. Radio 0.9 en 4D garantiza
-  // que el morph cubra una vuelta completa del campo en cada ciclo.
-  float n1 = snoise4(vec4(fogUV * vec2(2.5, 4.0),
+  vec2 fogUV = imgUV + orbit + warp1 + warp2;
+
+  // Octava grande — frecuencia (2.0, 3.5). Bajé un poco de (2.5, 4.0)
+  // para que las "nubes de niebla" sean más amplias y el orbital
+  // traversal de 0.12 UV cubra una porción mayor del feature de ruido,
+  // haciendo el movimiento más perceptible al ojo.
+  float n1 = snoise4(vec4(fogUV * vec2(2.0, 3.5),
                           fCs * 0.9, fSn * 0.9)) * 0.5 + 0.5;
-  // Octava chica — shimmer, fase rápida (2× la angular). Da el detalle
-  // de "vapor que se mueve" sin que la estructura grande pierda calma.
+  // Octava chica — shimmer, fase rápida (2×). Da el detalle de "vapor
+  // que se mueve" sin que la estructura grande pierda calma.
   float n2 = snoise4(vec4(fogUV * vec2(6.5, 10.0) + 3.7,
                           fCsF * 0.7, fSnF * 0.7)) * 0.5 + 0.5;
   float fogN = n1 * 0.65 + n2 * 0.35;
@@ -1058,11 +1070,12 @@ export class WolfLakeCanvas {
     // Idéntico al hero del abismo: 120 substeps/s. Las ondas se propagan
     // y rebotan al mismo ritmo que en esa sección.
     const WAVE_STEP = 1 / 120;
-    // 26s por ciclo — orbital drift + warp + dos octavas. Más corto que
-    // 36s para que el movimiento se perciba al primer vistazo sin tener
-    // que clavarle decenas de segundos a la pantalla; aún suficientemente
-    // lento para que la silueta se sienta como respiración premium.
-    const FOG_PERIOD = 26;
+    // 22s por ciclo — orbital drift + iterated warp + dos octavas. La
+    // turbulencia interna del warp ya produce variación rápida; el
+    // período del loop principal puede ser más corto sin sentirse
+    // apurado, lo que hace el movimiento global perceptible al primer
+    // vistazo.
+    const FOG_PERIOD = 22;
 
     const start = (): void => {
       if (raf !== 0) return;
