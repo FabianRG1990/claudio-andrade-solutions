@@ -154,12 +154,24 @@
   }
 }
 
+// Labels del form — ascendidos de "eyebrow tag" a "field heading". Un
+// formulario premium trata sus campos como estructura, no como decoración:
+// Nombre / Email / Asunto / Mensaje son la base del card y deben leerse
+// con jerarquía propia (sentence case, peso editorial, contraste pleno),
+// no como tracking-out caps al 10px que desaparecen visualmente.
 .form-field__label {
   display: block;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.72);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  transition: color 350ms var(--ease-fluid);
+}
+
+.form-field:focus-within .form-field__label {
+  color: rgb(var(--lagoon));
 }
 
 .form-field__input {
@@ -366,18 +378,23 @@
   min-width: 0;
 }
 
+// Labels del card — mismo principio que los del form: el rótulo (Email /
+// Teléfono / Dirección) es estructura, no tag. Sentence case + peso 600 +
+// foam pleno para que se lea como "headline del card". El valor de abajo
+// se aliviana en mono (Times) para que el peso jerárquico viva en el label.
 .info-card__label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.7);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
 }
 
 .info-card__value {
   font-family: var(--font-mono);
-  font-size: 1rem;
+  font-size: 0.95rem;
   letter-spacing: var(--tracking-tight);
-  color: rgb(var(--foam));
+  color: rgb(var(--foam) / 0.88);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
