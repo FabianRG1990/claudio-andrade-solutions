@@ -67,6 +67,7 @@
     "jsonc-eslint-parser": "^2.1.0",
     "nx": "patch:nx@npm%3A22.7.0#~/.yarn/patches/nx-npm-22.7.0-93822c10a7.patch",
     "prettier": "^3.8.1",
+    "sharp": "^0.34.5",
     "supertest": "^7.1.4",
     "ts-node": "10.9.1",
     "tslib": "^2.3.0",

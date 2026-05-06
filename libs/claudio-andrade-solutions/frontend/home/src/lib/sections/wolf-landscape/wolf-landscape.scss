@@ -5,8 +5,10 @@
 // como una única exposición) — por eso la integración de luz, sombra y
 // color es física, no apilada en CSS.
 //
-// El bg se ancla por DERECHA-INFERIOR para que en viewports angostos
-// (mobile portrait, ventanas estrechas) el lobo no se salga del frame.
+// El render lo maneja `WolfLakeCanvas` adentro: WebGL2 con la imagen como
+// textura, ondas con rebote en orillas, niebla en loop perfecto, y peces
+// que reaccionan al cursor. La <img> base vive dentro del componente y
+// solo se muestra como fallback si WebGL2 no está disponible.
 // =============================================================================
 
 .wolf-landscape {
@@ -18,18 +20,6 @@
   background: #06091A;
 }
 
-.wolf-landscape__bg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  // Anclar por DERECHA-INFERIOR mantiene el lobo + roca en frame
-  // mientras se recorta del lado izquierdo (donde es solo lago/bruma)
-  // si la pantalla es más angosta que 16:9. Lo que se sacrifica es
-  // negative space, no contenido.
-  object-position: right bottom;
-}
-
 // Costura inferior — funde la base del bg al abismo puro (#06091A) para
 // que la siguiente sección entre sin línea visible. La AI ya dejó el
 // borde inferior oscuro; este gradient termina de cerrarlo.
@@ -39,6 +29,7 @@
   inset-inline: 0;
   bottom: 0;
   height: 18%;
+  z-index: 3;
   background: linear-gradient(
     180deg,
     rgb(6 9 26 / 0) 0%,
