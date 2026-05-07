@@ -101,6 +101,5 @@
       "style": "scss"
     }
   },
-  "analytics": true,
-  "nxCloudId": "69f3d4b390bb1266985261be"
+  "analytics": true
 }
