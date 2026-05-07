@@ -266,10 +266,11 @@ void main() {
   float fCsF = cos(fAfast);
   float fSnF = sin(fAfast);
 
-  // Orbital drift — círculo de radio 0.12 UV en el plano del ruido.
-  // El sample point traversa esa órbita en uFogPeriod y vuelve al
-  // punto inicial — sin traslación neta, motion claramente perceptible.
-  vec2 orbit = vec2(fCs, fSn) * 0.12;
+  // Orbital drift ELÍPTICO — la niebla en lago real drifta MÁS lateral
+  // que vertical (gravedad + flujo de aire frío sobre superficie de
+  // agua tibia). Radio 0.18 en X, 0.06 en Y → ratio 3:1 horizontal,
+  // físicamente correcto. El path elíptico preserva el loop seamless.
+  vec2 orbit = vec2(fCs * 0.18, fSn * 0.06);
 
   // Iterated domain warp nivel 1 — escala grande, fase lenta. Es el
   // "viento" base: la niebla se desplaza globalmente con curvas suaves.
@@ -289,20 +290,38 @@ void main() {
 
   vec2 fogUV = imgUV + orbit + warp1 + warp2;
 
-  // Octava grande — frecuencia (2.0, 3.5). Bajé un poco de (2.5, 4.0)
-  // para que las "nubes de niebla" sean más amplias y el orbital
-  // traversal de 0.12 UV cubra una porción mayor del feature de ruido,
-  // haciendo el movimiento más perceptible al ojo.
+  // Octava grande — manchas amplias, fase lenta. Estructura macro de la
+  // niebla, "nubes" que se mueven como bloques.
   float n1 = snoise4(vec4(fogUV * vec2(2.0, 3.5),
                           fCs * 0.9, fSn * 0.9)) * 0.5 + 0.5;
-  // Octava chica — shimmer, fase rápida (2×). Da el detalle de "vapor
-  // que se mueve" sin que la estructura grande pierda calma.
+  // Octava media — fase rápida 2×. Shimmer interno, "vapor moviéndose"
+  // dentro de las nubes grandes sin que la estructura macro pierda calma.
   float n2 = snoise4(vec4(fogUV * vec2(6.5, 10.0) + 3.7,
                           fCsF * 0.7, fSnF * 0.7)) * 0.5 + 0.5;
-  float fogN = n1 * 0.65 + n2 * 0.35;
+  // Octava fina — wisps. Filamentos de vapor a alta frecuencia, fase
+  // todavía más rápida. Peso bajo (0.10) para que sean detalle, no ruido.
+  float n3 = snoise4(vec4(fogUV * vec2(15.0, 22.0) + 9.4,
+                          fCsF * 0.85, fSnF * 0.85)) * 0.5 + 0.5;
+  float fogN = n1 * 0.60 + n2 * 0.30 + n3 * 0.10;
 
-  vec3 fogColor = vec3(0.78, 0.86, 0.92);
-  color = mix(color, fogColor, fogBand * fogN * 0.30);
+  // Power curve — empuja los grises medios hacia oscuros. Resultado:
+  // patches definidos en vez de niebla uniforme. La niebla real es
+  // patchy (zonas densas + zonas casi limpias), no un velo plano.
+  fogN = pow(fogN, 1.45);
+
+  // Variación cromática — la niebla bajo luz lunar no es un solo color.
+  // Las zonas en sombra son más cool (azuladas), las que reciben más
+  // moonlight tiran a silver-warm. Mezcla controlada por noise lento de
+  // baja frecuencia que vive en el mismo loop.
+  float fogTint = snoise4(vec4(imgUV * vec2(1.5, 2.0) + 17.0,
+                               fCs * 0.4, fSn * 0.4)) * 0.5 + 0.5;
+  vec3 fogCool   = vec3(0.72, 0.82, 0.94); // azul-frío de sombra
+  vec3 fogSilver = vec3(0.88, 0.90, 0.92); // silver bajo moonlight
+  vec3 fogColor = mix(fogCool, fogSilver, fogTint);
+
+  // Multiplicador 0.34 (era 0.30) compensa la curva de potencia que
+  // baja la media de fogN — densidad final visual equivalente.
+  color = mix(color, fogColor, fogBand * fogN * 0.34);
 
   fragColor = vec4(color, 1.0);
 }`;
