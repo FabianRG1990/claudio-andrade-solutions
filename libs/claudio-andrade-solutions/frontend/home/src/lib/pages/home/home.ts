@@ -1,37 +1,37 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-import { Conservation } from '../../sections/conservation/conservation';
-import { FeaturedExhibits } from '../../sections/featured-exhibits/featured-exhibits';
-import { Membership } from '../../sections/membership/membership';
-import { SpeciesMarquee } from '../../sections/species-marquee/species-marquee';
+import { CaseStudies } from '../../sections/case-studies/case-studies';
+import { FeaturedProducts } from '../../sections/featured-products/featured-products';
+import { Engagements } from '../../sections/engagements/engagements';
+import { ServicesMarquee } from '../../sections/services-marquee/services-marquee';
 import { Timeline } from '../../sections/timeline/timeline';
-import { Visit } from '../../sections/visit/visit';
+import { Availability } from '../../sections/availability/availability';
 import { WolfLandscape } from '../../sections/wolf-landscape/wolf-landscape';
 
 /**
  * HomePage — composición del manifiesto. WolfLandscape es ahora el hero
  * único de la portada (lago + lobo + niebla + peces, copy editorial encima).
- *   WolfLandscape → FeaturedExhibits → SpeciesMarquee → Membership →
- *   Conservation → Visit → Timeline.
+ *   WolfLandscape → FeaturedProducts → ServicesMarquee → Engagements →
+ *   CaseStudies → Availability → Timeline.
  */
 @Component({
   selector: 'app-home',
   imports: [
     WolfLandscape,
-    FeaturedExhibits,
-    SpeciesMarquee,
-    Membership,
-    Conservation,
-    Visit,
+    FeaturedProducts,
+    ServicesMarquee,
+    Engagements,
+    CaseStudies,
+    Availability,
     Timeline,
   ],
   template: `
     <app-wolf-landscape />
-    <app-featured-exhibits />
-    <app-species-marquee />
-    <app-membership />
-    <app-conservation />
-    <app-visit />
+    <app-featured-products />
+    <app-services-marquee />
+    <app-engagements />
+    <app-case-studies />
+    <app-availability />
     <app-timeline />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

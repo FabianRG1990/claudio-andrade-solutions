@@ -32,9 +32,9 @@ export class Footer {
   protected readonly whatsappHref = 'https://wa.me/50672091418';
 
   protected readonly navLinks: readonly NavLink[] = [
-    { label: 'Productos', href: '/exhibiciones' },
-    { label: 'Casos', href: '/especies' },
-    { label: 'Acerca de nosotros', href: '/especies' },
+    { label: 'Productos', href: '/productos' },
+    { label: 'Casos', href: '/nosotros' },
+    { label: 'Acerca de nosotros', href: '/nosotros' },
     { label: 'Auditoría', href: '/contacto' },
     { label: 'Contáctenos', href: '/contacto' },
   ];

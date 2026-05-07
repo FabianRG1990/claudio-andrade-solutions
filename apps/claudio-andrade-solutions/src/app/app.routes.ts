@@ -13,12 +13,12 @@ export const appRoutes: Route[] = [
     loadChildren: () => import('@cas-ui-home'),
   },
   {
-    path: 'exhibiciones',
-    loadChildren: () => import('@cas-ui-exhibiciones'),
+    path: 'productos',
+    loadChildren: () => import('@cas-ui-productos'),
   },
   {
-    path: 'especies',
-    loadChildren: () => import('@cas-ui-especies'),
+    path: 'nosotros',
+    loadChildren: () => import('@cas-ui-nosotros'),
   },
   {
     path: 'contacto',

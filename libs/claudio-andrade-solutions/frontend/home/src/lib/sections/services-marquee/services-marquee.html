@@ -1,0 +1,82 @@
+<section class="services-marquee">
+  <div class="services-marquee__container">
+    <div class="services-marquee__head">
+      <div>
+        <div appReveal>
+          <app-eyebrow tone="kelp">Capítulo 02 · Lo que ofrecemos</app-eyebrow>
+        </div>
+        <p appReveal [delay]="0.05" class="services-marquee__count">
+          Capacidades a medida · sin lista cerrada
+        </p>
+      </div>
+      <h2 appReveal [delay]="0.1" class="services-marquee__title">
+        Cualquier desafío.
+        <span class="services-marquee__title-italic">Un mismo cuidado.</span>
+      </h2>
+    </div>
+  </div>
+
+  <div class="services-marquee__reel-wrap">
+    <div class="services-marquee__edge services-marquee__edge--left" aria-hidden="true"></div>
+    <div class="services-marquee__edge services-marquee__edge--right" aria-hidden="true"></div>
+
+    <div class="services-marquee__reel animate-marquee">
+      @for (sp of reel(); track sp.reelKey) {
+        <article
+          class="service-card glass-shell glass-shell-hover"
+          [attr.data-accent]="sp.accent || 'lagoon'"
+        >
+          <div class="service-card__inner glass-core">
+            <!-- Halo de color por categoría — vive bajo el contenido como
+                 capa cero. `.glass-core` ya tiene overflow:hidden, así que
+                 el resplandor se recorta limpio al borde de la card. -->
+            <span class="service-card__glow" aria-hidden="true"></span>
+
+            <!-- HEAD: icono protagonista + secuencia editorial + status -->
+            <header class="service-card__hero">
+              <span class="service-card__icon glass-bubble-icon">
+                @if (sp.icon) {
+                  <ng-icon [name]="sp.icon" size="24" />
+                }
+              </span>
+              <div class="service-card__hero-meta">
+                <span class="service-card__sequence">{{ sp.sequence }} / 10</span>
+                <span
+                  class="service-card__status"
+                  [attr.data-status]="statusToneAttr(sp.status)"
+                >
+                  {{ statusLabel(sp.status) }}
+                </span>
+              </div>
+            </header>
+
+            <!-- BODY: categoría + nombre grande + tagline editorial -->
+            <div class="service-card__body">
+              <p class="service-card__category">{{ sp.category }}</p>
+              <h3 class="service-card__name">{{ sp.name }}</h3>
+              <p class="service-card__tagline">{{ sp.tagline }}</p>
+            </div>
+
+            <!-- HIGHLIGHTS: 2 bullets con icono — el alcance temporal y el
+                 entregable principal. Reemplaza el grid plano de 2 columnas
+                 por una lectura de "qué te llevás" más contundente. -->
+            <ul class="service-card__highlights">
+              <li class="service-card__highlight">
+                <span class="service-card__highlight-icon">
+                  <ng-icon name="phosphorClock" size="11" />
+                </span>
+                <span>{{ sp.timeline }}</span>
+              </li>
+              <li class="service-card__highlight">
+                <span class="service-card__highlight-icon service-card__highlight-icon--check">
+                  <ng-icon name="phosphorCheckBold" size="10" />
+                </span>
+                <span>{{ sp.outcome }}</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

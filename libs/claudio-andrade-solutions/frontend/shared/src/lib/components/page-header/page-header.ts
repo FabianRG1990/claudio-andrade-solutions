@@ -8,7 +8,7 @@ import { RevealDirective } from '../../directives/reveal/reveal.directive';
 
 /**
  * PageHeader — header editorial reutilizable para las rutas internas
- * (/exhibiciones, /especies, /contacto). Replica el `<PageHeader>` del
+ * (/productos, /nosotros, /contacto). Replica el `<PageHeader>` del
  * proyecto Next: bg-mesh-deep + caustic + bubble-stream + reveal staggered
  * sobre dos columnas (eyebrow/capítulo/sello a la izquierda, título +
  * descripción a la derecha).

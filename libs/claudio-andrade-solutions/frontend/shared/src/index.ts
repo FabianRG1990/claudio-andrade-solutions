@@ -33,18 +33,18 @@ export { ImgFadeDirective } from './lib/directives/img-fade/img-fade.directive';
 
 // ─── Data + types ──────────────────────────────────────────────────────────
 export {
-  exhibits,
-  species,
-  featuredCases,
-  visitInfo,
-  tickets,
+  products,
+  services,
+  caseStudies,
+  availability,
+  engagements,
 } from './lib/data/data';
 export type {
-  Exhibit,
-  Species,
-  SpeciesStatus,
-  ConservationStat,
+  Product,
+  Service,
+  ServiceStatus,
+  Metric,
   CaseSlide,
-  FeaturedCase,
-  Ticket,
+  CaseStudy,
+  Engagement,
 } from './lib/data/data';

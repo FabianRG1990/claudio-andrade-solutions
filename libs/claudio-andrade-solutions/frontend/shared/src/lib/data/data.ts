@@ -1,139 +1,120 @@
 // =============================================================================
 // data — fuente única de contenido del sitio.
 //
-// Antes este módulo describía un acuario (especies, biomas, conservación).
-// Hoy describe Claudio Andrade Solutions: una consultora tecnológica que
-// vende soluciones a medida — auditorías, sistemas, IA, automatización,
-// landing pages premium, integraciones con el ecosistema Walmart.
-//
-// Los nombres de los tipos (`Exhibit`, `Species`, `ConservationStat`,
-// `Ticket`) se conservan por inercia con los componentes existentes; lo
-// que cambia es el contenido y el campo `image` apunta a las assets viejas
-// hasta que las reemplacemos. Los componentes consumen `name`, `description`,
-// `accent`, `status`, etc. — la semántica visual se mantiene; solo la
-// narrativa cambia de "ecosistemas marinos" a "soluciones tecnológicas".
+// Describe Claudio Andrade Solutions: una consultora tecnológica que vende
+// soluciones a medida — auditorías, sistemas, IA, automatización, landing
+// pages premium, integraciones con el ecosistema Walmart.
 // =============================================================================
 
 // ---- Productos ------------------------------------------------------------
-// `Exhibit` se reutiliza como tipo "Producto/Solución". Cada card tiene un
-// nombre, una categoría (`zone`), un timeline estimado (`depth`), un par de
-// métricas (`species` = entregables, `liters` = cobertura) y una descripción
-// corta. El `accent` controla los tintes en la UI existente.
-export type Exhibit = {
+// Cada producto tiene un nombre, una categoría (`zone`), un timeline estimado,
+// un par de métricas (entregables + cobertura) y una descripción corta. El
+// `accent` controla los tintes en la UI existente.
+export type Product = {
   slug: string;
   name: string;
-  zone: string;        // categoría (Auditoría, Sistema, IA, etc.)
-  depth: string;       // timeline estimado (2-4 sem, 12+ sem...)
-  species: number;     // entregables / módulos
-  liters: string;      // cobertura / escala
+  zone: string;          // categoría (Auditoría, Sistema, IA, etc.)
+  timeline: string;      // timeline estimado (2-4 sem, 12+ sem...)
+  deliverables: number;  // cantidad de entregables / módulos
+  coverage: string;      // cobertura / escala
   description: string;
   accent: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
   image: string;
 };
 
-export const exhibits: Exhibit[] = [
+export const products: Product[] = [
   {
     slug: 'auditoria-tecnologica',
     name: 'Auditoría tecnológica',
     zone: 'Diagnóstico',
-    depth: '2 — 4 semanas',
-    species: 14,
-    liters: '360°',
+    timeline: '2 — 4 semanas',
+    deliverables: 14,
+    coverage: '360°',
     description:
       'Diagnóstico completo del stack, los flujos y los procesos. Detectamos qué automatizar, qué reescribir y qué dejar quieto — con un mapa accionable y prioridades claras.',
     accent: 'lagoon',
-    image: '/biomas/abismo-pacifico.png',
+    image: '/productos/auditoria-tecnologica.png',
   },
   {
     slug: 'sistemas-a-medida',
     name: 'Sistemas a medida',
     zone: 'Desarrollo',
-    depth: '12 — 24 semanas',
-    species: 32,
-    liters: '∞',
+    timeline: '12 — 24 semanas',
+    deliverables: 32,
+    coverage: '∞',
     description:
       'Plataformas internas, ERPs ligeros, tableros de operaciones. Angular + Nx + Firebase, monorepo escalable, despliegue continuo. Construidos para crecer con la empresa.',
     accent: 'kelp',
-    image: '/biomas/bosque-de-kelp.png',
+    image: '/productos/sistemas-a-medida.png',
   },
   {
     slug: 'integraciones-ia',
     name: 'Integraciones de IA',
     zone: 'Inteligencia',
-    depth: '4 — 10 semanas',
-    species: 18,
-    liters: 'Multi-modelo',
+    timeline: '4 — 10 semanas',
+    deliverables: 18,
+    coverage: 'Multi-modelo',
     description:
       'Agentes Claude, RAG sobre documentación interna, asistentes de soporte, generación de contenido y automatización de tareas de soporte. IA integrada a tu proceso real.',
     accent: 'bioluminescent',
-    image: '/biomas/arrecife-de-coral.png',
+    image: '/productos/integraciones-ia.png',
   },
   {
     slug: 'apps-walmart',
     name: 'Apps proveedores Walmart',
     zone: 'Vertical',
-    depth: '6 — 12 semanas',
-    species: 22,
-    liters: 'Retail Link',
+    timeline: '6 — 12 semanas',
+    deliverables: 22,
+    coverage: 'Retail Link',
     description:
       'Aplicaciones específicas para proveedores: integración con Retail Link, OTIF, scorecards, forecast assist y conciliación automática. Una sola construcción, escala por SKU.',
     accent: 'coral',
-    image: '/biomas/tunel-azul.png',
+    image: '/productos/apps-walmart.png',
   },
   {
     slug: 'landing-premium',
     name: 'Landing premium',
     zone: 'Marca',
-    depth: '3 — 6 semanas',
-    species: 9,
-    liters: 'Lighthouse 95+',
+    timeline: '3 — 6 semanas',
+    deliverables: 9,
+    coverage: 'Lighthouse 95+',
     description:
       'Páginas de marca con presupuesto editorial — animaciones canvas, glass-morphism real, rendimiento auditado. La que estás viendo es de las nuestras.',
     accent: 'lagoon',
-    image: '/biomas/manglar.png',
+    image: '/productos/landing-premium.png',
   },
   {
     slug: 'automatizacion-procesos',
     name: 'Automatización de procesos',
     zone: 'Operaciones',
-    depth: '4 — 8 semanas',
-    species: 16,
-    liters: 'n8n · Zapier · Make',
+    timeline: '4 — 8 semanas',
+    deliverables: 16,
+    coverage: 'n8n · Zapier · Make',
     description:
       'Pipelines que conectan tus herramientas — ETL ligeros, sincronización entre sistemas, alertas inteligentes. Reducimos trabajo manual sin reemplazar lo que ya funciona.',
     accent: 'kelp',
-    image: '/biomas/polo-sur.png',
+    image: '/productos/automatizacion-procesos.png',
   },
 ];
 
 // ---- Servicios (carrusel del home) ----------------------------------------
-// `Species` se reutiliza como "Service" dentro del marquee del home: el
-// componente ya consume `common`, `scientific`, `habitat`, `status`, `depth`.
-// Re-mapeo conceptual:
-//   common      → nombre del servicio
-//   scientific  → tagline editorial
-//   habitat     → categoría
-//   status      → estado/etiqueta de disponibilidad
-//   depth       → alcance/escala
-//   diet        → entregable principal
-//   image       → reutilizada como icono de fallback (no se mostrará en el card)
-//
-// Se agrega `icon` para el ng-icon que reemplaza la imagen.
-export type SpeciesStatus = 'Estable' | 'Vulnerable' | 'En peligro' | 'Crítico';
+// Cada card del marquee tiene nombre, tagline editorial, categoría, status,
+// timeline, outcome principal e icono ng-icon.
+export type ServiceStatus = 'Estable' | 'Vulnerable' | 'En peligro' | 'Crítico';
 
-export type Species = {
+export type Service = {
   slug: string;
-  common: string;
-  scientific: string;
-  habitat: string;
-  status: SpeciesStatus;
-  depth: string;
-  diet: string;
+  name: string;
+  tagline: string;
+  category: string;
+  status: ServiceStatus;
+  timeline: string;
+  outcome: string;
   image: string;
   imagePosition?: string;
   icon?: string;
   // accent: tono visual de la card (corner-glow + category eyebrow). Mismo
-  // sistema que `Exhibit.accent` — los 4 valores corresponden a los tokens
+  // sistema que `Product.accent` — los 4 valores corresponden a los tokens
   // de color del proyecto.
   accent?: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
 };
@@ -145,135 +126,134 @@ export type Species = {
 //   'Crítico'    = Premium         (coral intenso — el caro)
 // El mapping es un detalle de UI; los strings los lee `STATUS_TONES` en el
 // marquee.
-export const species: Species[] = [
+export const services: Service[] = [
   {
     slug: 'auditoria-tech',
-    common: 'Auditoría tecnológica',
-    scientific: 'Diagnóstico 360° de stack, procesos y oportunidades de IA.',
-    habitat: 'Diagnóstico',
+    name: 'Auditoría tecnológica',
+    tagline: 'Diagnóstico 360° de stack, procesos y oportunidades de IA.',
+    category: 'Diagnóstico',
     status: 'Estable',
-    depth: '2 — 4 semanas',
-    diet: 'Plan de acción a 12 meses',
-    image: '/especies/tiburon-ballena.jpg',
+    timeline: '2 — 4 semanas',
+    outcome: 'Plan de acción a 12 meses',
+    image: '',
     icon: 'phosphorPulseBold',
     accent: 'lagoon',
   },
   {
     slug: 'sistemas-medida',
-    common: 'Sistemas a medida',
-    scientific: 'Plataformas internas y ERPs ligeros que crecen con la empresa.',
-    habitat: 'Desarrollo',
+    name: 'Sistemas a medida',
+    tagline: 'Plataformas internas y ERPs ligeros que crecen con la empresa.',
+    category: 'Desarrollo',
     status: 'Estable',
-    depth: '12 — 24 semanas',
-    diet: 'App productiva en 90 días',
-    image: '/especies/pulpo-mimo.jpg',
+    timeline: '12 — 24 semanas',
+    outcome: 'App productiva en 90 días',
+    image: '',
     icon: 'phosphorTerminalWindowBold',
     accent: 'kelp',
   },
   {
     slug: 'integraciones-ia',
-    common: 'Integraciones de IA',
-    scientific: 'Agentes Claude, RAG sobre tu documentación, asistentes que entienden el negocio.',
-    habitat: 'Inteligencia',
+    name: 'Integraciones de IA',
+    tagline: 'Agentes Claude, RAG sobre tu documentación, asistentes que entienden el negocio.',
+    category: 'Inteligencia',
     status: 'Vulnerable',
-    depth: '4 — 10 semanas',
-    diet: 'IA en producción, no en demo',
-    image: '/especies/medusa-luna.jpg',
+    timeline: '4 — 10 semanas',
+    outcome: 'IA en producción, no en demo',
+    image: '',
     icon: 'phosphorRobotBold',
     accent: 'bioluminescent',
   },
   {
     slug: 'apps-walmart',
-    common: 'Apps proveedores Walmart',
-    scientific: 'Retail Link, OTIF, scorecards y forecast assist sin fricción con el sistema.',
-    habitat: 'Vertical · Retail',
+    name: 'Apps proveedores Walmart',
+    tagline: 'Retail Link, OTIF, scorecards y forecast assist sin fricción con el sistema.',
+    category: 'Vertical · Retail',
     status: 'En peligro',
-    depth: '6 — 12 semanas',
-    diet: 'Conciliación automatizada por SKU',
-    image: '/especies/pez-dragon.jpg',
+    timeline: '6 — 12 semanas',
+    outcome: 'Conciliación automatizada por SKU',
+    image: '',
     icon: 'phosphorPackageBold',
     accent: 'coral',
   },
   {
     slug: 'landing-premium',
-    common: 'Landing premium',
-    scientific: 'Páginas de marca con presupuesto editorial y rendimiento auditado.',
-    habitat: 'Marca',
+    name: 'Landing premium',
+    tagline: 'Páginas de marca con presupuesto editorial y rendimiento auditado.',
+    category: 'Marca',
     status: 'Estable',
-    depth: '3 — 6 semanas',
-    diet: 'Lighthouse 95+ garantizado',
-    image: '/especies/manta-gigante.jpg',
+    timeline: '3 — 6 semanas',
+    outcome: 'Lighthouse 95+ garantizado',
+    image: '',
     icon: 'phosphorBrowsersBold',
     accent: 'lagoon',
   },
   {
     slug: 'apps-moviles',
-    common: 'Apps móviles',
-    scientific: 'iOS, Android y multiplataforma con un solo equipo y una sola lista de tareas.',
-    habitat: 'Móvil',
+    name: 'Apps móviles',
+    tagline: 'iOS, Android y multiplataforma con un solo equipo y una sola lista de tareas.',
+    category: 'Móvil',
     status: 'Vulnerable',
-    depth: '8 — 16 semanas',
-    diet: 'Listo para App Store y Play Store',
-    image: '/especies/caballito-leafy.png',
+    timeline: '8 — 16 semanas',
+    outcome: 'Listo para App Store y Play Store',
+    image: '',
     icon: 'phosphorDeviceMobileBold',
     accent: 'kelp',
   },
   {
     slug: 'analisis-flujos',
-    common: 'Análisis de flujos',
-    scientific: 'Procesos, métricas y cuellos de botella mapeados al detalle.',
-    habitat: 'Operaciones',
+    name: 'Análisis de flujos',
+    tagline: 'Procesos, métricas y cuellos de botella mapeados al detalle.',
+    category: 'Operaciones',
     status: 'Estable',
-    depth: '2 — 6 semanas',
-    diet: 'Fricciones priorizadas por impacto',
-    image: '/especies/calamar-vampiro.webp',
+    timeline: '2 — 6 semanas',
+    outcome: 'Fricciones priorizadas por impacto',
+    image: '',
     icon: 'phosphorChartLineUpBold',
     accent: 'bioluminescent',
   },
   {
     slug: 'automatizacion',
-    common: 'Automatización',
-    scientific: 'Pipelines, webhooks y ETL ligeros que conectan lo que ya tenés.',
-    habitat: 'Integración',
+    name: 'Automatización',
+    tagline: 'Pipelines, webhooks y ETL ligeros que conectan lo que ya tenés.',
+    category: 'Integración',
     status: 'Estable',
-    depth: '4 — 8 semanas',
-    diet: 'Horas-hombre liberadas',
-    image: '/especies/nudibranquio-azul.jpg',
+    timeline: '4 — 8 semanas',
+    outcome: 'Horas-hombre liberadas',
+    image: '',
     icon: 'phosphorGearBold',
     accent: 'coral',
   },
   {
     slug: 'consultoria-cloud',
-    common: 'Consultoría cloud',
-    scientific: 'Firebase, Google Cloud y Edge bien afinados — costos auditados.',
-    habitat: 'Infraestructura',
+    name: 'Consultoría cloud',
+    tagline: 'Firebase, Google Cloud y Edge bien afinados — costos auditados.',
+    category: 'Infraestructura',
     status: 'Estable',
-    depth: '2 — 8 semanas',
-    diet: 'Costos optimizados, despliegues estables',
-    image: '/especies/tiburon-ballena.jpg',
+    timeline: '2 — 8 semanas',
+    outcome: 'Costos optimizados, despliegues estables',
+    image: '',
     icon: 'phosphorCloudCheckBold',
     accent: 'lagoon',
   },
   {
     slug: 'consultoria-estrategica',
-    common: 'Consultoría estratégica',
-    scientific: 'CTO fraccional y acompañamiento técnico para empresas en crecimiento.',
-    habitat: 'Asesoría',
+    name: 'Consultoría estratégica',
+    tagline: 'CTO fraccional y acompañamiento técnico para empresas en crecimiento.',
+    category: 'Asesoría',
     status: 'En peligro',
-    depth: 'Mensual',
-    diet: 'Decisiones técnicas con respaldo',
-    image: '/especies/pulpo-mimo.jpg',
+    timeline: 'Mensual',
+    outcome: 'Decisiones técnicas con respaldo',
+    image: '',
     icon: 'phosphorBrainBold',
     accent: 'kelp',
   },
 ];
 
 // ---- Casos destacados (capítulo 04) ---------------------------------------
-// El capítulo 04 dejó de ser un único showcase para volverse una fila de tres
-// casos reales — moofy / acuario / adrian — con layout alternado (imagen
-// izquierda · stats derecha, luego espejo, luego espejo). Cada caso conserva
-// la dramaturgia del original: hero landscape grande + mini-carrusel de
-// capturas mobile que ciclan + métricas verificables al lado opuesto.
+// Una fila de tres casos reales — moofy / acuario / adrian — con layout
+// alternado (imagen izquierda · stats derecha, luego espejo, luego espejo).
+// Cada caso lleva: hero landscape grande + mini-carrusel de capturas mobile
+// que ciclan + métricas verificables al lado opuesto.
 export type CaseSlide = {
   src: string;
   alt: string;
@@ -287,13 +267,13 @@ export type CaseSlide = {
   position?: string;
 };
 
-export type ConservationStat = {
+export type Metric = {
   label: string;
   value: string;
   suffix: string;
 };
 
-export type FeaturedCase = {
+export type CaseStudy = {
   slug: string;
   badgeLabel: string;          // "Caso · moofy.vip"
   name: string;                // título card (línea principal, ~20-24 px)
@@ -301,12 +281,12 @@ export type FeaturedCase = {
   year: string;                // "2026"
   status: string;              // pill "Live · …" (constante por caso, ≤24 chars)
   slides: ReadonlyArray<CaseSlide>;
-  stats: ReadonlyArray<ConservationStat>;  // 3 métricas máx — más es densidad
+  stats: ReadonlyArray<Metric>;            // 3 métricas máx — más es densidad
   resultsEyebrow: string;      // "Resultados · moofy.vip"
   accent: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
 };
 
-export const featuredCases: ReadonlyArray<FeaturedCase> = [
+export const caseStudies: ReadonlyArray<CaseStudy> = [
   // ─── 01 · moofy.vip — plataforma operativa para proveedores Walmart ──────
   {
     slug: 'moofy',
@@ -429,11 +409,9 @@ export const featuredCases: ReadonlyArray<FeaturedCase> = [
   },
 ];
 
-// ---- Info de contacto / disponibilidad ------------------------------------
-// `visitInfo` se mantiene; cambia el contenido: en lugar de horarios de un
-// acuario, muestra disponibilidad de la consultoría para reuniones de
-// descubrimiento.
-export const visitInfo = {
+// ---- Disponibilidad / contacto --------------------------------------------
+// Disponibilidad de la consultoría para reuniones de descubrimiento.
+export const availability = {
   hours: [
     { day: 'Lunes — Jueves', hours: '08:00 — 19:00' },
     { day: 'Viernes', hours: '08:00 — 16:00 · Cierre temprano' },
@@ -444,10 +422,10 @@ export const visitInfo = {
     'Trabajamos por cohortes: arrancamos máximo dos proyectos nuevos por mes para mantener el nivel de atención. Pedí tu reunión de descubrimiento — sin costo y sin compromiso.',
 } as const;
 
-// ---- Modelos de engagement (sustituyen "Tickets") -------------------------
-// `Ticket` se reutiliza para describir cómo se contrata el trabajo:
-// auditoría puntual, proyecto cerrado, partnership recurrente.
-export type Ticket = {
+// ---- Modelos de engagement ------------------------------------------------
+// Describen cómo se contrata el trabajo: auditoría puntual, proyecto cerrado,
+// partnership recurrente.
+export type Engagement = {
   name: string;
   price: string;
   cadence: string;
@@ -457,7 +435,7 @@ export type Ticket = {
   highlight?: boolean;
 };
 
-export const tickets: Ticket[] = [
+export const engagements: Engagement[] = [
   {
     name: 'Auditoría',
     price: 'Desde $1.8K',

@@ -30,8 +30,8 @@ interface NavLink {
 
 const LINKS: ReadonlyArray<NavLink> = [
   { href: '/', label: 'Inicio' },
-  { href: '/exhibiciones', label: 'Productos' },
-  { href: '/especies', label: 'Acerca de nosotros' },
+  { href: '/productos', label: 'Productos' },
+  { href: '/nosotros', label: 'Acerca de nosotros' },
   { href: '/contacto', label: 'Contáctenos' },
 ];
 

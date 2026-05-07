@@ -1,0 +1,79 @@
+<section class="featured-products">
+  <div class="featured-products__container">
+    <div class="featured-products__head">
+      <app-section-heading
+        eyebrow="Capítulo 01 · Productos"
+        title="Seis productos."
+        italic="Una arquitectura."
+        description="Auditorías, sistemas a medida, integraciones de IA, apps verticales para retail y landing pages premium. Cada producto está pensado para resolver un problema concreto — sin acomodar la realidad al stack."
+        tone="lagoon"
+      />
+      <a
+        routerLink="/productos"
+        class="featured-products__cta glass-button"
+        appReveal
+        [delay]="0.2"
+      >
+        <span class="featured-products__cta-label">Ver los 6 productos</span>
+        <span class="featured-products__cta-icon glass-button-icon">
+          <ng-icon name="phosphorArrowUpRightBold" size="14" />
+        </span>
+      </a>
+    </div>
+
+    <!-- Bento asimétrico: 1 XL (col 7, row 2) + 2 MD (col 5) + 1 LG (col 7) + 1 MD (col 5) -->
+    <div class="featured-products__grid">
+      @for (p of featured; track p.slug; let i = $index) {
+        <a
+          appReveal
+          routerLink="/productos"
+          class="product-card glass-shell glass-shell-hover"
+          [class.product-card--xl]="i === 0"
+          [class.product-card--lg]="i === 3"
+          [class.product-card--md]="i === 1 || i === 2 || i === 4"
+          [attr.data-accent]="p.accent"
+        >
+          <div class="product-card__inner">
+            <img
+              appImgFade
+              [src]="p.image"
+              [alt]="p.name"
+              class="product-card__image"
+              loading="lazy"
+            />
+            <div class="product-card__gradient"></div>
+            <div class="product-card__hairline hairline"></div>
+
+            <div class="product-card__top">
+              <span
+                class="product-card__badge"
+                [attr.data-accent]="p.accent"
+              >
+                <span class="product-card__badge-dot" aria-hidden="true"></span>
+                {{ p.zone }}
+              </span>
+              <span class="product-card__timeline">{{ p.timeline }}</span>
+            </div>
+
+            <div class="product-card__bottom">
+              <div class="product-card__row">
+                <div>
+                  <h3 class="product-card__title">{{ p.name }}</h3>
+                  <p class="product-card__description">{{ p.description }}</p>
+                </div>
+                <span class="product-card__arrow glass-button-icon" aria-hidden="true">
+                  <ng-icon name="phosphorArrowUpRightBold" size="14" />
+                </span>
+              </div>
+              <div class="product-card__meta">
+                <span>{{ p.deliverables }} entregables</span>
+                <span class="product-card__meta-dot" aria-hidden="true"></span>
+                <span>{{ p.coverage }}</span>
+              </div>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+  </div>
+</section>

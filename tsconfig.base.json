@@ -18,10 +18,10 @@
       "@cas-ui-shared": ["./libs/claudio-andrade-solutions/frontend/shared/src/index.ts"],
       "@cas-ui-shared/*": ["./libs/claudio-andrade-solutions/frontend/shared/src/lib/*"],
       "@cas-ui-home": ["./libs/claudio-andrade-solutions/frontend/home/src/index.ts"],
-      "@cas-ui-exhibiciones": [
-        "./libs/claudio-andrade-solutions/frontend/exhibiciones/src/index.ts"
+      "@cas-ui-productos": [
+        "./libs/claudio-andrade-solutions/frontend/productos/src/index.ts"
       ],
-      "@cas-ui-especies": ["./libs/claudio-andrade-solutions/frontend/especies/src/index.ts"],
+      "@cas-ui-nosotros": ["./libs/claudio-andrade-solutions/frontend/nosotros/src/index.ts"],
       "@cas-ui-contacto": ["./libs/claudio-andrade-solutions/frontend/contacto/src/index.ts"]
     }
   },
