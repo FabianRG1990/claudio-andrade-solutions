@@ -105,6 +105,27 @@
   color: rgb(var(--foam));
   white-space: nowrap;
 
+  // Sombra apilada — mismo lenguaje que `.wolf-landscape__title`, escalado
+  // al tamaño chico del wordmark. Garantiza legibilidad sobre la niebla
+  // animada del hero sin meter scrim ni recuadro (ambos vetados — apagan
+  // la escena viva). Capas:
+  //   a) halo ancho de abismo (16px blur, 0.85) — pinta el contraste real
+  //      contra cualquier zona clara de la niebla.
+  //   b) halo intermedio (5px blur, 0.75) — refuerza los bordes a media
+  //      distancia y evita el efecto "halo único difuso".
+  //   c) contorno fino (1px, 0.85) — define cada glifo contra transiciones
+  //      claras de niebla y reflejos cyan del lago.
+  //   d) hairline 0px (0.7) — engrosa el borde sin desplazamiento, hace que
+  //      el serif Times no se "rompa" en thin-strokes contra fondo brillante.
+  //   e) highlight superior (-1px, foam 0.20) — luz cenital esculpida,
+  //      mismo idioma que el título grande.
+  text-shadow:
+    0 2px 16px rgb(6 9 26 / 0.85),
+    0 1px 5px rgb(6 9 26 / 0.75),
+    0 1px 1px rgb(6 9 26 / 0.85),
+    0 0 1px rgb(6 9 26 / 0.7),
+    0 -1px 0 rgb(245 241 232 / 0.20);
+
   // En phones <480px ocultamos el wordmark — el ancho no alcanza para
   // emblema + nombre cómodamente. El emblema ya identifica la app a esa
   // escala.
