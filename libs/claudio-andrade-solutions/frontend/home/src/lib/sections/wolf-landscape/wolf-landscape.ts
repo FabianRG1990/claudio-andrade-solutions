@@ -5,9 +5,9 @@ import { phosphorSparkleBold } from '@ng-icons/phosphor-icons/bold';
 
 /**
  * WolfLandscape — hero de apertura. Fondo es una sola imagen estática
- * (`hero-wolf/hero-mk2.png`): lago + lobo + skyline + puntos
- * bioluminiscentes en el agua. Sin canvas, sin fish, sin niebla: la
- * escena no anima.
+ * (`hero-wolf/hero-mk3.png`): lago + lobo + skyline + Vía Láctea +
+ * puntos bioluminiscentes en el agua. Imagen de alta resolución
+ * (1672×941), sin canvas, sin fish, sin niebla: la escena no anima.
  *
  * Encima vive una sola capa de copy editorial: telemetría arriba a la
  * izquierda (la derecha se quitó para no taparle la cara al lobo),
