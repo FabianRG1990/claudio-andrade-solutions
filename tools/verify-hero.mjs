@@ -22,8 +22,8 @@ page.on('pageerror', (err) => {
   consoleErrors.push({ type: 'pageerror', text: String(err) });
 });
 
-console.log('[1/3] Navigating to http://localhost:4321 ...');
-await page.goto('http://localhost:4321', { waitUntil: 'networkidle', timeout: 30000 });
+console.log('[1/3] Navigating to http://localhost:4322 ...');
+await page.goto('http://localhost:4322', { waitUntil: 'load', timeout: 30000 });
 
 // Wait for hero image to render fully
 console.log('[2/3] Waiting for hero image ...');

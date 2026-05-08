@@ -1,20 +1,3 @@
-<!-- Brand — position: absolute. Logo + wordmark anclados al Hero (tope del
-     documento en home). Solo se renderiza en la home — en otras rutas no
-     hay Hero al que pertenecer, así que no aparece. -->
-@if (isHome()) {
-  <header class="floating-nav-brand">
-    <a
-      routerLink="/"
-      class="floating-nav__brand"
-      aria-label="Claudio Andrade Solutions · Inicio"
-      (click)="onLinkClick('/', $event)"
-    >
-      <app-emblem-mark [size]="96" />
-      <span class="floating-nav__brand-wordmark">Claudio Andrade Solutions</span>
-    </a>
-  </header>
-}
-
 <!-- Rail — position: absolute. Anclada al top del documento (no al
      viewport): al scrollear baja con la página y desaparece. Pill desktop +
      burger móvil viven aquí — todo el "navbar" (links + acceso a menú) se

@@ -20,8 +20,6 @@ import {
 } from '@ng-icons/phosphor-icons/regular';
 import { filter, map, startWith } from 'rxjs/operators';
 
-import { EmblemMark } from '../../components/brand-mark/emblem-mark';
-
 interface NavLink {
   readonly href: string;
   readonly label: string;
@@ -35,21 +33,18 @@ const LINKS: ReadonlyArray<NavLink> = [
 ];
 
 /**
- * FloatingNav — split en dos contenedores:
- *  - Brand-bar (position: fixed) con emblema + wordmark, persistente arriba.
- *  - Rail (position: absolute) con la pill desktop y el burger móvil; al
- *    scrollear se va con la página (no es fixed).
+ * FloatingNav — rail centrado horizontalmente con los links del sitio.
+ * El brand (logo + wordmark) ya no vive aquí: se quitó por pedido del
+ * usuario. El nav es solo links flotando con hover hermoso.
  *
- *  - Pill desktop con `<app-glass-pill-canvas>` Three.js detrás de los links
  *  - Indicador del link activo (fade-in via clase, sustituye `layoutId`)
  *  - Burger + bottom-sheet móvil con stagger en los items
- *  - Cursor spotlight escrito como CSS vars (`--mx`, `--my`, `--m-opacity`)
  *  - Cierre automático del menú al cambiar de ruta
  *  - Body scroll lock cuando el menú móvil está abierto
  */
 @Component({
   selector: 'app-floating-nav',
-  imports: [RouterLink, NgIcon, EmblemMark],
+  imports: [RouterLink, NgIcon],
   providers: [provideIcons({ phosphorList, phosphorX })],
   templateUrl: './floating-nav.html',
   styleUrl: './floating-nav.scss',
@@ -83,21 +78,11 @@ export class FloatingNav {
   }
 
   /**
-   * `true` cuando la ruta actual es la home — el brand (logo + wordmark)
-   * solo se renderiza ahí porque vive anclado al Hero, y el Hero solo
-   * existe en la home.
-   */
-  protected isHome(): boolean {
-    return this.currentUrl() === '/';
-  }
-
-  /**
-   * Click handler para el brand y los links del nav. Si el destino es la
-   * misma ruta donde ya estás, hace scroll-to-top suave (replica el
-   * comportamiento del original: logo o "Inicio" siempre te devuelven al
-   * hero, aunque ya estés en `/`). Si la ruta es distinta, deja que
-   * RouterLink navegue normalmente — el `scrollPositionRestoration: 'top'`
-   * del router config se encarga del reset.
+   * Click handler para los links del nav. Si el destino es la misma ruta
+   * donde ya estás, hace scroll-to-top suave. Si la ruta es distinta,
+   * deja que RouterLink navegue normalmente — el
+   * `scrollPositionRestoration: 'top'` del router config se encarga del
+   * reset.
    */
   protected onLinkClick(href: string, event: MouseEvent): void {
     if (!this.isBrowser) return;
