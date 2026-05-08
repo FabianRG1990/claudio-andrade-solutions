@@ -1,27 +1,25 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-
-import { WolfLakeCanvas } from './wolf-lake-canvas';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { phosphorArrowDown } from '@ng-icons/phosphor-icons/regular';
+import { phosphorSparkleBold } from '@ng-icons/phosphor-icons/bold';
 
 /**
- * WolfLandscape — segmento de apertura, antes del hero principal.
- * El bg es UNA SOLA imagen compuesta (paisaje fotorreal + lobo poligonal
- * azul + montículo de roca + reflejo cyan del lobo en el lago) generada
- * por nano-banana-pro a partir del fondo y el lobo originales. Por eso
- * la luz, las sombras, la paleta y el reflejo en el agua son físicas
- * reales, no compositing apilado en CSS.
+ * WolfLandscape — hero de apertura. Fondo es una sola imagen estática
+ * (`hero-wolf/hero-mk2.png`): lago + lobo + skyline + puntos
+ * bioluminiscentes en el agua. Sin canvas, sin fish, sin niebla: la
+ * escena no anima.
  *
- * Sobre la imagen va el componente WolfLakeCanvas: WebGL2 que muestrea la
- * imagen original, anima la niebla en loop perfecto (4D simplex), agita
- * el reflejo cuando hay ondas, y un canvas 2D arriba con peces que
- * patrullan y reaccionan al cursor. La <img> queda como fallback puro
- * para WebGL ausente o prefers-reduced-motion.
- *
- * La sección mide 100dvh y termina con un fade al abismo (#06091A) para
- * que la siguiente sección entre sin línea de costura visible.
+ * Encima vive una sola capa de copy editorial: telemetría arriba a la
+ * izquierda (la derecha se quitó para no taparle la cara al lobo),
+ * badge + título + lede en lead column izquierda y card "próxima
+ * cohorte" + scroll hint en aside derecha. La legibilidad sobre la
+ * escena la dan los `text-shadow` apilados de cada elemento — sin
+ * scrim/vignette.
  */
 @Component({
   selector: 'app-wolf-landscape',
-  imports: [WolfLakeCanvas],
+  imports: [NgIcon],
+  providers: [provideIcons({ phosphorArrowDown, phosphorSparkleBold })],
   templateUrl: './wolf-landscape.html',
   styleUrl: './wolf-landscape.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,39 +1,100 @@
-<section class="wolf-landscape">
-  <!-- Capa viva: la imagen del lobo + lago + reflejo, animada con WebGL2.
-       Niebla tenue en bucle perfecto, peces sutiles que persiguen el cursor,
-       ondas que rebotan en orillas y rocas distorsionando el reflejo cuando
-       pasan. Si WebGL2 no está o el usuario pidió reduced-motion, cae a la
-       <img> estática original sin perder ningún pixel del compositing.
-       aria-hidden — la capa es decoración pura; el contenido semántico vive
-       en el bloque .wolf-landscape__copy. -->
-  <app-wolf-lake-canvas aria-hidden="true" />
+<section class="hero">
+  <!-- Fondo estático — UNA sola imagen compuesta (lago + lobo + skyline +
+       puntos bioluminiscentes en el agua). Sin canvas, sin animación, sin
+       fallback dinámico: el bg es la imagen tal cual y la legibilidad del
+       copy vive en el text-shadow apilado de cada elemento. -->
+  <img
+    src="hero-wolf/hero-mk2.png"
+    alt=""
+    class="hero__bg"
+    aria-hidden="true"
+    fetchpriority="high"
+    decoding="async"
+  />
 
-  <!-- Copy del hero — eyebrow + título editorial + subtítulo. La marca
-       (emblema + wordmark) ya vive en .floating-nav-brand del shell, así
-       que aquí solo va lo que define a la página: qué hacemos y cómo. -->
-  <div class="wolf-landscape__copy">
-    <div class="wolf-landscape__copy-inner">
-      <div class="wolf-landscape__eyebrow">
-        <span class="wolf-landscape__eyebrow-rule" aria-hidden="true"></span>
-        <span class="wolf-landscape__eyebrow-text">Consultora tecnológica</span>
-      </div>
+  <!-- Cierre inferior — funde la base del hero al abismo puro para que la
+       siguiente sección no muestre una costura horizontal. -->
+  <div class="hero__seam" aria-hidden="true"></div>
 
-      <h1 class="wolf-landscape__title">
-        Sistemas a medida.
-        <span class="wolf-landscape__title-line">
-          Decisiones <em class="wolf-landscape__title-italic">que</em> escalan.
-        </span>
-      </h1>
-
-      <p class="wolf-landscape__lede">
-        Auditamos procesos, integramos inteligencia artificial y construimos
-        plataformas a medida — tecnología probada para empresas que ya saben
-        hacia dónde van.
-      </p>
+  <!-- Marco superior — solo columna izquierda. La derecha se quitó porque
+       quedaba sobre la cara del lobo. -->
+  <div class="hero__telemetry">
+    <div class="hero__telemetry-col">
+      <span>Angular 21 · Nx · Yarn</span>
+      <span class="hero__telemetry-secondary">Stack moderno, sin deuda técnica</span>
     </div>
   </div>
 
-  <!-- Costura inferior — funde el borde bajo del hero al abismo
-       (#06091A) para que la siguiente sección entre sin línea visible. -->
-  <div class="wolf-landscape__seam" aria-hidden="true"></div>
+  <!-- Capa principal -->
+  <div class="hero__container">
+    <div class="hero__grid">
+      <div class="hero__lead">
+        <span class="hero__badge">
+          <ng-icon
+            name="phosphorSparkleBold"
+            size="12"
+            class="hero__badge-icon"
+          />
+          <span class="hero__badge-prefix">Capacidad activa · </span>
+          <span class="hero__badge-key">Soluciones con IA</span>
+          <span class="hero__badge-suffix"> a medida</span>
+        </span>
+
+        <h1 class="hero__title">
+          Desarrollo
+          <span class="hero__title-line">
+            <em class="hero__title-italic">de</em> Software
+          </span>
+          <span class="hero__title-line">
+            <em class="hero__title-italic">y</em> Diseño.
+          </span>
+        </h1>
+
+        <p class="hero__copy">
+          Auditamos procesos, construimos sistemas a medida e integramos IA
+          aplicada en empresas que escalan, sin reinventar lo que ya funciona.
+        </p>
+      </div>
+
+      <div class="hero__aside">
+        <div class="hero__wave-card glass-shell">
+          <div class="hero__wave-core glass-core">
+            <div class="hero__wave-head">
+              <p class="hero__wave-label">Próxima cohorte</p>
+              <span class="hero__wave-pulse" aria-hidden="true"></span>
+            </div>
+            <p class="hero__wave-time">02</p>
+            <p class="hero__wave-context">
+              Cupos disponibles · Diagnóstico + Auditoría tecnológica
+            </p>
+
+            <div class="hero__wave-stats">
+              <div class="hero__stat">
+                <p class="hero__stat-label">proyectos</p>
+                <p class="hero__stat-value">120+</p>
+              </div>
+              <div class="hero__stat">
+                <p class="hero__stat-label">uptime</p>
+                <p class="hero__stat-value">99.97%</p>
+              </div>
+              <div class="hero__stat">
+                <p class="hero__stat-label">equipos</p>
+                <p class="hero__stat-value">46</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero__scroll-hint">
+          <div class="hero__scroll-cue">
+            <span class="hero__scroll-icon" aria-hidden="true">
+              <ng-icon name="phosphorArrowDown" size="11" />
+            </span>
+            Continuá
+          </div>
+          <div class="hero__pagination">01 / 05</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>

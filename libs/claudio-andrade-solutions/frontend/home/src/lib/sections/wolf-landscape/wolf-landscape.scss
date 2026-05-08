@@ -1,222 +1,381 @@
+// El path resuelve vía `stylePreprocessorOptions.includePaths` del project.json
+// del app, que apunta a `libs/claudio-andrade-solutions/frontend/shared/src/lib/styles`.
+@use 'mixins' as m;
+
 // =============================================================================
-// WolfLandscape — segmento hero de apertura. La sección mide exactamente la
-// altura del viewport (100dvh). El bg es UNA SOLA imagen compuesta (paisaje
-// + lobo + roca + reflejo cyan en el agua, todo nacido como una única
-// exposición) — por eso la integración de luz, sombra y color es física, no
-// apilada en CSS.
-//
-// El render lo maneja `WolfLakeCanvas` adentro: WebGL2 con la imagen como
-// textura, ondas con rebote en orillas, niebla en loop perfecto, y peces
-// que reaccionan al cursor. La <img> base vive dentro del componente y
-// solo se muestra como fallback si WebGL2 no está disponible.
-//
-// Sobre la escena vive una sola capa de copy:
-//   • .wolf-landscape__copy — eyebrow + título + subtítulo, anclados al
-//     cuadrante sup-izq (no compite con el lobo abajo-der ni con la marca
-//     del shell que vive arriba-izq). La legibilidad la garantizan los
-//     `text-shadow` apilados de cada elemento — NO hay vignette/scrim
-//     sobre la escena: cualquier oscurecido apaga la niebla animada y la
-//     hace ver "muerta", aunque siga corriendo en GPU.
+// Hero — capítulo de apertura. Fondo: imagen estática (hero-mk2.png) que
+// ocupa toda la sección. Sobre ella vive el copy editorial. La altura es
+// 100dvh y termina con un seam que funde al abismo (#06091A).
 // =============================================================================
 
-.wolf-landscape {
+.hero {
   position: relative;
-  display: block;
-  width: 100%;
-  height: 100dvh;
+  isolation: isolate;
+  min-height: 100dvh;
   overflow: hidden;
   background: #06091A;
 }
 
-// ─── Costura inferior ────────────────────────────────────────────────────────
-// Funde la base del bg al abismo puro (#06091A) para que la siguiente sección
-// entre sin línea visible. La AI ya dejó el borde inferior oscuro; este
-// gradient termina de cerrarlo.
-.wolf-landscape__seam {
+// ─── Fondo estático ──────────────────────────────────────────────────────────
+// La imagen cubre toda la sección (object-fit: cover) y se ancla al cuadrante
+// derecho-medio para preservar el lobo en mobile cuando el aspecto cambia.
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+// ─── Cierre inferior ─────────────────────────────────────────────────────────
+// Funde la base al abismo puro para que la siguiente sección entre sin línea
+// de costura horizontal visible.
+.hero__seam {
   pointer-events: none;
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  height: 18%;
   z-index: 3;
+  height: 11rem;
   background: linear-gradient(
     180deg,
-    rgb(6 9 26 / 0) 0%,
-    rgb(6 9 26 / 0.45) 45%,
-    rgb(6 9 26 / 0.85) 80%,
+    transparent 0%,
+    rgb(6 9 26 / 0.55) 45%,
     #06091A 100%
   );
 }
 
-// ─── Bloque de copy del hero ─────────────────────────────────────────────────
-// Capa absolute fill, no captura clicks (los peces siguen leyendo el cursor
-// vía window listener); solo el texto en sí es seleccionable. Layout: flex
-// vertical anclado a top-left, con padding-top que despeja la marca del
-// shell (~120px) y padding-bottom que respeta la franja de niebla baja.
-.wolf-landscape__copy {
+// ─── Telemetría superior ─────────────────────────────────────────────────────
+// Líneas tipográficas anclados a las esquinas top, encima del nav. Stack de
+// la izquierda + paleta cloud de la derecha. Sombra apilada para legibilidad
+// contra cualquier zona del bg.
+.hero__telemetry {
   position: absolute;
-  inset: 0;
-  z-index: 4;
+  left: 0;
+  right: 0;
+  top: 7rem;
+  z-index: 10;
+  margin-inline: auto;
   display: flex;
-  align-items: center;
-  pointer-events: none;
-  // Padding-top fluido — clearance para .floating-nav-brand (96px emblema
-  // + 24px top + breathing). Padding-bottom amplio para no chocar con la
-  // costura del agua donde nadan los peces.
-  padding-top: clamp(7rem, 5rem + 6vw, 10rem);
-  padding-bottom: clamp(6rem, 4rem + 5vw, 9rem);
+  max-width: 80rem;
+  align-items: flex-start;
+  justify-content: space-between;
   padding-inline: var(--container-px);
 
-  // El texto sí es seleccionable / lecturable
-  > * {
-    pointer-events: auto;
+  @media (min-width: 1024px) {
+    top: 8rem;
   }
 }
 
-.wolf-landscape__copy-inner {
-  width: 100%;
-  max-width: 80rem;
-  margin-inline: auto;
-  // Anclamos al inicio del flex container — el copy queda en el cuadrante
-  // sup-izq (alineado con la marca + telemetría del shell), respetando la
-  // ley editorial de "leer antes de mirar".
-}
-
-// ─── Eyebrow ─────────────────────────────────────────────────────────────────
-// Línea pequeña + tag corto. La línea horizontal (rule) es el detalle
-// editorial que delata cuidado tipográfico: ~28px de barra fina + gap +
-// texto en caps tracked. Mismo lenguaje que las telemetrías del legacy hero.
-.wolf-landscape__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.875rem;
-  color: rgb(var(--foam) / 0.78);
-}
-
-.wolf-landscape__eyebrow-rule {
-  display: block;
-  width: 1.75rem;
-  height: 1px;
-  // Sin tinte cyan — solo foam translúcido, mismo lenguaje cromático del
-  // resto del copy. La línea se siente "editorial" por la sutileza, no
-  // por el color.
-  background: linear-gradient(
-    90deg,
-    rgb(var(--foam) / 0) 0%,
-    rgb(var(--foam) / 0.7) 60%,
-    rgb(var(--foam) / 0.45) 100%
-  );
-}
-
-.wolf-landscape__eyebrow-text {
-  font-family: var(--font-display);
-  font-size: var(--type-label-md);
-  font-weight: 500;
+.hero__telemetry-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  // Sombra apilada — sin scrim, hasta el eyebrow chico necesita un par
-  // de capas para no perderse contra movimiento de niebla.
+  color: rgb(var(--foam) / 0.65);
   text-shadow:
     0 2px 8px rgb(6 9 26 / 0.7),
     0 1px 2px rgb(6 9 26 / 0.65);
 }
 
+.hero__telemetry-col--right {
+  display: none;
+
+  @media (min-width: 640px) {
+    display: flex;
+    align-items: flex-end;
+    // Subida arriba del wolf face del bg — solo la columna derecha se
+    // levanta para no taparle la cara al lobo. La izquierda mantiene su
+    // top natural junto a la marca. Margin negativo en flex la desplaza
+    // sin afectar a su sibling.
+    margin-top: -2rem;
+  }
+
+  @media (min-width: 1024px) {
+    margin-top: -3.25rem;
+  }
+}
+
+.hero__telemetry-secondary {
+  display: none;
+
+  @media (min-width: 640px) {
+    display: inline;
+  }
+}
+
+// ─── Capa principal ──────────────────────────────────────────────────────────
+.hero__container {
+  position: relative;
+  z-index: 10;
+  margin-inline: auto;
+  display: flex;
+  min-height: 100dvh;
+  max-width: 80rem;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-top: clamp(8rem, 4rem + 12vw, 14rem);
+  padding-inline: var(--container-px);
+  padding-bottom: clamp(4rem, 2.5rem + 4vw, 8rem);
+}
+
+.hero__grid {
+  display: grid;
+  gap: 3rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1.5fr 1fr;
+    align-items: end;
+  }
+}
+
+// ─── Lead column (badge + título + copy + CTA) ───────────────────────────────
+.hero__lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+// Badge — adapta su contenido por breakpoint en lugar de solo escalar.
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--foam) / 0.18);
+  background: rgb(var(--foam) / 0.06);
+  padding: 0.25rem 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.85);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+
+  @media (max-width: 359.98px) {
+    display: none;
+  }
+}
+
+.hero__badge-icon {
+  color: rgb(var(--lagoon));
+}
+
+.hero__badge-prefix {
+  display: none;
+
+  @media (min-width: 640px) {
+    display: inline;
+  }
+}
+
+.hero__badge-suffix {
+  display: none;
+
+  @media (min-width: 480px) {
+    display: inline;
+  }
+}
+
 // ─── Título ──────────────────────────────────────────────────────────────────
-// Tipografía hero (44→112px fluido). Dos líneas balanceadas con `text-wrap:
-// balance`. Paleta deliberadamente monocroma — foam puro, sin gradientes
-// hue. El acabado "3D" nace de luz y sombra, no de tinte:
-//   1) color base foam macizo (#F5F1E8) — alineado con Apple/Stripe/Linear
-//      y con la lectura cromática fría de la escena (lago + niebla + lobo
-//      cyan).
-//   2) text-shadow chain de tres capas — halo amplio de abismo
-//      (legibilidad), contorno fino (definición contra niebla) y highlight
-//      superior (luz cenital esculpida).
-//   3) peso 500 + tracking-tight — peso editorial, no display gordo.
-.wolf-landscape__title {
-  margin-top: clamp(1rem, 0.5rem + 1.2vw, 1.75rem);
+// Tres líneas: "Desarrollo / de Software / y Diseño." con conectores en
+// italic editorial. Foam puro, sin gradientes hue. Legibilidad por
+// text-shadow apilado (halo amplio + halo medio + contorno + highlight
+// superior) — sin scrim sobre la imagen.
+.hero__title {
+  margin-top: 2rem;
   max-width: 18ch;
   text-wrap: balance;
   font-family: var(--font-display);
-  font-size: var(--type-h1-hero);
+  font-size: clamp(2.25rem, 1.3rem + 4vw, 5.5rem);
   font-weight: 500;
   line-height: 0.96;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
-
-  // Sombra apilada — toda la legibilidad vive acá. Sin scrim sobre la
-  // escena, la niebla respira; el contraste lo da el chain de sombras
-  // adheridas al glifo:
-  //   a) halo ancho de abismo (24px blur, 0.7 alpha) — legibilidad real
-  //      contra niebla animada y reflejo cyan.
-  //   b) halo intermedio (8px blur, 0.6) — refuerza bordes a media
-  //      distancia, evita "borrosidad" que un solo blur grande provoca.
-  //   c) contorno fino (1px, 0.7) — define cada glifo contra cualquier
-  //      transición clara de la niebla.
-  //   d) highlight superior (-1px, foam 0.22) — luz cenital esculpida,
-  //      el matiz "3D" sin gradiente hue.
   text-shadow:
-    0 4px 24px rgb(6 9 26 / 0.7),
-    0 2px 8px rgb(6 9 26 / 0.6),
+    0 4px 24px rgb(6 9 26 / 0.75),
+    0 2px 8px rgb(6 9 26 / 0.65),
     0 1px 2px rgb(6 9 26 / 0.7),
     0 -1px 0 rgb(245 241 232 / 0.22);
 }
 
-// La segunda línea aprende del salto explícito del HTML; el span ayuda a
-// que `text-wrap: balance` distribuya bien sin romperse.
-.wolf-landscape__title-line {
+.hero__title-line {
   display: block;
 }
 
-.wolf-landscape__title-italic {
+.hero__title-italic {
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
-  // Italic con menor opacidad — guía la lectura sin competir con los
-  // sustantivos. Sin tinte — sigue siendo foam, solo translúcido.
+  color: rgb(var(--foam) / 0.75);
+}
+
+// ─── Copy ────────────────────────────────────────────────────────────────────
+.hero__copy {
+  margin-top: 2rem;
+  max-width: 52ch;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.88);
+  line-height: 1.625;
+  font-size: var(--type-body-lg);
+  text-shadow:
+    0 2px 14px rgb(6 9 26 / 0.7),
+    0 1px 4px rgb(6 9 26 / 0.65);
+}
+
+.hero__cta {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+// ─── Aside column (cohorte card + scroll hint) ───────────────────────────────
+.hero__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// Override del glass-shell base para hacer el card más translúcido — el bg
+// del hero (lago + lobo + skyline) tiene mucho que mostrar y el card no
+// debe taparlo. Reducimos las alphas del background a ~mitad de lo default.
+.hero__wave-card {
+  border-radius: var(--radius-squircle);
+  padding: 0.5rem;
+  background:
+    radial-gradient(ellipse 130% 70% at 50% -10%, rgb(245 241 232 / 0.025) 0%, transparent 70%),
+    linear-gradient(180deg, rgb(245 241 232 / 0.04) 0%, rgb(245 241 232 / 0.012) 100%);
+  box-shadow:
+    0 36px 72px -28px rgb(6 9 26 / 0.55),
+    0 0 0 1px rgb(245 241 232 / 0.06),
+    inset 0 1px 0 rgb(245 241 232 / 0.14),
+    inset 0 -1px 0 rgb(6 9 26 / 0.30);
+}
+
+// El core (interior del card) también baja la opacidad del fill oscuro
+// para que el lago abajo se siga leyendo a través.
+.hero__wave-core {
+  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  padding: 1.5rem;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -10%, rgb(245 241 232 / 0.025) 0%, transparent 65%),
+    linear-gradient(180deg, rgb(10 13 38 / 0.30) 0%, rgb(6 9 26 / 0.45) 100%);
+}
+
+.hero__wave-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero__wave-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+.hero__wave-pulse {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 12px 2px rgb(127 227 214 / 0.6);
+}
+
+.hero__wave-time {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: var(--type-mono-xl);
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+.hero__wave-context {
+  margin-top: 0.25rem;
   color: rgb(var(--foam) / 0.7);
 }
 
-// ─── Lede / subtítulo ────────────────────────────────────────────────────────
-// Una sola idea, máximo 2 líneas en desktop. Tipo body-lg, tracking neutral.
-// La sombra es más liviana que la del título (no compite por presencia).
-.wolf-landscape__lede {
-  margin-top: clamp(1.25rem, 0.8rem + 1.4vw, 2rem);
-  max-width: 44ch;
-  text-wrap: pretty;
+.hero__wave-stats {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  border-top: 1px solid rgb(var(--foam) / 0.12);
+  padding-top: 1.25rem;
+}
+
+.hero__stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.5);
+}
+
+.hero__stat-value {
+  margin-top: 0.25rem;
   font-family: var(--font-display);
-  font-size: var(--type-body-lg);
-  font-weight: 400;
-  line-height: 1.55;
-  color: rgb(var(--foam) / 0.92);
-  // Sombra del lede más densa que antes — sin scrim, el body necesita
-  // su propio contraste contra niebla. Dos capas (blur amplio + cercano)
-  // alcanzan; no requiere highlight superior porque a 18-20px no hay
-  // relieve perceptible.
+  font-size: 1.25rem;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+// ─── Scroll hint (solo visible en lg+) ───────────────────────────────────────
+.hero__scroll-hint {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  color: rgb(var(--foam) / 0.6);
   text-shadow:
-    0 2px 14px rgb(6 9 26 / 0.7),
-    0 1px 4px rgb(6 9 26 / 0.65),
-    0 1px 1px rgb(6 9 26 / 0.55);
+    0 2px 8px rgb(6 9 26 / 0.7),
+    0 1px 2px rgb(6 9 26 / 0.6);
+
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+}
+
+.hero__scroll-cue {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.hero__scroll-icon {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.18);
+}
+
+.hero__pagination {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
 }
 
 // ─── Mobile fine-tuning ──────────────────────────────────────────────────────
-// En phones, el wolf de la imagen sube en el encuadre por el cover-fit; el
-// copy se compacta y empuja el clamp del lede a 36ch para que no choque
-// contra la roca de la derecha.
 @media (max-width: 639.98px) {
-  .wolf-landscape__copy {
-    align-items: flex-start;
-    padding-top: 6.5rem;
-  }
-
-  .wolf-landscape__title {
+  .hero__title {
     max-width: 14ch;
   }
 
-  .wolf-landscape__lede {
+  .hero__copy {
     max-width: 32ch;
   }
 }
-
-// ─── Reduced motion ──────────────────────────────────────────────────────────
-// El canvas WebGL ya hace su propio fallback. El gradiente de texto y la
-// vignette se mantienen estáticos por diseño — no animan, no requieren ajuste.

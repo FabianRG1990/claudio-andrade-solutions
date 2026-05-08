@@ -22,17 +22,9 @@
 <div class="floating-nav-rail">
   <nav
     #navRef
-    class="floating-nav__pill glass-nav-shell"
+    class="floating-nav__pill"
     aria-label="Navegación principal"
   >
-    @if (pillVisible()) {
-      <!-- Three.js + WebGL: solo se monta cuando el pill está realmente
-           visible (≥880px). En mobile el pill es display:none y, sin este
-           gate, el canvas seguía corriendo RAF + manteniendo contexto WebGL
-           en GPU memory innecesariamente. -->
-      <app-glass-pill-canvas />
-    }
-
     @for (link of links; track link.href) {
       <a
         [routerLink]="link.href"
