@@ -1,16 +1,32 @@
 <section class="hero">
-  <!-- Fondo estático — UNA sola imagen compuesta (lago + lobo + skyline +
-       puntos bioluminiscentes en el agua). Sin canvas, sin animación, sin
-       fallback dinámico: el bg es la imagen tal cual y la legibilidad del
-       copy vive en el text-shadow apilado de cada elemento. -->
-  <img
-    src="hero-wolf/hero-mk3.png"
-    alt=""
+  <!-- Fondo: video generado con Seedance 2 (image-to-video, 8s loop, 1080p,
+       same first/last frame para loop perfecto). El `<source media>` carga
+       el MP4 SOLO si el usuario no pidió reduced-motion — caso contrario el
+       browser nunca hace fetch del MP4 y se queda en el `poster` (PNG
+       estático MK3). Eso respeta accesibilidad sin necesidad de JS. -->
+  <video
     class="hero__bg"
+    poster="hero-wolf/hero-mk3.png"
+    autoplay
+    loop
+    muted
+    playsinline
+    preload="metadata"
     aria-hidden="true"
-    fetchpriority="high"
-    decoding="async"
-  />
+  >
+    <source
+      src="hero-wolf/hero-mk3.mp4"
+      type="video/mp4"
+      media="(prefers-reduced-motion: no-preference)"
+    />
+  </video>
+
+
+  <!-- Canvas interactivo: peces ambientales + pez del cursor con física
+       de profundidad, todos clamped al polígono del lago. Loop infinito
+       (la simulación corre, no termina). Sin animación si el usuario
+       pidió prefers-reduced-motion. -->
+  <app-wolf-lake-canvas />
 
   <!-- Cierre inferior — funde la base del hero al abismo puro para que la
        siguiente sección no muestre una costura horizontal. -->
