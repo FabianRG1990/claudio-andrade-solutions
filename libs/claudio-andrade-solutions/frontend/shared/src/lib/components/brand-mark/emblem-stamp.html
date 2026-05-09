@@ -4,5 +4,9 @@
   [style.height.px]="size()"
   aria-hidden="true"
 >
-  <img src="/logo/logo-192.png" alt="" class="emblem-stamp__image" />
+  <picture>
+    <source srcset="/logo/logo-192.avif" type="image/avif" />
+    <source srcset="/logo/logo-192.webp" type="image/webp" />
+    <img src="/logo/logo-192.png" alt="" class="emblem-stamp__image" decoding="async" />
+  </picture>
 </span>

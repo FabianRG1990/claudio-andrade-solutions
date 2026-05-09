@@ -28,15 +28,19 @@
           <div class="case-row__media glass-shell">
             <div class="case-row__media-inner">
               @for (slide of c.slides; track slide.src; let si = $index) {
-                <img
-                  [src]="slide.src"
-                  [alt]="slide.alt"
-                  class="case-row__image"
-                  [class.is-active]="indices[i]() === si"
-                  [style.object-position]="slide.position || null"
-                  decoding="async"
-                  loading="eager"
-                />
+                <picture>
+                  <source [srcset]="slide.src.replace('.png', '.avif')" type="image/avif" />
+                  <source [srcset]="slide.src.replace('.png', '.webp')" type="image/webp" />
+                  <img
+                    [src]="slide.src"
+                    [alt]="slide.alt"
+                    class="case-row__image"
+                    [class.is-active]="indices[i]() === si"
+                    [style.object-position]="slide.position || null"
+                    decoding="async"
+                    loading="eager"
+                  />
+                </picture>
               }
               <div class="case-row__media-tint" aria-hidden="true"></div>
 

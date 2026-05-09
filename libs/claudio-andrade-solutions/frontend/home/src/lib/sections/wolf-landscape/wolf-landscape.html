@@ -1,12 +1,16 @@
 <section class="hero">
   <!-- Fondo: video generado con Seedance 2 (image-to-video, 8s loop, 1080p,
-       same first/last frame para loop perfecto). El `<source media>` carga
-       el MP4 SOLO si el usuario no pidió reduced-motion — caso contrario el
-       browser nunca hace fetch del MP4 y se queda en el `poster` (PNG
-       estático MK3). Eso respeta accesibilidad sin necesidad de JS. -->
+       same first/last frame para loop perfecto). Tres `<source>` con
+       prioridad descendente:
+         1. mobile (≤768px AND no reduced-motion) → 720p ~900 KB
+         2. desktop (no reduced-motion) → 1080p ~2.8 MB
+         3. ningún source matchea si el user pidió reduced-motion → se queda
+            en el `poster` PNG estático y el browser no fetch-ea ningún MP4.
+       El navegador evalúa `<source>` en orden y usa el primero cuyo `media`
+       matchea. -->
   <video
     class="hero__bg"
-    poster="hero-wolf/hero-mk3.png"
+    poster="hero-wolf/hero-mk3.webp"
     autoplay
     loop
     muted
@@ -14,6 +18,11 @@
     preload="metadata"
     aria-hidden="true"
   >
+    <source
+      src="hero-wolf/hero-mk3.mobile.mp4"
+      type="video/mp4"
+      media="(max-width: 768px) and (prefers-reduced-motion: no-preference)"
+    />
     <source
       src="hero-wolf/hero-mk3.mp4"
       type="video/mp4"

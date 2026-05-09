@@ -56,3 +56,47 @@
 html {
   font-optical-sizing: auto;
 }
+
+// =============================================================================
+// Roboto self-hosted (subset latin) — antes via Google Fonts CSS, ahora
+// servidos desde /fonts/. Beneficio: 0 round trips externos en el critical
+// path (Google Fonts costaba ~200-400 ms por DNS+TLS+stylesheet+woff2).
+// Se cargan los pesos efectivamente usados en el sitio: 300/400/500 normal
+// + italic 400/500. El preload de los 2 más usados (400 + 500 normal) vive
+// en index.html para que arranquen apenas se parsea el HTML.
+// =============================================================================
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/roboto-300.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/roboto-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/roboto-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/roboto-400i.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/roboto-500i.woff2') format('woff2');
+}

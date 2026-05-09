@@ -16,28 +16,34 @@
            el ícono genérico.
          - PNG sized 32 + 192: browsers modernos los prefieren si los ofrecemos.
          - apple-touch-icon 192: iOS al guardar a home screen.
-         La versión 2.3MB original (`/logo/logo.png`) la dejamos para el nav
-         y page-headers; el favicon usa las versiones reducidas (1-36 KB). -->
+         El nav y page-headers usan `/logo/logo-512.png` (215 KB) o
+         `logo-192.png` (39 KB) según tamaño. -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/logo/logo-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/logo/logo-192.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/logo/logo-192.png" />
 
-    <!-- Sin preload de Fraunces italic — el original tampoco la carga.
-         Los spans editoriales italic se renderizan con Times New Roman
-         local + size-adjust 115.45% vía la @font-face Fraunces Fallback. -->
-
-    <!-- Roboto Medium (500) — fuente principal del sitio. Se cargan los
-         pesos 300/400/500 normal e italic para cubrir títulos (500),
-         body (400), italics editoriales y los pocos lugares que usan 300.
+    <!-- Roboto self-hosted desde /fonts/. Las @font-face viven en el SCSS
+         global (libs/.../styles/mixins/_typography.scss) y se inlinean como
+         critical CSS por Beasties. Acá solo preloadeamos los 2 pesos más
+         usados (400 + 500 normal) para que el browser arranque la descarga
+         apenas parsea el <head>, sin esperar al CSS bundle.
          Excepciones que NO usan Roboto:
            1. Wordmark del navbar (.floating-nav__brand-wordmark) → Times
            2. Números grandes / stats (.font-mono) → Times -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;1,400;1,500&display=swap"
+      rel="preload"
+      href="/fonts/roboto-400.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/roboto-500.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
   </head>
   <body class="grain">
