@@ -1,41 +1,13 @@
 <section class="hero">
-  <!-- Fondo: video generado con Seedance 2 (image-to-video, 8s loop, 1080p,
-       same first/last frame para loop perfecto). Tres `<source>` con
-       prioridad descendente:
-         1. mobile (≤768px AND no reduced-motion) → 720p ~900 KB
-         2. desktop (no reduced-motion) → 1080p ~2.8 MB
-         3. ningún source matchea si el user pidió reduced-motion → se queda
-            en el `poster` PNG estático y el browser no fetch-ea ningún MP4.
-       El navegador evalúa `<source>` en orden y usa el primero cuyo `media`
-       matchea. -->
-  <video
+  <!-- Fondo estático MK5 — imagen única, sin video ni canvas interactivo. -->
+  <img
     class="hero__bg"
-    poster="hero-wolf/hero-mk3.webp"
-    autoplay
-    loop
-    muted
-    playsinline
-    preload="metadata"
+    src="hero-wolf/hero-mk5.png"
+    alt=""
     aria-hidden="true"
-  >
-    <source
-      src="hero-wolf/hero-mk3.mobile.mp4"
-      type="video/mp4"
-      media="(max-width: 768px) and (prefers-reduced-motion: no-preference)"
-    />
-    <source
-      src="hero-wolf/hero-mk3.mp4"
-      type="video/mp4"
-      media="(prefers-reduced-motion: no-preference)"
-    />
-  </video>
-
-
-  <!-- Canvas interactivo: peces ambientales + pez del cursor con física
-       de profundidad, todos clamped al polígono del lago. Loop infinito
-       (la simulación corre, no termina). Sin animación si el usuario
-       pidió prefers-reduced-motion. -->
-  <app-wolf-lake-canvas />
+    decoding="async"
+    fetchpriority="high"
+  />
 
   <!-- Cierre inferior — funde la base del hero al abismo puro para que la
        siguiente sección no muestre una costura horizontal. -->
