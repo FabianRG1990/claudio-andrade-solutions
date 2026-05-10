@@ -28,17 +28,19 @@ interface Star {
  *      sincronizan visualmente — patrón clásico Apple/Linear/Stripe para
  *      titileo "vivo, no cronometrado".
  *
- *   2) Estrellas fugaces — dos elementos animados con cycles de 9s y 13s
- *      desfasados, así sale una fugaz cada ~5-7s en promedio. Cada una
- *      tiene un head brillante con tail gradient + leve curva en el path
- *      + micro-flare al final. CSS keyframes, loop infinito perfecto.
+ *   2) Estrella fugaz — UN solo dot que cada ~14s destella brevemente y
+ *      se desplaza ~1.5cm lateralmente hacia la ciudad (de izquierda a
+ *      derecha), dejando un trail blanco delgado de ~1.4cm que crece
+ *      detrás del dot a medida que avanza. Visible solo ~1.2s por ciclo.
+ *      Diseñado para imitar una fugaz real vista desde tierra: destello
+ *      corto y localizado, no streak dramático cruzando el cielo entero.
  *
  * Posiciones generadas determinísticamente (mismo PRNG por índice), así
  * el SSR y CSR producen el mismo resultado y no hay flash de re-position
  * en hidratación.
  *
  * z-index: 1 — encima del bg image (z=0), debajo del canvas de peces
- * (z=2). Así las fugaces y estrellas son fondo del lago / no compiten
+ * (z=2). Así la fugaz y las estrellas son fondo del lago / no compiten
  * con los peces visualmente.
  */
 @Component({
@@ -61,16 +63,12 @@ interface Star {
       }
     </div>
 
-    <!-- Estrellas fugaces TEMPORALMENTE DESACTIVADAS — la versión CSS
-         no llegaba al estándar premium (parecía línea blanca rotada).
-         Se rehará con SVG + filter o con clip de video generado en
-         una sola petición batch junto con el logo. -->
-    @if (false) {
-      <div class="sky-shooting" aria-hidden="true">
-        <span class="sky-shooting__star sky-shooting__star--a"></span>
-        <span class="sky-shooting__star sky-shooting__star--b"></span>
-      </div>
-    }
+    <!-- Estrella fugaz — un único dot blanco con halo que destella en el
+         cuadrante superior-izquierdo del cielo, se desplaza ~1.5cm hacia
+         la derecha (rumbo a la ciudad) y deja un trail fino que crece
+         detrás. Subtle por diseño: mejor que el usuario lo "atrape" como
+         un detalle vivo a que lo perciba como animación protagonista. -->
+    <span class="sky-shooting-star" aria-hidden="true"></span>
   `,
   styleUrl: './wolf-sky.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
