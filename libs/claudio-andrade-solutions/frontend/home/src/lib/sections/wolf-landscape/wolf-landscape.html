@@ -1,34 +1,35 @@
 <section class="hero">
-  <!-- Fondo: video generado con Seedance 2 (image-to-video, 8s loop, 1080p,
-       same first/last frame para loop perfecto). Tres `<source>` con
-       prioridad descendente:
-         1. mobile (≤768px AND no reduced-motion) → 720p ~900 KB
-         2. desktop (no reduced-motion) → 1080p ~2.8 MB
-         3. ningún source matchea si el user pidió reduced-motion → se queda
-            en el `poster` PNG estático y el browser no fetch-ea ningún MP4.
-       El navegador evalúa `<source>` en orden y usa el primero cuyo `media`
-       matchea. -->
-  <video
-    class="hero__bg"
-    poster="hero-wolf/hero-mk3.webp"
-    autoplay
-    loop
-    muted
-    playsinline
-    preload="metadata"
-    aria-hidden="true"
-  >
-    <source
-      src="hero-wolf/hero-mk3.mobile.mp4"
-      type="video/mp4"
-      media="(max-width: 768px) and (prefers-reduced-motion: no-preference)"
+  <!-- Fondo: imagen estática MK6 (lago + lobo wireframe + skyline + cielo
+       estrellado). El `<picture>` negocia formato por compatibilidad del
+       navegador: AVIF (~60 KB) → WebP (~135 KB) → PNG (~1.8 MB fallback).
+       Sobre esta imagen viven dos capas de animación:
+         1. `<app-wolf-lake-flow>` — canvas WebGL que aplica un flow map
+            al área del agua, desplazando la textura existente hacia abajo
+            del frame (hacia el espectador). No genera olas nuevas ni
+            eventos — solo anima el patrón que la imagen ya pinta. Si
+            falla WebGL o el usuario pidió reduced-motion, queda la
+            imagen estática.
+         2. `<app-wolf-sky>` — 22 estrellas CSS que titilan sobre el cielo
+            pintado en el poster (no genera estrellas nuevas, solo añade
+            vida a las que ya existen). -->
+  <picture>
+    <source srcset="hero-wolf/hero-mk6.avif" type="image/avif" />
+    <source srcset="hero-wolf/hero-mk6.webp" type="image/webp" />
+    <img
+      class="hero__bg"
+      src="hero-wolf/hero-mk6.png"
+      alt=""
+      aria-hidden="true"
+      fetchpriority="high"
+      decoding="async"
     />
-    <source
-      src="hero-wolf/hero-mk3.mp4"
-      type="video/mp4"
-      media="(prefers-reduced-motion: no-preference)"
-    />
-  </video>
+  </picture>
+
+  <!-- Capa de agua animada: flow map WebGL. Se monta encima de la imagen,
+       fade-in cuando todo está listo. Si el render falla por cualquier
+       motivo (no WebGL, prefers-reduced-motion, error de carga), la
+       imagen estática debajo sigue visible. -->
+  <app-wolf-lake-flow />
 
   <!-- Capa de cielo: detecta las estrellas reales pintadas en el poster y
        coloca halos suaves encima que titilan en aditivo (mix-blend: screen).

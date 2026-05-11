@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 
 /**
- * WolfLakeCanvas — capa interactiva sobre el lago del Hero MK3.
+ * WolfLakeCanvas — capa interactiva sobre el lago del Hero MK6.
  *
  * Arquitectura:
  *   • La imagen MK3 vive como `<img>` en el DOM y NO se toca — se queda
@@ -611,9 +611,10 @@ export class WolfLakeCanvas {
       return;
     }
     const mask = imageToMask(maskImg);
-    // Imagen MK3 nativa — debe coincidir con el `<img class="hero__bg">` del
-    // wolf-landscape (cover, centered). Si cambia el src, cambian estos
-    // y los polígonos del generate-masks.mjs.
+    // Dimensiones nativas de la imagen del hero (MK6 = mismas que MK3:
+    // 1672×941). Si en el futuro se cambia el src del `<img class="hero__bg">`
+    // por una imagen de OTRO tamaño, hay que actualizar estos y regenerar
+    // los polígonos en generate-masks.mjs.
     const IMG_W = 1672;
     const IMG_H = 941;
 
