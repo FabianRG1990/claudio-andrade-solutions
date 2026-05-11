@@ -4,9 +4,7 @@ import { phosphorArrowDown } from '@ng-icons/phosphor-icons/regular';
 import { phosphorSparkleBold } from '@ng-icons/phosphor-icons/bold';
 
 import { WolfLakeCanvas } from './wolf-lake-canvas';
-// WolfSky importado pero NO usado — la capa CSS quedó desactivada.
-// Se mantiene el archivo por si después decidimos re-habilitar partes.
-// import { WolfSky } from './wolf-sky';
+import { WolfSky } from './wolf-sky';
 
 /**
  * WolfLandscape — hero de apertura. Fondo es la imagen estática MK3
@@ -24,7 +22,7 @@ import { WolfLakeCanvas } from './wolf-lake-canvas';
  */
 @Component({
   selector: 'app-wolf-landscape',
-  imports: [NgIcon, WolfLakeCanvas],
+  imports: [NgIcon, WolfLakeCanvas, WolfSky],
   providers: [provideIcons({ phosphorArrowDown, phosphorSparkleBold })],
   templateUrl: './wolf-landscape.html',
   styleUrl: './wolf-landscape.scss',
