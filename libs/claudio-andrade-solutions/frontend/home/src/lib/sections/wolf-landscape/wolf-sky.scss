@@ -69,10 +69,108 @@
   }
 }
 
+// ─── Estrella fugaz ──────────────────────────────────────────────────────────
+// Trayecto: arranca cerca del punto rojo del screenshot (73 %, 14 %) y baja
+// en diagonal hacia la izquierda. Visible ~1.4 s cada 16 s.
+//
+// Decisiones críticas para fluidez:
+//   • `transform` y `opacity` corren en animaciones SEPARADAS sobre el mismo
+//     elemento. Si las dos viven en el mismo @keyframes, los stops intermedios
+//     de opacity fuerzan stops intermedios en transform, y CSS aplica el
+//     timing-function entre CADA par consecutivo → produce micro-frenadas
+//     que se leen como "brincos". Separadas, el `translate` es un único
+//     segmento entre 2 keyframes → motion 100 % fluida.
+//   • Unidades simétricas (`vw` en ambos ejes) → el ángulo del trayecto es
+//     idéntico en todo aspect-ratio, así el `rotate` del trail siempre queda
+//     perfectamente alineado con el vector de movimiento. Sacrifica ~2 % de
+//     precisión en el landing point a cambio de coherencia visual universal.
+//   • `linear` en el movimiento — un trayecto corto a velocidad constante
+//     se ve más natural que con aceleración/desaceleración.
+//
+// Construcción:
+//   • Head — dot 2 px con halo apilado. Position absolute en el origen.
+//   • Trail (`::before`) — barra 1 px con linear-gradient. transform-origin
+//     left center la deja pegada al head; rotate(−22deg) la orienta a la
+//     OPUESTA del vector de viaje (que apunta a ~158° desde east). scaleX
+//     0 → 1 entrando y 1 → 0 saliendo, sincronizado con el fade del head.
+.sky-shooting-star {
+  position: absolute;
+  top: 14%;
+  left: 73%;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgb(245 250 255);
+  box-shadow:
+    0 0 3px 0 rgb(220 240 255 / 0.85),
+    0 0 8px 1px rgb(180 210 255 / 0.45),
+    0 0 16px 2px rgb(150 190 245 / 0.18);
+  opacity: 0;
+  pointer-events: none;
+  // Dos animaciones sobre el mismo elemento — ver decisión crítica arriba.
+  animation:
+    sky-shooting-move 16s linear 6s infinite,
+    sky-shooting-fade 16s linear 6s infinite;
+  will-change: transform, opacity;
+}
+
+.sky-shooting-star::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6vw;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgb(255 255 255 / 0.95) 0%,
+    rgb(245 250 255 / 0.7) 20%,
+    rgb(230 245 255 / 0.35) 55%,
+    rgb(220 235 255 / 0.08) 85%,
+    rgb(220 235 255 / 0) 100%
+  );
+  transform-origin: left center;
+  transform: translateY(-50%) rotate(-22deg) scaleX(0);
+  animation: sky-shooting-trail 16s linear 6s infinite;
+  will-change: transform;
+}
+
+// Motion: UN solo segmento entre origen y destino. Después se mantiene en el
+// destino (invisible por opacity:0) hasta el próximo ciclo. Sin keyframes
+// intermedios → trayectoria perfectamente lineal y fluida.
+@keyframes sky-shooting-move {
+  0%        { transform: translate(0, 0); }
+  9%, 100%  { transform: translate(-15vw, 6vw); }
+}
+
+// Opacidad independiente: fade-in rápido (0 → 1 en el primer 1 % del cycle),
+// plateau a brillo máximo hasta 7 %, fade-out al llegar (7 % → 9 %).
+@keyframes sky-shooting-fade {
+  0%, 100%  { opacity: 0; }
+  1%, 7%    { opacity: 1; }
+  9%        { opacity: 0; }
+}
+
+// Trail: crece a su largo máximo en el primer 2 % (junto con el fade-in del
+// head), se mantiene durante el journey, colapsa en el fade-out (7 % → 9 %).
+// Plateau largo = trail siempre presente mientras la cabeza viaja, sin
+// pulsos extraños.
+@keyframes sky-shooting-trail {
+  0%        { transform: translateY(-50%) rotate(-22deg) scaleX(0); }
+  2%, 7%    { transform: translateY(-50%) rotate(-22deg) scaleX(1); }
+  9%, 100%  { transform: translateY(-50%) rotate(-22deg) scaleX(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sky-star {
     animation: none;
     // Sostiene una opacidad media — visible pero estática.
     opacity: calc(var(--peak, 0.7) * 0.55);
+  }
+
+  .sky-shooting-star,
+  .sky-shooting-star::before {
+    animation: none;
+    opacity: 0;
   }
 }

@@ -65,6 +65,10 @@ const PERIODS = [4.7, 5.3, 6.1, 6.9, 7.7, 8.3];
           [style.--delay.s]="s.delay"
         ></span>
       }
+      <!-- Estrella fugaz — sale del punto rojo (73%, 14%) y termina en el
+           verde (58%, 24%) del screenshot que pasó el usuario. Trayecto y
+           ángulo de la cola están definidos en SCSS porque son fijos. -->
+      <span class="sky-shooting-star"></span>
     </div>
   `,
   styleUrl: './wolf-sky.scss',
