@@ -119,7 +119,7 @@
   min-height: 100dvh;
   max-width: 80rem;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: center;
   padding-top: clamp(8rem, 4rem + 12vw, 14rem);
   padding-inline: var(--container-px);
   padding-bottom: clamp(4rem, 2.5rem + 4vw, 8rem);
@@ -132,6 +132,7 @@
   @media (min-width: 1024px) {
     grid-template-columns: 1.5fr 1fr;
     align-items: end;
+    margin: 3rem 0 0 0;
   }
 }
 
