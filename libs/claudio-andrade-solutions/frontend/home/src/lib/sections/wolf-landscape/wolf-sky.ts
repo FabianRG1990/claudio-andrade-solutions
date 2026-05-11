@@ -29,15 +29,18 @@ interface Star {
 const PERIODS = [4.7, 5.3, 6.1, 6.9, 7.7, 8.3];
 
 /**
- * WolfSky — capa decorativa con 22 estrellas que titilan sobre el cielo
+ * WolfSky — capa decorativa con 40 estrellas que titilan sobre el cielo
  * del hero. Posiciones generadas determinísticamente desde el índice
  * (mismo resultado SSR/CSR, sin flash de re-position en hidratación).
  *
  * Diseño:
- *   • Estrellas en el top 40 % del hero — no bajan al horizonte ni al lago.
- *   • Tamaño 1.5-2.5 px — coincide con las estrellas pintadas en el poster
- *     (no compiten visualmente, parecen "una más" que respira).
- *   • Pico de opacidad variado 0.55-0.9 — naturalismo: en un cielo real
+ *   • Estrellas en el top 1-18 % del hero — la franja de cielo limpio de
+ *     MK6, encima del horizonte/skyline y de las copas de los árboles.
+ *   • X 8-92 % — los árboles laterales recortan los bordes del cielo,
+ *     así que dejamos margen para no pintar sobre follaje.
+ *   • Tamaño 1.8-3 px — un toque más grandes que las pintadas en el
+ *     poster para que se lean como "twinkling encima", no como copias.
+ *   • Pico de opacidad variado 0.65-0.95 — naturalismo: en un cielo real
  *     no todas las estrellas brillan igual.
  *   • Animación fade in → pico → fade out → 0 puro. El "apagado" es total
  *     entre ciclos: la estrella desaparece y vuelve, no oscila sobre un
@@ -70,7 +73,7 @@ const PERIODS = [4.7, 5.3, 6.1, 6.9, 7.7, 8.3];
 export class WolfSky {
   protected readonly stars = computed<Star[]>(() => {
     const out: Star[] = [];
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 40; i++) {
       // PRNG determinístico por índice — multiplicadores primos para
       // que la distribución se sienta uniforme sin patrón visible.
       const a = (i * 137 + 17) % 1000;
@@ -81,17 +84,22 @@ export class WolfSky {
 
       out.push({
         i,
-        // Margen 4-96 % horizontal — evita que un dot quede pegado al borde.
-        x: 4 + (a / 1000) * 92,
-        // Cielo: 2-38 % vertical. No bajamos al horizonte (50 %) ni a las
-        // copas de los árboles laterales (~35-45 %).
-        y: 2 + (b / 1000) * 36,
-        // 1.5-2.5 px de núcleo. El halo `box-shadow` agrega ~2-3 px más,
-        // así el "objeto" total coincide con las estrellas pintadas.
-        size: 1.5 + (c / 1000) * 1,
-        // 0.55-0.9 — pico variado. La mitad inferior del rango da estrellas
-        // tenues, la superior da estrellas más notables. Naturalismo.
-        peak: 0.55 + (d / 1000) * 0.35,
+        // Margen 8-92 % horizontal — los árboles laterales recortan los
+        // bordes del cielo en MK6, así que dejamos hueco para no pintar
+        // sobre follaje.
+        x: 8 + (a / 1000) * 84,
+        // Cielo limpio: 1-18 % vertical. En MK6 el horizonte/skyline vive
+        // ~20-25 %, así que cualquier estrella debajo de 18 % cae sobre
+        // árboles, edificios o reflejos en el lago.
+        y: 1 + (b / 1000) * 17,
+        // 1.8-3 px de núcleo. Un toque más grandes que las estrellas
+        // pintadas del poster para que el twinkle se lea como capa
+        // animada por encima, no como copia que se confunde con el fondo.
+        size: 1.8 + (c / 1000) * 1.2,
+        // 0.65-0.95 — pico variado. Subido respecto a la versión MK3
+        // porque el cielo de MK6 ya trae estrellas pintadas; las animadas
+        // necesitan brillar un punto más para no perderse entre ellas.
+        peak: 0.65 + (d / 1000) * 0.3,
         dur: PERIODS[i % PERIODS.length],
         // 0..8 s de fase — cubre más que el período máximo, así el ciclo
         // colectivo arranca completamente desfasado entre estrellas.

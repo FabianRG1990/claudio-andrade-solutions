@@ -130,9 +130,13 @@ class LakeFish {
     const dy = this.target.y - head.y;
     const dist = Math.hypot(dx, dy);
     // pull también escala con depthFactor para mantener el ratio
-    // movimiento-por-frame / tamaño-aparente constante.
-    const pull = (isFollowing ? 0.13 : 0.08) * depthFactor;
-    const maxStep = (isFollowing ? 9 : 5) * this.speedScale * dt * 60 * depthFactor;
+    // movimiento-por-frame / tamaño-aparente constante. El pez cursor
+    // (isFollowing=true) usa pull/maxStep notablemente más altos que los
+    // ambientales — el fondo del hero ya no es el abismo oscuro, es el
+    // lago iluminado donde un pez perezoso se siente "muerto" en lugar
+    // de tranquilo. Los ambientales mantienen su cadencia de patrullaje.
+    const pull = (isFollowing ? 0.20 : 0.08) * depthFactor;
+    const maxStep = (isFollowing ? 14 : 5) * this.speedScale * dt * 60 * depthFactor;
     const step = Math.min(dist * pull, maxStep);
     if (dist > 0.5) {
       head.x += (dx / dist) * step;
@@ -155,11 +159,15 @@ class LakeFish {
       b.y = a.y + (ddy / d) * this.segLen;
     }
 
-    // Onda lateral — `phase` avanza con velocidad base + boost por speed.
-    // La amplitud crece hacia la cola con t² (Math.pow del original) para
-    // que la cabeza casi no oscile y la cola se vea ondular fuerte.
+    // Onda lateral — solo activa con velocidad. Antes el cuerpo
+    // ondulaba aún quieto (`+ 0.3`) y se mecía hasta 5px lateral con
+    // velocidad alta — el resultado era un pez "balanceándose como en
+    // las olas", efecto que el usuario rechaza. Ahora idle = 0 (cuerpo
+    // recto al detenerse) y la amplitud por velocidad es muy chica
+    // (`speed * 0.10` cap 0.8px). Los peces ahora glidean con cuerpo
+    // casi recto y solo la cola sigue dando vida.
     this.phase += dt * (3.5 + speed * 0.6);
-    const baseAmp = Math.min(speed * 0.45, 5) + 0.3;
+    const baseAmp = Math.min(speed * 0.10, 0.8);
     for (let i = 2; i < this.spine.length; i++) {
       const t = i / (this.spine.length - 1);
       const wave = Math.sin(this.phase - t * 4.2) * baseAmp * t * t;
@@ -210,6 +218,12 @@ class LakeFish {
     const tailDir = norm({ x: tail.x - beforeTail.x, y: tail.y - beforeTail.y });
 
     const speed = Math.hypot(this.velocity.x, this.velocity.y);
+    // Wag de cola en valores originales — el usuario probó las versiones
+    // atenuadas y prefirió el aleteo de antes. Ahora que el cuerpo ya no
+    // se mece (la onda lateral del cuerpo quedó casi en cero arriba), la
+    // cola sí debe estar viva con su amplitud completa: idle 1.4, hasta
+    // 4.9 con velocidad alta. Solo el cuerpo está rígido; la cola es
+    // la que da la sensación de "pez nadando".
     const tailWag = Math.sin(this.phase - 4.0) * (1.4 + Math.min(speed * 0.4, 3.5));
 
     // Centroide para el transform uniforme — punto medio entre cabeza y
@@ -681,20 +695,26 @@ export class WolfLakeCanvas {
     ];
 
     // ─── depthScale: pez Y normalizado al rango del lago → escala visual.
-    // Rango DRAMÁTICO de tamaño entre fondo y frente para que el cambio
-    // de profundidad se note como física real:
-    //   y_v 0.540 (orilla lejana, cerca de la ciudad) → 0.18× (punto)
-    //   y_v 1.000 (frente del lago, justo abajo)      → 1.25× (claramente
-    //                                                   más grande)
-    // Curva t² pura — el achique hacia el fondo es agresivo, así el pez
-    // del cursor moviéndose hacia la ciudad se ACHICA notablemente.
+    // Rango ATENUADO (antes era 0.18×→1.25×, ratio 7×). El usuario pidió
+    // que el shrink hacia la ciudad se note pero sin volverse "punto":
+    // el fondo del hero ya cambió y un achique tan dramático perdió
+    // sentido. Nuevo rango:
+    //   y_v 0.540 (orilla lejana, cerca de la ciudad) → 0.50× (visible
+    //                                                    como pez chico,
+    //                                                    no como punto)
+    //   y_v 1.000 (frente del lago, justo abajo)      → 1.15× (sigue
+    //                                                    siendo más
+    //                                                    grande, ratio
+    //                                                    visible 2.3×)
     const LAKE_TOP_V = 0.540;
     const LAKE_BOTTOM_V = 1.00;
     const depthScaleAt = (yV: number): number => {
       const t = Math.max(0, Math.min(1, (yV - LAKE_TOP_V) / (LAKE_BOTTOM_V - LAKE_TOP_V)));
-      // Curva pure-t² más agresiva — diferencia 7× entre fondo y frente.
+      // Curva t² mantiene la sensación de perspectiva (cambio gradual
+      // hacia el fondo, acelera hacia el frente), pero el rango total
+      // es mucho más suave que antes.
       const curved = t * t;
-      return 0.18 + curved * 1.07;
+      return 0.50 + curved * 0.65;
     };
 
     // ─── Build ambient fishes — escala pequeña, proporcionada al
@@ -741,9 +761,24 @@ export class WolfLakeCanvas {
         segments: 12,
         segLen: cursorBase * 0.95,
         bodyScale: cursorBase * 1.08,
-        speedScale: 0.45,
+        // speedScale 0.85 (antes 0.45) — el fondo cambió, el pez del
+        // cursor ahora puede moverse con energía sin que se sienta fuera
+        // de tono con la escena.
+        speedScale: 0.85,
         color: { spine: '#b8c8ff', body: '#1648dc', glow: '#0d4dff' },
-        orbit: { cx: 0.5, cy: 0.85, rx: 0, ry: 0, phase: 0, speed: 0 },
+        // Orbit no-cero — cuando el cursor sale del agua (o no hay
+        // cursor), el pez se devuelve a este patrullaje en vez de
+        // quedarse esperando en la orilla. cx/cy = frente-centro del
+        // lago (donde naturalmente vive el pez); rx/ry un poco más
+        // amplios que los ambientales porque éste es el "pez principal".
+        orbit: {
+          cx: 0.40,
+          cy: 0.88,
+          rx: 0.10,
+          ry: 0.025,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.18,
+        },
       },
     );
     // No usamos un cursorDepth lerpeado por separado — el depthScale del
@@ -793,50 +828,52 @@ export class WolfLakeCanvas {
       const dt = Math.min(0.05, (now - lastT) / 1000);
       lastT = now;
 
-      // Cursor target — convertir cursor a image-UV y validar que está en
-      // el lago. Si está fuera, el pez sigue su última profundidad pero el
-      // target se queda donde estaba (el pez se queda esperando, no salta).
-      let targetCanvasX = cursorFish.target.x;
-      let targetCanvasY = cursorFish.target.y;
+      // Cursor target — el pez sigue al cursor SOLO si está sobre el
+      // agua. Fuera del agua (sobre cielo, montañas, lobo, roca) el pez
+      // NO espera en la orilla: vuelve a su patrullaje normal como
+      // cualquier pez ambiental. Comportamiento explícito pedido por el
+      // usuario: "que no me espere ni se quede en la animación de que
+      // me esté siguiendo".
+      let cursorOnWater = false;
       if (pointer.active) {
         const iuv = canvasUVToImgUV({ x: pointer.x / cw, y: pointer.y / ch }, cw, ch, IMG_W, IMG_H);
-        const m = sampleMask(mask, iuv.x, iuv.y);
-        if (m > 0.35) {
-          // Cursor está sobre agua — el pez puede ir directo hacia ahí.
-          targetCanvasX = pointer.x;
-          targetCanvasY = pointer.y;
-        } else {
-          // Cursor sobre tierra/cielo — el pez intenta ir al punto del
-          // lago más cercano al cursor (clamp al borde de la máscara).
-          // Buscamos en la línea cursor → centro-del-lago el primer punto
-          // con mask > 0.5.
-          const centerCu = imgUVToCanvasUV({ x: 0.45, y: 0.86 }, cw, ch, IMG_W, IMG_H);
-          const centerX = centerCu.x * cw;
-          const centerY = centerCu.y * ch;
-          for (let t = 0.05; t <= 1; t += 0.05) {
-            const px = pointer.x + (centerX - pointer.x) * t;
-            const py = pointer.y + (centerY - pointer.y) * t;
-            const piuv = canvasUVToImgUV({ x: px / cw, y: py / ch }, cw, ch, IMG_W, IMG_H);
-            if (sampleMask(mask, piuv.x, piuv.y) > 0.5) {
-              targetCanvasX = px;
-              targetCanvasY = py;
-              break;
-            }
-          }
+        if (sampleMask(mask, iuv.x, iuv.y) > 0.35) {
+          cursorOnWater = true;
         }
       }
-      // Smoothing del target — el pez nada hacia el cursor con retraso
-      // suave. Sin un cursorDepth lerpeado por separado: el size del pez
-      // se calcula cada frame de la Y de su cabeza, así size y position
-      // están SIEMPRE en sync sin asimetría.
-      cursorFish.setTargetSmooth({ x: targetCanvasX, y: targetCanvasY }, 0.06);
+
+      if (cursorOnWater) {
+        // Modo follow — target = posición del cursor, smoothing 0.10 para
+        // respuesta viva. isFollowing=true en update() activa los
+        // pull/maxStep altos (0.20/14) del pez del cursor.
+        cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.10);
+        cursorFish.glowBoostTarget = 0.85;
+      } else {
+        // Modo patrullaje — exactamente como un pez ambiental: target =
+        // punto en órbita, smoothing 0.04 (drift suave). isFollowing=false
+        // baja a la cadencia ambiental. La transición es smooth porque
+        // setTargetSmooth lerpea el target gradualmente; el pez no
+        // "salta" del cursor a la órbita, sino que pierde interés y
+        // deriva de regreso a su zona de patrullaje.
+        cursorFish.orbit.phase += dt * cursorFish.orbit.speed;
+        let tx = cursorFish.orbit.cx + Math.cos(cursorFish.orbit.phase) * cursorFish.orbit.rx;
+        let ty = cursorFish.orbit.cy + Math.sin(cursorFish.orbit.phase * 1.3) * cursorFish.orbit.ry;
+        if (sampleMask(mask, tx, ty) < 0.4) {
+          tx = cursorFish.orbit.cx;
+          ty = cursorFish.orbit.cy;
+        }
+        const cuv = imgUVToCanvasUV({ x: tx, y: ty }, cw, ch, IMG_W, IMG_H);
+        cursorFish.setTargetSmooth({ x: cuv.x * cw, y: cuv.y * ch }, 0.04);
+        cursorFish.glowBoostTarget = 0.4;
+      }
+
       // Velocidad escalada por profundidad: pez al fondo nada lento
       // (tanto en pixels como visualmente — perspectiva real).
       const cursorHeadVForUpdate = canvasUVToImgUV(
         { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
         cw, ch, IMG_W, IMG_H,
       ).y;
-      cursorFish.update(dt, true, depthScaleAt(cursorHeadVForUpdate));
+      cursorFish.update(dt, cursorOnWater, depthScaleAt(cursorHeadVForUpdate));
 
       // Ambient fish — patrullaje en orbit, target con clamp a la máscara.
       for (const f of fishes) {
@@ -884,9 +921,10 @@ export class WolfLakeCanvas {
 
       // El pez-cursor también se queda dentro del lago (clamp idéntico).
       // Ancla de seguridad: el centro horizontal del lago al frente.
+      // glowBoostTarget ya fue asignado arriba según el modo (follow
+      // = 0.85, patrol = 0.4) — no se vuelve a setear acá.
       const safeAnchor = imgUVToCanvasUV({ x: 0.40, y: 0.88 }, cw, ch, IMG_W, IMG_H);
       clampSpineToLake(cursorFish, mask, cw, ch, IMG_W, IMG_H, safeAnchor);
-      cursorFish.glowBoostTarget = pointer.active ? 0.85 : 0.4;
 
       // ─── Render
       ctx.clearRect(0, 0, cw, ch);
