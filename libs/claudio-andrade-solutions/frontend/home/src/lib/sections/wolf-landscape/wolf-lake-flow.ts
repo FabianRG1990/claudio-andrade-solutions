@@ -377,9 +377,26 @@ const FRAG_SHADER = /* glsl */ `
       imgUV.y
     );
 
-    // Flow amount con perspectiva: más cerca del bottom (donde el
-    // espectador está más cerca del agua) = más flujo aparente.
-    float perspective = 0.20 + 0.80 * imgUV.y;
+    // Flow amount con perspectiva. La versión anterior (0.20 + 0.80*imgUV.y)
+    // dejaba ~0.58 de flujo JUSTO en el waterline, produciendo el efecto
+    // "agua derritiéndose en capas" en la franja superior del lago: el
+    // reflejo del skyline de la ciudad (alto contraste: luces puntuales
+    // contra cielo negro) se desplaza hacia abajo y se lee como goterones
+    // verticales en lugar de oleaje natural.
+    //
+    // Fix: el flujo arranca en CERO exactamente en el waterline y se mantiene
+    // muy calmado en la franja del reflejo del horizonte (primeros ~5-8 %
+    // de la profundidad del lago), después acelera al ratio original. El
+    // resto del lago queda sin tocar — al frente del lago el flujo sigue
+    // siendo 1.0 (donde ya se veía bien).
+    //
+    // smoothstep(0.05, 0.20, t) — flow=0 hasta el 5 % bajo el waterline,
+    // ramp en los siguientes 15 %, luego full strength.
+    float distFromWL = max(0.0, imgUV.y - waterlineY);
+    float lakeDepth = max(0.001, 1.0 - waterlineY);
+    float t = clamp(distFromWL / lakeDepth, 0.0, 1.0);
+    float horizonCalm = smoothstep(0.05, 0.20, t);
+    float perspective = horizonCalm * (0.20 + 0.80 * imgUV.y);
     float amount = MAX_AMOUNT * mask * perspective;
 
     // Dos fases offset por 0.5 del período. Cada una avanza linealmente
