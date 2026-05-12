@@ -95,20 +95,25 @@ class LakeFish {
   /** Segundos restantes de pausa antes de elegir nuevo waypoint. */
   pauseTimer = 0;
 
-  // ─── Física real de pez ────────────────────────────────────────────────────
-  /** Dirección actual a la que mira la cabeza (radianes). Un pez real no
-   *  pivota instantáneo: rota con turn-rate finito, lo que produce arcos
-   *  bancarios en lugar de cambios bruscos. Se inicializa a 0 (head mirando
-   *  derecha) y se actualiza cada frame con `clampedRotateToward(target)`. */
+  // ─── Física real de pez (sólo modo 'ambient') ──────────────────────────────
+  /** Dirección actual a la que mira la cabeza (radianes). Solo usada en
+   *  modo 'ambient'. Un pez real no pivota instantáneo: rota con turn-rate
+   *  finito, lo que produce arcos bancarios. */
   heading = 0;
-  /** Micro-target del hover. Durante pausing el pez no se queda fijo:
-   *  cada 0.6–2s elige un punto random a 6–18px y deriva suavemente hacia
-   *  él. Esto rota el heading lento y da el efecto "el pez observa
-   *  alrededor", como pez real hovereando con sus pectorales. */
+  /** Micro-target del hover. Solo usado en modo 'ambient' durante pausing. */
   hoverDriftTarget: Vec | null = null;
-  /** Segundos hasta que se elija nuevo hoverDriftTarget. Randomizado por
-   *  pez para que cada uno tenga su propio ritmo de exploración visual. */
+  /** Segundos hasta que se elija nuevo hoverDriftTarget. Solo 'ambient'. */
   hoverDriftTimer = 0;
+
+  /** Modo de física:
+   *  • 'ambient' — los peces del lago: heading + drag + effort smoothed +
+   *    wander state machine + hover drift. Física naturalista nueva.
+   *  • 'cursor'  — el pez que sigue el cursor: movimiento directo head→target
+   *    sin turn-rate limit ni drag, wave/cola driven by speed bruto, patrol
+   *    orbit-based. Comportamiento legacy explícitamente preferido por el
+   *    usuario para este pez ("ya tiene un montón de lag, ya no sigue el
+   *    cursor", quiere "el mismo comportamiento que tenía ayer"). */
+  physicsMode: 'cursor' | 'ambient' = 'ambient';
 
   constructor(start: Vec, opts: {
     segments: number;
@@ -117,6 +122,7 @@ class LakeFish {
     speedScale: number;
     color: FishColor;
     orbit: LakeFish['orbit'];
+    physicsMode?: 'cursor' | 'ambient';
   }) {
     this.segments = opts.segments;
     this.segLen = opts.segLen;
@@ -124,6 +130,7 @@ class LakeFish {
     this.speedScale = opts.speedScale;
     this.color = opts.color;
     this.orbit = opts.orbit;
+    this.physicsMode = opts.physicsMode ?? 'ambient';
     this.spine = Array.from({ length: opts.segments }, (_, i) => ({
       x: start.x - i * opts.segLen,
       y: start.y,
@@ -166,54 +173,45 @@ class LakeFish {
     const dy = this.target.y - head.y;
     const dist = Math.hypot(dx, dy);
 
-    // ─── Heading con turn-rate limit (biomecánica real de pez) ───
-    // Un pez NO pivota instantáneo hacia su objetivo: tiene un radio
-    // de giro mínimo determinado por su velocidad (banking effect). A
-    // velocidad alta el arco es amplio; a velocidad casi-cero rota más
-    // rápido. Esto produce trayectorias curvas naturales en lugar de
-    // los pivotes bruscos que delatan animación procedural.
-    if (dist > 0.5) {
-      const targetAngle = Math.atan2(dy, dx);
-      let angleDiff = targetAngle - this.heading;
-      while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-      while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-      // Turn rate inverso a la velocidad. A 0 px/frame → 4.5 rad/s
-      // (~258°/sec, suficiente para "look around" sin snap). A 14 px/frame
-      // (cursor fish) → ~1.4 rad/s (~80°/sec, arco bancario claro).
-      const currSpeed = Math.hypot(this.velocity.x, this.velocity.y);
-      const turnRate = Math.min(6.0 / (1 + currSpeed * 0.15), 4.5);
-      const turn = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
-      this.heading += turn;
-    }
-
-    // ─── Step magnitude con drag al girar ───
-    // pull/maxStep base — el cursor fish usa valores altos (0.20/14)
-    // porque necesita responder al usuario. Los ambientales mantienen
-    // su cadencia de patrullaje (0.08/5).
+    // ─── Movimiento de la cabeza — branchado por physicsMode ───
+    // 'ambient': heading + turn-rate limit + drag al girar (física real
+    //            naturalista).
+    // 'cursor':  movimiento directo head→target sin lag, como ayer
+    //            (el usuario lo prefirió explícitamente: "ya tiene un
+    //            montón de lag, ya no sigue el cursor").
     const pull = (isFollowing ? 0.20 : 0.08) * depthFactor;
     const maxStep = (isFollowing ? 14 : 5) * this.speedScale * dt * 60 * depthFactor;
-    let stepMag = Math.min(dist * pull, maxStep);
-    if (dist > 0.5) {
-      // Drag al girar: cuando heading está desalineado del target, el
-      // pez avanza más lento (banking drag). Alignment es cos(angleDiff):
-      //   1.0 (heading == target dir) → dragFactor 1.0  → speed full
-      //   0.0 (perpendicular)         → dragFactor 0.5  → speed 50%
-      //   <0  (target detrás)         → dragFactor 0.35 → speed 35%
-      // Resultado: el pez frena cuando hace un giro cerrado y acelera
-      // de nuevo cuando heading ya apunta a target. Indistinguible de
-      // un pez real con sus pectorales actuando de freno.
-      const targetAngle = Math.atan2(dy, dx);
-      let alignDiff = targetAngle - this.heading;
-      while (alignDiff > Math.PI) alignDiff -= 2 * Math.PI;
-      while (alignDiff < -Math.PI) alignDiff += 2 * Math.PI;
-      const alignment = Math.cos(alignDiff);
-      const dragFactor = 0.35 + 0.65 * Math.max(0, alignment);
-      stepMag *= dragFactor;
-
-      // Movimiento a lo largo del heading (no directo al target). Si
-      // target está atrás, el pez seguirá un arco al banking-rotar.
-      head.x += Math.cos(this.heading) * stepMag;
-      head.y += Math.sin(this.heading) * stepMag;
+    if (this.physicsMode === 'cursor') {
+      const step = Math.min(dist * pull, maxStep);
+      if (dist > 0.5) {
+        head.x += (dx / dist) * step;
+        head.y += (dy / dist) * step;
+      }
+    } else {
+      // Heading con turn-rate limit
+      if (dist > 0.5) {
+        const targetAngle = Math.atan2(dy, dx);
+        let angleDiff = targetAngle - this.heading;
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        const currSpeed = Math.hypot(this.velocity.x, this.velocity.y);
+        const turnRate = Math.min(6.0 / (1 + currSpeed * 0.15), 4.5);
+        const turn = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
+        this.heading += turn;
+      }
+      // Drag al girar + movimiento a lo largo del heading
+      let stepMag = Math.min(dist * pull, maxStep);
+      if (dist > 0.5) {
+        const targetAngle = Math.atan2(dy, dx);
+        let alignDiff = targetAngle - this.heading;
+        while (alignDiff > Math.PI) alignDiff -= 2 * Math.PI;
+        while (alignDiff < -Math.PI) alignDiff += 2 * Math.PI;
+        const alignment = Math.cos(alignDiff);
+        const dragFactor = 0.35 + 0.65 * Math.max(0, alignment);
+        stepMag *= dragFactor;
+        head.x += Math.cos(this.heading) * stepMag;
+        head.y += Math.sin(this.heading) * stepMag;
+      }
     }
 
     this.velocity.x = head.x - this.prevHead.x;
@@ -232,30 +230,24 @@ class LakeFish {
       b.y = a.y + (ddy / d) * this.segLen;
     }
 
-    // Onda lateral del cuerpo — base ShadowFish (referencia natural) +
-    // señal de esfuerzo smoothed para evitar el "twisting al frenar":
-    //
-    //   • Mask `t²` — la onda crece desde el segmento 2 hasta la cola
-    //     con rampa cuadrática suave. El cuerpo entero ondula (no solo
-    //     la cola tip), como pez real cruisendo.
-    //   • Effort smoothed (lerp k=4, tau ~250ms) sigue la velocidad
-    //     real. CRÍTICO para el deceleration: cuando el head se detiene
-    //     bruscamente, effort baja gradualmente en ~250ms, así el wave
-    //     se desinfla en vez de seguir oscilando full amplitude
-    //     (que era exactamente el "twisting" que el usuario reportaba —
-    //     "parece como si chocaran con una pared").
-    //   • Frecuencia driven by effort — quieto: 1 rad/s (~6s/ciclo,
-    //     respiración lenta del pez en hover). Cruisendo: 4 rad/s
-    //     (~1.5s/ciclo, ritmo natural de wag).
-    //   • Amplitud driven by effort — quieto: 0.20 (cola/cuerpo casi
-    //     inmóviles). Cruisendo: 1.0 (full undulation).
-    //
-    // La variabilidad rítmica entre peces vive a nivel MACRO en la
-    // state machine wander, no a nivel micro de la cola.
-    const targetEffort = Math.min(1, speed / 2.0);
-    this.effort += (targetEffort - this.effort) * Math.min(1, dt * 4);
-    this.phase += dt * (1.0 + this.effort * 3.0);
-    const baseAmp = 0.20 + 0.80 * this.effort;
+    // Onda lateral del cuerpo — branchada por physicsMode:
+    //   'cursor':  fórmula legacy de ayer — phase rate `3.5 + speed*0.6`,
+    //              amplitud `min(speed*0.10, 0.8)`. Comportamiento que el
+    //              usuario quiere preservar para el pez del cursor.
+    //   'ambient': nuevo signal `effort` smoothed (lerp k=4, tau ~250ms)
+    //              que evita el "twisting al frenar" — al detenerse el
+    //              head, la cola se desinfla gradualmente en lugar de
+    //              seguir oscilando.
+    let baseAmp: number;
+    if (this.physicsMode === 'cursor') {
+      this.phase += dt * (3.5 + speed * 0.6);
+      baseAmp = Math.min(speed * 0.10, 0.8);
+    } else {
+      const targetEffort = Math.min(1, speed / 2.0);
+      this.effort += (targetEffort - this.effort) * Math.min(1, dt * 4);
+      this.phase += dt * (1.0 + this.effort * 3.0);
+      baseAmp = 0.20 + 0.80 * this.effort;
+    }
     for (let i = 2; i < this.spine.length; i++) {
       const t = i / (this.spine.length - 1);
       const wave = Math.sin(this.phase - t * 4.2) * baseAmp * t * t;
@@ -305,19 +297,21 @@ class LakeFish {
     const headDir = norm({ x: head.x - second.x, y: head.y - second.y });
     const tailDir = norm({ x: tail.x - beforeTail.x, y: tail.y - beforeTail.y });
 
-    // tailWag — amplitud proporcional al tamaño + escala por effort
-    // smoothed para que la cola se desinfle gradualmente al frenar
-    // (sin el "twisting al chocar con la pared"). Para bodyScale=4.5:
-    //   • Cruisendo (effort=1):  wag amp = 4.5 × 0.45 × 1.00 = 2.03px
-    //                            (look natural que ya gustó).
-    //   • Quieto (effort=0):     wag amp = 4.5 × 0.45 × 0.20 = 0.41px
-    //                            (cola casi inmóvil, "respiración"
-    //                            apenas perceptible).
-    //   • Decelerando:           lerp smooth de 2.03 → 0.41 sobre
-    //                            ~250ms — desinflado natural al
-    //                            llegar al waypoint.
-    const wagFactor = 0.20 + 0.80 * this.effort;
-    const tailWag = Math.sin(this.phase - 4.0) * (this.bodyScale * 0.45 * wagFactor);
+    // tailWag — branchado por physicsMode:
+    //   'cursor':  fórmula legacy de ayer: `1.4 + min(speed*0.4, 3.5)`,
+    //              rango 1.4 (idle) hasta 4.9 (rápido). Cola viva con
+    //              amplitud completa — comportamiento que el usuario
+    //              quiere preservar explícitamente.
+    //   'ambient': escalado por effort smoothed para evitar twisting
+    //              al frenar. Quieto: 0.41px. Cruisendo: 2.03px.
+    let tailWag: number;
+    if (this.physicsMode === 'cursor') {
+      const speed = Math.hypot(this.velocity.x, this.velocity.y);
+      tailWag = Math.sin(this.phase - 4.0) * (1.4 + Math.min(speed * 0.4, 3.5));
+    } else {
+      const wagFactor = 0.20 + 0.80 * this.effort;
+      tailWag = Math.sin(this.phase - 4.0) * (this.bodyScale * 0.45 * wagFactor);
+    }
 
     // Centroide para el transform uniforme — punto medio entre cabeza y
     // cola (centro aproximado del cuerpo).
@@ -924,16 +918,19 @@ export class WolfLakeCanvas {
         segments: 12,
         segLen: cursorBase * 0.95,
         bodyScale: cursorBase * 1.08,
-        // speedScale 0.85 (antes 0.45) — el fondo cambió, el pez del
-        // cursor ahora puede moverse con energía sin que se sienta fuera
-        // de tono con la escena.
+        // speedScale 0.85 — el pez del cursor se mueve con energía.
         speedScale: 0.85,
         color: { spine: '#b8c8ff', body: '#1648dc', glow: '#0d4dff' },
+        // physicsMode='cursor' — el pez del cursor mantiene la física
+        // legacy (movimiento directo head→target sin turn-rate limit ni
+        // drag, wave/cola driven by speed bruto, patrol orbit-based).
+        // Comportamiento explícitamente preferido por el usuario: "ya
+        // tiene un montón de lag, ya no sigue el cursor", quiere el
+        // comportamiento de ayer.
+        physicsMode: 'cursor',
         // Orbit no-cero — cuando el cursor sale del agua (o no hay
-        // cursor), el pez se devuelve a este patrullaje en vez de
-        // quedarse esperando en la orilla. cx/cy = frente-centro del
-        // lago (donde naturalmente vive el pez); rx/ry un poco más
-        // amplios que los ambientales porque éste es el "pez principal".
+        // cursor), el pez patrulla en esta órbita en vez de quedarse
+        // esperando en la orilla o usar el wander state machine.
         orbit: {
           cx: 0.40,
           cy: 0.88,
@@ -1006,18 +1003,26 @@ export class WolfLakeCanvas {
       }
 
       if (cursorOnWater) {
-        // Modo follow — target = posición del cursor, smoothing 0.10 para
-        // respuesta viva. isFollowing=true en update() activa los
+        // Modo follow — target = posición del cursor, smoothing 0.10
+        // para respuesta viva. isFollowing=true en update() activa los
         // pull/maxStep altos (0.20/14) del pez del cursor.
         cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.10);
         cursorFish.glowBoostTarget = 0.85;
       } else {
-        // Modo patrullaje — wander libre por todo el lago como un pez
-        // ambiental: elige waypoints random, nada, pausa, repite. La
-        // transición desde follow es suave porque setTargetSmooth lerpea
-        // el target gradualmente; el pez no "salta" del cursor a otro
-        // punto, sino que pierde interés y deriva.
-        applyWander(cursorFish, dt);
+        // Modo patrullaje — orbit-based legacy (NO wander state machine).
+        // El usuario pidió explícitamente que el pez del cursor conserve
+        // el comportamiento de ayer, incluido el patrullaje en la órbita
+        // chica del frente del lago en vez del wander libre que aplica
+        // a los peces ambientales.
+        cursorFish.orbit.phase += dt * cursorFish.orbit.speed;
+        let tx = cursorFish.orbit.cx + Math.cos(cursorFish.orbit.phase) * cursorFish.orbit.rx;
+        let ty = cursorFish.orbit.cy + Math.sin(cursorFish.orbit.phase * 1.3) * cursorFish.orbit.ry;
+        if (sampleMask(mask, tx, ty) < 0.4) {
+          tx = cursorFish.orbit.cx;
+          ty = cursorFish.orbit.cy;
+        }
+        const cuv = imgUVToCanvasUV({ x: tx, y: ty }, cw, ch, IMG_W, IMG_H);
+        cursorFish.setTargetSmooth({ x: cuv.x * cw, y: cuv.y * ch }, 0.04);
         cursorFish.glowBoostTarget = 0.4;
       }
 
