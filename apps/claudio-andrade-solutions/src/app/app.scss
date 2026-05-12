@@ -3,4 +3,36 @@
 .app-main {
   position: relative;
   z-index: 10;
+
+  // Entrada por boot — fade + rise sutil (8px) tras el splash. Delay 500ms:
+  // empieza después de que el splash arrancó su fade pero antes de que
+  // termine, así el ojo percibe crossfade en vez de "splash → vacío → main".
+  // 750ms de duración: cómodo para el body, no apresurado. La regla
+  // `html.app-booted .app-main { opacity:1; transform:translateY(0) }` vive
+  // en `index.html` (inline <style>) por la limitación de view-encapsulation
+  // con `:root` documentada arriba.
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 750ms 500ms var(--ease-fluid),
+    transform 750ms 500ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Footer comparte la cadencia del main pero entra ligeramente después para
+// que la jerarquía visual (top → bottom) se respete en la animación.
+app-footer {
+  display: block;
+  opacity: 0;
+  transition: opacity 750ms 750ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+  }
 }

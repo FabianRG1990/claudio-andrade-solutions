@@ -45,8 +45,204 @@
       type="font/woff2"
       crossorigin
     />
+
+    <!-- Preload del lobo del splash para que esté listo en el primer paint.
+         192 webp = 8-12 KB, decode sub-frame, no compite con el bundle. -->
+    <link
+      rel="preload"
+      href="/logo/logo-192.webp"
+      as="image"
+      type="image/webp"
+      fetchpriority="high"
+    />
+
+    <!-- =========================================================================
+         Boot splash — capa pintada en el primer frame, antes de que Angular
+         hidrate. Cubre el viewport con #06091A (mismo navy que el ocean-bg
+         base, sin costura cuando crossfadea) + logo breathing en el centro.
+         Mientras `html.app-booted` no esté presente, todo lo que pinta Angular
+         (`app-root`) queda con opacity 0 y filter blur — el usuario no ve
+         elementos "saltando a su sitio". `app.ts` setea la clase con un
+         min-hold de 350ms para que el splash respire antes de fadear.
+         Referencia: pattern usado por Stripe / Linear / Vercel en hard refresh.
+         ========================================================================= -->
+    <style>
+      /* app-root no se esconde a nivel de host — los hijos (.ocean-bg__canvas,
+         .app-main, .floating-nav-rail, app-footer) tienen sus propios opacity:0
+         hasta que llega `html.app-booted`. Ocultar `app-root` con visibility:
+         hidden añadía riesgo de "página en blanco" si por cualquier razón
+         (hidratación lenta, JS bloqueado, fallo en afterNextRender) el flag
+         tardaba en aparecer. El splash de fondo cubre todo igual. */
+
+      .boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #06091a;
+        pointer-events: none;
+        /* Crossfade hacia afuera: blur + scale up + opacity. El blur ascendente
+           es la transición que usan los preloaders premium (Apple onboarding,
+           Linear): da la sensación de "saliendo del foco" no de "apagándose".
+           650ms total — corto pero suficiente para que se lea como gesto y
+           no como switch binario. ease-out (no in-out) → la masa visual sale
+           rápido al principio, suaviza al final = sensación de elegancia. */
+        transition:
+          opacity 650ms cubic-bezier(0.32, 0.72, 0, 1),
+          filter 650ms cubic-bezier(0.32, 0.72, 0, 1),
+          transform 650ms cubic-bezier(0.32, 0.72, 0, 1),
+          visibility 0s linear 650ms;
+      }
+
+      .boot-splash__logo {
+        width: 72px;
+        height: 72px;
+        /* Latido sutil — escala +/- 4% sobre 2.4s. Frecuencia tipo respiración
+           humana (~25 bpm); evita la sensación robótica de un spinner. */
+        animation: boot-splash-breath 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        /* Halo difuso debajo (sin glow loud — solo presencia). El drop-shadow
+           sobre PNG con alpha hace que el lobo flote sobre el navy sin parecer
+           pegado. */
+        filter: drop-shadow(0 8px 32px rgb(94 196 209 / 0.18))
+          drop-shadow(0 2px 8px rgb(6 9 26 / 0.6));
+      }
+
+      @keyframes boot-splash-breath {
+        0%,
+        100% {
+          opacity: 0.78;
+          transform: scale(0.98);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.02);
+        }
+      }
+
+      html.app-booted .boot-splash {
+        opacity: 0;
+        filter: blur(8px);
+        transform: scale(1.04);
+        visibility: hidden;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .boot-splash {
+          transition:
+            opacity 200ms linear,
+            visibility 0s linear 200ms;
+        }
+        .boot-splash__logo {
+          animation: none;
+        }
+        html.app-booted .boot-splash {
+          filter: none;
+          transform: none;
+        }
+      }
+
+      /* =====================================================================
+         Reglas de entrada en cascada — vivieron originalmente en los SCSS de
+         cada componente, pero Angular view-encapsulation envuelve `:root` con
+         el atributo `_ngcontent-ng-cXXX` que `<html>` jamás tiene, así que el
+         selector nunca matcheaba y el contenido quedaba en opacity: 0 para
+         siempre tras fadear el splash. Estas reglas viven aquí (sin scoping)
+         para garantizar que matchean. Los `opacity: 0` base sí están en los
+         SCSS de componente porque .app-main / .floating-nav-rail / etc SÍ
+         tienen el atributo y los matchean sin problema.
+         ===================================================================== */
+      html.app-booted .ocean-bg__canvas {
+        opacity: 1;
+      }
+      html.app-booted .app-main {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      html.app-booted app-footer {
+        opacity: 1;
+      }
+      html.app-booted .floating-nav-rail {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Hero — cascada interna back-to-front. La escena (bg image + lake-flow
+         + sky + fish canvas) aparece heredando el fade-in de .app-main; estos
+         elementos del foreground se asientan después en su propio ritmo.
+         Orden: telemetry → badge → wave-card → title → copy → scroll-hint.
+         Delays calibrados para que el ojo vea "primero la escena, después el
+         layout humano". */
+      html.app-booted .hero__telemetry,
+      html.app-booted .hero__badge,
+      html.app-booted .hero__title,
+      html.app-booted .hero__copy,
+      html.app-booted .hero__wave-card,
+      html.app-booted .hero__scroll-hint {
+        opacity: 1;
+        transform: none;
+      }
+      html.app-booted .hero__title {
+        filter: none;
+      }
+    </style>
   </head>
   <body class="grain">
+    <!-- Splash queda en el DOM hasta que el usuario refresque; tras booteo
+         vive con visibility:hidden + pointer-events:none, no captura clicks ni
+         lecturas de screen reader (aria-hidden). El costo de mantener el
+         elemento es despreciable (un <div> + <img>). -->
+    <div class="boot-splash" aria-hidden="true">
+      <img
+        class="boot-splash__logo"
+        src="/logo/logo-192.webp"
+        alt=""
+        width="72"
+        height="72"
+        decoding="sync"
+        fetchpriority="high"
+      />
+    </div>
+
     <app-root></app-root>
+
+    <!-- =========================================================================
+         Boot trigger + failsafe.
+         Primary: window 'load' — dispara cuando el documento + recursos
+         críticos (CSS, fuentes preload, imagen del splash) terminaron de
+         cargar. Es la señal honesta de "ya está todo listo, fundimos al
+         contenido". No depende de que Angular hidrate; funciona aunque el
+         bundle JS falle.
+         Min-hold de 350ms: si el load es muy rápido (caché caliente), el
+         splash apenas se vería y se sentiría como flash. Forzar un mínimo
+         lo lee como gesto, no como bug.
+         Failsafe: 4000ms — garantiza que la app aparece SIEMPRE, incluso si
+         'load' no se dispara (worker bug, recursos pendientes infinitos).
+         ========================================================================= -->
+    <script>
+      (function () {
+        var booted = false;
+        function boot() {
+          if (booted) return;
+          booted = true;
+          document.documentElement.classList.add('app-booted');
+        }
+        var MIN_HOLD = 350;
+        var t0 = performance.now();
+        function bootWithHold() {
+          var elapsed = performance.now() - t0;
+          var wait = Math.max(0, MIN_HOLD - elapsed);
+          setTimeout(boot, wait);
+        }
+        if (document.readyState === 'complete') {
+          bootWithHold();
+        } else {
+          window.addEventListener('load', bootWithHold, { once: true });
+        }
+        // Failsafe absoluto — el splash nunca debe quedarse colgado.
+        setTimeout(boot, 4000);
+      })();
+    </script>
   </body>
 </html>

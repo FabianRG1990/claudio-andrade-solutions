@@ -79,6 +79,25 @@
   @media (min-width: 1024px) {
     top: 1.5rem;
   }
+
+  // Entrada por boot — el rail aterriza desde arriba (-10px → 0). Delay 650ms,
+  // el último de la cascada: ocean (350ms) → main (500ms) → nav (650ms). El
+  // ojo recorre la página de fondo a primer plano, y el nav es lo último que
+  // se asienta — equivalente al patrón de Stripe / Linear donde el chrome
+  // confirma "página lista". La regla `html.app-booted .floating-nav-rail
+  // { opacity:1; transform:translateY(0) }` vive en `index.html` (inline
+  // <style>) por la limitación de view-encapsulation con `:root` arriba.
+  opacity: 0;
+  transform: translateY(-10px);
+  transition:
+    opacity 700ms 650ms var(--ease-spring),
+    transform 700ms 650ms var(--ease-spring);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 // ─── Brand: emblema + wordmark ───────────────────────────────────────────────

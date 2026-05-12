@@ -66,8 +66,26 @@
   justify-content: space-between;
   padding-inline: var(--container-px);
 
+  // Entrada escalonada — primero entra la escena (bg image + agua + cielo +
+  // peces) heredando el fade-in de .app-main, luego este eyebrow superior es
+  // el primer elemento de la capa "humana" que se asienta. Delay 700ms +
+  // 700ms de duración. El reveal final (opacity:1; transform:none) vive en
+  // `index.html` <style> global por la limitación de view-encapsulation con
+  // selectores que matchean `<html>` (documentada en index.html).
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 700ms 700ms var(--ease-fluid),
+    transform 700ms 700ms var(--ease-fluid);
+
   @media (min-width: 1024px) {
     top: 8rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -160,8 +178,22 @@
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 
+  // Entrada — segundo en la cadena de cobre. 850ms delay, justo antes del
+  // título.
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 700ms 850ms var(--ease-fluid),
+    transform 700ms 850ms var(--ease-fluid);
+
   @media (max-width: 359.98px) {
     display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -205,6 +237,26 @@
     0 2px 8px rgb(6 9 26 / 0.65),
     0 1px 2px rgb(6 9 26 / 0.7),
     0 -1px 0 rgb(245 241 232 / 0.22);
+
+  // Entrada — el momento focal del hero. Combinación rise + blur-out 4px →
+  // hace que el headline "se enfoque" en lugar de aparecer plano. Pattern de
+  // entrada usado por Apple en sus pages de producto y por Linear en sus
+  // releases. 1000ms delay, 850ms de duración (el más lento del stagger
+  // porque es el ancla visual).
+  opacity: 0;
+  transform: translateY(16px);
+  filter: blur(4px);
+  transition:
+    opacity 850ms 1000ms var(--ease-fluid),
+    transform 850ms 1000ms var(--ease-fluid),
+    filter 850ms 1000ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
 }
 
 .hero__title-line {
@@ -229,6 +281,21 @@
   text-shadow:
     0 2px 14px rgb(6 9 26 / 0.7),
     0 1px 4px rgb(6 9 26 / 0.65);
+
+  // Entrada — sigue al título con 200ms de delay adicional. Sin blur (el
+  // párrafo no necesita ese tratamiento focal; ya pertenece a la jerarquía
+  // secundaria).
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 750ms 1200ms var(--ease-fluid),
+    transform 750ms 1200ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .hero__cta {
@@ -260,6 +327,23 @@
     0 0 0 1px rgb(245 241 232 / 0.06),
     inset 0 1px 0 rgb(245 241 232 / 0.14),
     inset 0 -1px 0 rgb(6 9 26 / 0.30);
+
+  // Entrada en paralelo con el copy (1100ms delay) — el ojo del usuario
+  // recorre izquierda (título → copy) y la card asienta a la derecha al
+  // mismo tiempo. 800ms de duración + rise 14px. Sin blur — el glass shell
+  // ya tiene un backdrop-filter activo y combinarlo con blur de entrada
+  // genera artefactos visibles en algunos browsers.
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 800ms 1100ms var(--ease-fluid),
+    transform 800ms 1100ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 // El core (interior del card) también baja la opacidad del fill oscuro
@@ -340,8 +424,23 @@
     0 2px 8px rgb(6 9 26 / 0.7),
     0 1px 2px rgb(6 9 26 / 0.6);
 
+  // Última pieza de la cadena (1450ms delay). El scroll cue cierra la
+  // composición del hero — aparece cuando el resto ya está asentado, así el
+  // ojo lo encuentra después de leer título + copy + card.
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 600ms 1450ms var(--ease-fluid),
+    transform 600ms 1450ms var(--ease-fluid);
+
   @media (min-width: 1024px) {
     display: flex;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

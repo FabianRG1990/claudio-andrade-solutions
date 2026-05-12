@@ -12,8 +12,25 @@
   background: rgb(var(--abyss));
 }
 
+// IMPORTANTE: este rule NO se anida dentro de `.ocean-bg`. Anidarlo creaba un
+// selector compuesto `.ocean-bg[_ngcontent-XXX] .ocean-bg__canvas[_ngcontent-XXX]`
+// con specificity (0,4,0) que ganaba contra el reveal global
+// `html.app-booted .ocean-bg__canvas` (0,2,1) → el canvas se quedaba en
+// opacity:0 permanente y los peces se dibujaban invisibles. Al mantener este
+// rule top-level, la specificity baja a (0,1,1) y el global gana.
+//
+// El reveal `html.app-booted .ocean-bg__canvas { opacity:1 }` vive en
+// `index.html` (inline <style>) porque view-encapsulation rompe `:root` (le
+// añade el atributo del componente que `<html>` no tiene).
 .ocean-bg__canvas {
   position: relative;
   height: 100%;
   width: 100%;
+  opacity: 0;
+  transition: opacity 900ms 350ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+  }
 }
