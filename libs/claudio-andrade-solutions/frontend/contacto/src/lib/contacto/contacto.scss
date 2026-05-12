@@ -170,12 +170,27 @@
 // con jerarquía propia (sentence case, peso editorial, contraste pleno),
 // no como tracking-out caps al 10px que desaparecen visualmente.
 .form-field__label {
+  position: relative;
+  // El glass-core inyecta una textura `::before` con `mix-blend-mode: overlay`
+  // que cubre a sus hijos. Sin un z-index explícito, los labels viven debajo
+  // de ese ruido — eso explica la sensación de "blur" sobre los caracteres
+  // pequeños (sobre todo el punto de la `i`). Subimos el contenido fuera.
+  z-index: 2;
   display: block;
   font-family: var(--font-display);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: var(--tracking-tight);
+  // Subimos de 15px → 17px (clamp) — Roboto a 17px tiene una x-height más
+  // generosa, el punto de la `i` se distingue claramente del trazo de la `l`
+  // y los caracteres no necesitan apretar para caber.
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+  // Roboto 600 es un peso sintetizado (la familia carga 300/400/500/700),
+  // así que el browser engorda artificialmente los trazos — y trazos gordos
+  // a 15px = letras pegadas. Roboto 500 (Medium real) lee igual de "weighty"
+  // por la fuente foam pero deja aire entre glifos.
+  font-weight: 500;
+  line-height: 1.25;
+  // 0.03em es el rango "Body Large" de Material para Roboto a 16-17px —
+  // tracking positivo notorio que abre los pares conflictivos (il / mm / rn).
+  letter-spacing: 0.03em;
   color: rgb(var(--foam));
   transition: color 350ms var(--ease-fluid);
 }
@@ -185,20 +200,24 @@
 }
 
 .form-field__input {
+  position: relative;
+  z-index: 2;
   margin-top: 0.5rem;
   width: 100%;
-  border: 1px solid rgb(var(--foam) / 0.18);
+  border: 1px solid rgb(var(--foam) / 0.22);
   background: rgb(var(--foam) / 0.04);
   color: rgb(var(--foam));
   font-family: inherit;
-  font-size: inherit;
+  font-size: 1rem;
+  letter-spacing: 0.018em;
   outline: none;
   transition:
     border-color 500ms var(--ease-fluid),
     background 500ms var(--ease-fluid);
 
   &::placeholder {
-    color: rgb(var(--foam) / 0.42);
+    color: rgb(var(--foam) / 0.5);
+    letter-spacing: 0.018em;
   }
 
   &:focus {
@@ -220,20 +239,23 @@
 }
 
 .contacto__form-footer {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   padding-top: 0.875rem;
-  border-top: 1px solid rgb(var(--foam) / 0.14);
+  border-top: 1px solid rgb(var(--foam) / 0.22);
 }
 
 .contacto__form-legal {
   max-width: 36ch;
   font-size: 11px;
   line-height: 1.5;
-  color: rgb(var(--foam) / 0.72);
+  letter-spacing: 0.012em;
+  color: rgb(var(--foam) / 0.78);
 }
 
 .contacto__submit {
@@ -245,7 +267,9 @@
   font-family: var(--font-button);
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  // Roboto botón bold a 14px con tracking negativo se ve apretado. +0.018em
+  // es el rango "Label Large" de Material para Roboto en botones.
+  letter-spacing: 0.018em;
   cursor: pointer;
   color: rgb(var(--foam));
 }
@@ -392,19 +416,30 @@
 // Teléfono / Dirección) es estructura, no tag. Sentence case + peso 600 +
 // foam pleno para que se lea como "headline del card". El valor de abajo
 // se aliviana en mono (Times) para que el peso jerárquico viva en el label.
+// Labels y values de los info-cards — mismo principio que los labels del form:
+// Roboto 500 (Medium real, no 600 sintetizado), tamaño más grande, tracking
+// abierto, y z-index por encima del ruido del glass-core.
 .info-card__label {
+  position: relative;
+  z-index: 2;
   font-family: var(--font-display);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: var(--tracking-tight);
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
   color: rgb(var(--foam));
 }
 
 .info-card__value {
+  position: relative;
+  z-index: 2;
   font-family: var(--font-mono);
-  font-size: 0.95rem;
-  letter-spacing: var(--tracking-tight);
-  color: rgb(var(--foam) / 0.88);
+  // Times a 15.2px con tracking 0 se ve apretado — los caracteres serif
+  // necesitan más aire que un sans para no quedar pegados. Subimos también
+  // un poquito el tamaño para mejorar lectura del @ y los puntos.
+  font-size: 1rem;
+  letter-spacing: 0.022em;
+  color: rgb(var(--foam) / 0.92);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
