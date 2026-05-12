@@ -410,7 +410,11 @@ class LakeFish {
     const right: Vec[] = [];
     for (let i = 0; i < this.spine.length; i++) {
       const t = i / (this.spine.length - 1);
-      const w = scale * Math.sin(Math.PI * Math.pow(t, 0.55)) * (1 - 0.32 * t) * 0.85;
+      // Multiplicador subido de 0.85 → 1.0 (~+18% de grosor). Acerca la
+      // proporción largo:ancho al pez de referencia (más fusiforme,
+      // menos "gusano"). Sin cambios en la curva sin/pow, solo el factor
+      // final — la silueta sigue siendo torpedo natural.
+      const w = scale * Math.sin(Math.PI * Math.pow(t, 0.55)) * (1 - 0.32 * t) * 1.0;
       const cur = this.spine[i];
       const ahead = i < this.spine.length - 1 ? this.spine[i + 1] : cur;
       const behind = i > 0 ? this.spine[i - 1] : cur;
@@ -887,7 +891,10 @@ export class WolfLakeCanvas {
         // entre ~30-65px de largo total — claramente visibles, no
         // protagonistas. El lago ocupa ~45% del alto del hero, así que
         // peces más grandes los harían parecer "fuera de escala".
-        const baseScale = Math.max(2.5, Math.min(5.0, cw / 320));
+        // Escala bumped 2.5–5.0 → 2.9–5.7 (~+14%). Peces más grandes
+        // como en la imagen de referencia, sin cambiar la física (sólo
+        // los píxeles que el render dibuja).
+        const baseScale = Math.max(2.9, Math.min(5.7, cw / 280));
         fishes.push(new LakeFish(start, {
           segments: 11,
           segLen: baseScale * 0.95,
@@ -911,7 +918,10 @@ export class WolfLakeCanvas {
     //   spine '#b8c8ff' (G=200, B=255) — muy claro, casi lavender
     //   body  '#1648dc' (G=72,  B=220) — azul profundo
     //   glow  '#0d4dff' (G=77,  B=255) — saturado eléctrico
-    const cursorBase = Math.max(2.8, Math.min(5.4, cw / 290));
+    // Cursor base bumped 2.8–5.4 → 3.2–6.1 (~+13%). El pez del cursor
+    // sigue siendo el "principal" (1.08× sobre cursorBase), un poco más
+    // grande que los ambientales como antes.
+    const cursorBase = Math.max(3.2, Math.min(6.1, cw / 260));
     const cursorFish = new LakeFish(
       { x: cw * 0.55, y: ch * 0.85 },
       {
