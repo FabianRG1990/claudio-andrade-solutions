@@ -1,7 +1,8 @@
 // =============================================================================
-// WolfSky — 40 estrellas titilando sobre el cielo del hero.
-// Núcleo blanco + halo box-shadow tenue. Animación fade in/out con apagado
-// total entre ciclos.
+// WolfSky — 30 estrellas titilando sobre el cielo del hero.
+// Núcleo blanco + halo box-shadow tenue. Animación que pulsa entre una
+// baseline visible (≈35 % del pico) y el pico — la estrella nunca se
+// apaga del todo, sólo modula su brillo sobre un mínimo siempre presente.
 // =============================================================================
 
 :host {
@@ -34,10 +35,14 @@
   height: var(--size, 2px);
   border-radius: 50%;
   background: rgb(245 250 255);
+  // Halo apilado, deliberadamente chico. Radio total ~4 px — el ojo lee
+  // "estrella tenue", no "punto de luz que pulsa grande". El pulso se
+  // percibe por la baseline → pico de la opacidad, no por crecimiento
+  // visual del halo.
   box-shadow:
-    0 0 1.5px 0 rgb(225 240 255 / 0.7),
-    0 0 4px 0 rgb(190 215 255 / 0.35),
-    0 0 8px 1px rgb(160 195 245 / 0.12);
+    0 0 1px 0 rgb(225 240 255 / 0.65),
+    0 0 2.5px 0 rgb(190 215 255 / 0.28),
+    0 0 5px 0 rgb(160 195 245 / 0.10);
   transform: translate(-50%, -50%);
   opacity: 0;
   // ease-in-out → la entrada y salida son suaves, no abruptas. Período
@@ -47,25 +52,20 @@
 }
 
 // Curva del titileo:
-//   0 % .. 15 %   : apagada (opacidad 0). La estrella "no existe" un rato.
-//   15 % .. 50 %  : sube hasta el pico.
-//   50 % .. 85 %  : baja de vuelta a 0.
-//   85 % .. 100 % : apagada de nuevo.
-// El plateau de oscuridad al inicio/fin (combinado con los períodos coprimos
-// y los delays desfasados) hace que en cualquier instante haya estrellas
-// completamente apagadas y otras en cualquier punto del fade — el cielo
-// nunca se siente "todo encendido" ni "todo apagado".
+//   0 % y 100 % : baseline (≈35 % del pico). La estrella siempre está ahí,
+//                 dim como las pintadas en el poster — no se desvanece.
+//   50 %        : pico de brillo individual de la estrella.
+// El cycle es un simple "respirar" entre baseline y pico, ease-in-out.
+// Con períodos coprimos por estrella + delays desfasados, en cualquier
+// instante hay estrellas en valle, otras subiendo, otras en pico, otras
+// bajando — el cielo se siente vivo sin que ninguna desaparezca.
 @keyframes sky-twinkle {
   0%,
-  15% {
-    opacity: 0;
+  100% {
+    opacity: calc(var(--peak, 0.7) * 0.35);
   }
   50% {
     opacity: var(--peak, 0.7);
-  }
-  85%,
-  100% {
-    opacity: 0;
   }
 }
 

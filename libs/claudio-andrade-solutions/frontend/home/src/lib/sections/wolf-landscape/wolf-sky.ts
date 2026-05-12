@@ -29,7 +29,7 @@ interface Star {
 const PERIODS = [4.7, 5.3, 6.1, 6.9, 7.7, 8.3];
 
 /**
- * WolfSky — capa decorativa con 40 estrellas que titilan sobre el cielo
+ * WolfSky — capa decorativa con 30 estrellas que titilan sobre el cielo
  * del hero. Posiciones generadas determinísticamente desde el índice
  * (mismo resultado SSR/CSR, sin flash de re-position en hidratación).
  *
@@ -38,13 +38,15 @@ const PERIODS = [4.7, 5.3, 6.1, 6.9, 7.7, 8.3];
  *     MK6, encima del horizonte/skyline y de las copas de los árboles.
  *   • X 8-92 % — los árboles laterales recortan los bordes del cielo,
  *     así que dejamos margen para no pintar sobre follaje.
- *   • Tamaño 1.8-3 px — un toque más grandes que las pintadas en el
- *     poster para que se lean como "twinkling encima", no como copias.
+ *   • Tamaño 1.2-1.8 px — pequeñas, mismo orden de magnitud que las
+ *     estrellas pintadas en el poster. Al pulsar no se hinchan: el ojo
+ *     debe leer "esa estrella brilló", no "apareció un punto grande".
  *   • Pico de opacidad variado 0.65-0.95 — naturalismo: en un cielo real
  *     no todas las estrellas brillan igual.
- *   • Animación fade in → pico → fade out → 0 puro. El "apagado" es total
- *     entre ciclos: la estrella desaparece y vuelve, no oscila sobre un
- *     fondo siempre encendido.
+ *   • Animación fade in → pico → fade out → BASELINE (no a 0). El valle
+ *     queda en ~35 % del pico de cada estrella, así "apagada" sigue
+ *     visible como las estrellas pintadas. El twinkle suma luz sobre
+ *     esa baseline, no aparece y desaparece.
  *   • ease-in-out + períodos coprimos 4.7-8.3 s + delays desfasados →
  *     nunca se sincronizan en pantalla, parece cielo vivo.
  *
@@ -77,7 +79,7 @@ const PERIODS = [4.7, 5.3, 6.1, 6.9, 7.7, 8.3];
 export class WolfSky {
   protected readonly stars = computed<Star[]>(() => {
     const out: Star[] = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 30; i++) {
       // PRNG determinístico por índice — multiplicadores primos para
       // que la distribución se sienta uniforme sin patrón visible.
       const a = (i * 137 + 17) % 1000;
@@ -96,10 +98,9 @@ export class WolfSky {
         // ~20-25 %, así que cualquier estrella debajo de 18 % cae sobre
         // árboles, edificios o reflejos en el lago.
         y: 1 + (b / 1000) * 17,
-        // 1.8-3 px de núcleo. Un toque más grandes que las estrellas
-        // pintadas del poster para que el twinkle se lea como capa
-        // animada por encima, no como copia que se confunde con el fondo.
-        size: 1.8 + (c / 1000) * 1.2,
+        // 1.2-1.8 px de núcleo. Pequeñas como las pintadas del poster —
+        // al pulsar el halo se nota, pero el punto en sí no se hincha.
+        size: 1.2 + (c / 1000) * 0.6,
         // 0.65-0.95 — pico variado. Subido respecto a la versión MK3
         // porque el cielo de MK6 ya trae estrellas pintadas; las animadas
         // necesitan brillar un punto más para no perderse entre ellas.
