@@ -25,8 +25,9 @@ import {
  * Arquitectura:
  *   • Un único quad fullscreen, dos texturas:
  *       u_image = hero-mk6 (la imagen visible)
- *       u_mask  = lake-mask-mk3 (R-channel: 1 = agua, 0 = no agua;
- *                 con feather suave en la orilla)
+ *       u_mask  = water-mask-mk6 (R-channel: 1 = agua, 0 = no agua;
+ *                 trazada por polyline siguiendo el contorno real, con
+ *                 Gaussian blur sigma=8 px para feather natural)
  *   • El fragment shader:
  *       1. Mapea gl_FragCoord a image-UV con `object-fit: cover` math.
  *       2. Lee la máscara — si es 0, el pixel sale idéntico a la imagen
@@ -130,13 +131,23 @@ export class WolfLakeFlow {
       return;
     }
 
-    // ─── Cargar imagen del hero ─────────────────────────────────────────────
-    // La máscara del agua se calcula procedural en el shader (más abajo).
-    // No usamos lake-mask-mk3.png aquí porque ESA máscara está calibrada
-    // para los peces (zona segura más interior que el agua real).
+    // ─── Cargar imagen del hero + máscara del agua ──────────────────────────
+    // water-mask-mk6.png se generó por polyline tracing del contorno real
+    // del agua (siguiendo el filo de las rocas y los árboles), con un
+    // Gaussian blur sigma=8 px para feather suave en el borde. R-channel:
+    // 1 = agua (animar), 0 = no-agua (estático).
+    //
+    // Se usa esta máscara en vez de lake-mask-mk3.png — esta es para el
+    // flow del agua; la otra está calibrada para los peces (zona más
+    // interior). La máscara para el flow puede llegar al filo de las
+    // rocas y a la orilla.
     let heroImg: HTMLImageElement;
+    let maskImg: HTMLImageElement;
     try {
-      heroImg = await loadImage('/hero-wolf/hero-mk6.webp');
+      [heroImg, maskImg] = await Promise.all([
+        loadImage('/hero-wolf/hero-mk6.webp'),
+        loadImage('/hero-wolf/water-mask-mk6.png'),
+      ]);
     } catch (e) {
       console.warn('[WolfLakeFlow] texture load failed', e);
       return;
@@ -166,11 +177,13 @@ export class WolfLakeFlow {
     gl.enableVertexAttribArray(aPosition);
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
-    // Única textura — la imagen del hero.
+    // Texturas: unit 0 = imagen, unit 1 = máscara.
     const imgTex = createTexture(gl, heroImg, gl.LINEAR);
-    if (!imgTex) return;
+    const maskTex = createTexture(gl, maskImg, gl.LINEAR);
+    if (!imgTex || !maskTex) return;
 
     const uImage = gl.getUniformLocation(program, 'u_image');
+    const uMask = gl.getUniformLocation(program, 'u_mask');
     const uCanvasSize = gl.getUniformLocation(program, 'u_canvasSize');
     const uImageSize = gl.getUniformLocation(program, 'u_imageSize');
     const uTime = gl.getUniformLocation(program, 'u_time');
@@ -178,6 +191,9 @@ export class WolfLakeFlow {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, imgTex);
     gl.uniform1i(uImage, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, maskTex);
+    gl.uniform1i(uMask, 1);
     gl.uniform2f(uImageSize, IMG_W, IMG_H);
 
     // ─── Resize ────────────────────────────────────────────────────────────
@@ -252,6 +268,7 @@ export class WolfLakeFlow {
       io.disconnect();
       ro.disconnect();
       gl.deleteTexture(imgTex);
+      gl.deleteTexture(maskTex);
       gl.deleteBuffer(positionBuffer);
       gl.deleteProgram(program);
     };
@@ -273,21 +290,16 @@ const VERT_SHADER = /* glsl */ `
  * Fragment shader:
  *   1. canvas-UV (top-left origin) ← gl_FragCoord
  *   2. image-UV  ← cover-fit transform desde canvas-UV
- *   3. mask = procedural — water = below waterline(x), con feather suave
- *      en la transición. Las constantes WL_* abajo definen la geometría
- *      del waterline para la imagen MK6 nativa (1672×941, aspect 16:9):
- *        • De x=0 a x=WL_DROP_START_X, waterline en y=WL_LEFT_Y
- *        • De x=WL_DROP_END_X en adelante, waterline en y=WL_RIGHT_Y
- *          (siguiendo la base de las rocas del lobo a la derecha)
- *        • Transición suave entre los dos niveles con smoothstep
- *      Si se cambia la imagen del hero por otra de composición diferente,
- *      ajustar estas 4 constantes (no requiere regenerar PNG de máscara).
+ *   3. mask = sample del R-channel de water-mask-mk6.png (textura PNG
+ *      generada por polyline tracing del contorno real, con Gaussian
+ *      blur para transición suave). Si se cambia la imagen del hero
+ *      por una composición distinta, regenerar la máscara con el
+ *      script en este mismo proyecto.
  *   4. Dos samples de la imagen con offsets de UV diferentes (p1 y p2),
  *      mezclados con peso abs(p1-0.5)*2. Esto cancela el seam del wrap
  *      del período (técnica Naughty Dog "flowmap blend").
- *   5. amount = base * mask * (0.20 + 0.80 * imgUV.y) — más flujo cerca
- *      del bottom del frame (lago cerca del espectador), menos cerca
- *      del horizonte (perspectiva).
+ *   5. amount = base * mask * perspectiva — más flujo cerca del bottom
+ *      del frame (lago cerca del espectador), menos cerca del horizonte.
  *   6. flow direction = -y en image-UV → el sample sube en la textura
  *      con el tiempo → el feature visual baja en el frame.
  */
@@ -295,6 +307,7 @@ const FRAG_SHADER = /* glsl */ `
   precision mediump float;
 
   uniform sampler2D u_image;
+  uniform sampler2D u_mask;
   uniform vec2 u_canvasSize;
   uniform vec2 u_imageSize;
   uniform float u_time;
@@ -305,28 +318,6 @@ const FRAG_SHADER = /* glsl */ `
   // Magnitud máxima del UV-displacement, en unidades de image-UV (0..1).
   // 0.07 = ~7% del alto de la imagen (~66 px en imagen nativa de 941 alto).
   const float MAX_AMOUNT = 0.07;
-
-  // Waterline geometry (image-UV, top-left origin). MK6 native composition.
-  // El waterline tiene forma de "V invertida" en la zona de rocas:
-  //   • Izquierda/centro (x < 0.775): y = 0.47 (lago abierto, ciudad y árboles reflejan)
-  //   • Cuña de rocas (0.78 ≤ x ≤ 0.85): waterline BAJA (y mayor) a y = 0.58
-  //     para que las rocas que sobresalen del lobo queden arriba (no animan)
-  //   • Derecha (x ≥ 0.85): y = 0.55 (agua bajo el lobo, donde está su reflejo
-  //     y el del pilar derecho — sí anima)
-  const float WL_BASE_Y = 0.47;
-  const float WL_DIP_PEAK_Y = 0.58;  // pico del dip: aquí están las rocas
-  const float WL_RIGHT_Y = 0.55;     // nivel del agua a la derecha
-  // Rise: el waterline baja gradualmente al entrar a la zona de rocas.
-  // Empieza en x=0.55 (donde la pendiente de las rocas comienza a meterse
-  // en el lago, según el trazado del usuario) y llega al pico en x=0.78.
-  const float DIP_RISE_START_X = 0.55;
-  const float DIP_RISE_END_X = 0.78;
-  // Fall: el waterline sube gradualmente hasta llegar al lado derecho
-  const float DIP_FALL_START_X = 0.78;
-  const float DIP_FALL_END_X = 0.85;
-  // Feather del waterline (cuánto se atenúa el flow cerca del borde).
-  const float WL_FEATHER_UP = 0.01;
-  const float WL_FEATHER_DOWN = 0.025;
 
   void main() {
     // canvas-UV con origen TOP-LEFT (mismo sistema que CSS/HTML).
@@ -363,40 +354,17 @@ const FRAG_SHADER = /* glsl */ `
       return;
     }
 
-    // ─── Máscara procedural del agua ──────────────────────────────────────
-    // Waterline en forma de "V invertida": base en y=0.47, sube rápido a
-    // y=0.58 en la cuña de rocas, baja gradualmente a y=0.55 en el lado
-    // derecho. Arriba del waterline (en y menor) → no anima; abajo → anima.
-    float waterlineY = WL_BASE_Y;
-    waterlineY += smoothstep(DIP_RISE_START_X, DIP_RISE_END_X, imgUV.x) * (WL_DIP_PEAK_Y - WL_BASE_Y);
-    waterlineY -= smoothstep(DIP_FALL_START_X, DIP_FALL_END_X, imgUV.x) * (WL_DIP_PEAK_Y - WL_RIGHT_Y);
-    // mask = 0 arriba del waterline, 1 abajo, con feather suave alrededor.
-    float mask = smoothstep(
-      waterlineY - WL_FEATHER_UP,
-      waterlineY + WL_FEATHER_DOWN,
-      imgUV.y
-    );
+    // ─── Máscara del agua: textura PNG con feather Gaussiano ─────────────
+    // Trazada por polyline siguiendo el contorno real de las rocas y la
+    // orilla; el blur sigma=8 px da una transición agua↔roca naturalmente
+    // suave, sin el "salto" visible que tenía la versión procedural.
+    float mask = texture2D(u_mask, imgUV).r;
 
-    // Flow amount con perspectiva. La versión anterior (0.20 + 0.80*imgUV.y)
-    // dejaba ~0.58 de flujo JUSTO en el waterline, produciendo el efecto
-    // "agua derritiéndose en capas" en la franja superior del lago: el
-    // reflejo del skyline de la ciudad (alto contraste: luces puntuales
-    // contra cielo negro) se desplaza hacia abajo y se lee como goterones
-    // verticales en lugar de oleaje natural.
-    //
-    // Fix: el flujo arranca en CERO exactamente en el waterline y se mantiene
-    // muy calmado en la franja del reflejo del horizonte (primeros ~5-8 %
-    // de la profundidad del lago), después acelera al ratio original. El
-    // resto del lago queda sin tocar — al frente del lago el flujo sigue
-    // siendo 1.0 (donde ya se veía bien).
-    //
-    // smoothstep(0.05, 0.20, t) — flow=0 hasta el 5 % bajo el waterline,
-    // ramp en los siguientes 15 %, luego full strength.
-    float distFromWL = max(0.0, imgUV.y - waterlineY);
-    float lakeDepth = max(0.001, 1.0 - waterlineY);
-    float t = clamp(distFromWL / lakeDepth, 0.0, 1.0);
-    float horizonCalm = smoothstep(0.05, 0.20, t);
-    float perspective = horizonCalm * (0.20 + 0.80 * imgUV.y);
+    // Flow amount con perspectiva: más flujo cerca del bottom del frame
+    // (lago cerca del espectador), menos cerca del horizonte. La máscara
+    // ya provee transición suave en el borde con las rocas (Gaussian blur),
+    // así que no necesitamos atenuación adicional en el waterline.
+    float perspective = 0.20 + 0.80 * imgUV.y;
     float amount = MAX_AMOUNT * mask * perspective;
 
     // Dos fases offset por 0.5 del período. Cada una avanza linealmente
@@ -440,6 +408,9 @@ function createShader(
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader);
+    const kind = type === gl.VERTEX_SHADER ? 'vertex' : 'fragment';
+    console.warn(`[WolfLakeFlow] ${kind} shader compile error:`, log);
     gl.deleteShader(shader);
     return null;
   }
