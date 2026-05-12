@@ -316,8 +316,11 @@ const FRAG_SHADER = /* glsl */ `
   // pero claramente visible. Si se quiere más lento subir a 4.5-5.
   const float PERIOD = 3.5;
   // Magnitud máxima del UV-displacement, en unidades de image-UV (0..1).
-  // 0.07 = ~7% del alto de la imagen (~66 px en imagen nativa de 941 alto).
-  const float MAX_AMOUNT = 0.07;
+  // 0.10 = ~10% del alto de la imagen (~94 px en imagen nativa de 941 alto).
+  // Combinado con la curva de perspectiva (depth^1.7), el horizonte queda
+  // en ~5% de este valor (~5 px, imperceptible) y el frente recibe la
+  // amplitud completa.
+  const float MAX_AMOUNT = 0.10;
 
   void main() {
     // canvas-UV con origen TOP-LEFT (mismo sistema que CSS/HTML).
@@ -383,7 +386,11 @@ const FRAG_SHADER = /* glsl */ `
     // y=1.0 (foreground). Cuadrado para que el fondo casi no se mueva
     // y el frente reciba la amplitud máxima.
     float depth = clamp((imgUV.y - 0.30) / 0.70, 0.0, 1.0);
-    float perspective = depth * depth;
+    // depth^1.7: el horizonte (depth bajo) sigue casi quieto, pero el
+    // cuerpo medio y el frente reciben más amplitud que con depth² puro.
+    // Esto le da más vida a la zona donde se ve el agua de cerca, sin
+    // tocar la lejanía perspectivada.
+    float perspective = pow(depth, 1.7);
     float amount = MAX_AMOUNT * maskCurve * perspective;
 
     // Dos fases offset por 0.5 del período. Cada una avanza linealmente
