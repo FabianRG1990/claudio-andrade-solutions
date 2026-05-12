@@ -17,7 +17,8 @@ export type Product = {
   timeline: string;      // timeline estimado (2-4 sem, 12+ sem...)
   deliverables: number;  // cantidad de entregables / módulos
   coverage: string;      // cobertura / escala
-  description: string;
+  tagline: string;       // resumen corto (1 línea) — usado en cards del home
+  description: string;   // descripción extendida — usada en /productos
   accent: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
   image: string;
 };
@@ -30,6 +31,7 @@ export const products: Product[] = [
     timeline: '2 — 4 semanas',
     deliverables: 14,
     coverage: '360°',
+    tagline: 'Stack, flujos y procesos auditados con mapa accionable.',
     description:
       'Diagnóstico completo del stack, los flujos y los procesos. Detectamos qué automatizar, qué reescribir y qué dejar quieto — con un mapa accionable y prioridades claras.',
     accent: 'lagoon',
@@ -42,6 +44,7 @@ export const products: Product[] = [
     timeline: '12 — 24 semanas',
     deliverables: 32,
     coverage: '∞',
+    tagline: 'Plataformas internas y ERPs en Angular, Nx y Firebase.',
     description:
       'Plataformas internas, ERPs ligeros, tableros de operaciones. Angular + Nx + Firebase, monorepo escalable, despliegue continuo. Construidos para crecer con la empresa.',
     accent: 'kelp',
@@ -54,6 +57,7 @@ export const products: Product[] = [
     timeline: '4 — 10 semanas',
     deliverables: 18,
     coverage: 'Multi-modelo',
+    tagline: 'Agentes Claude y RAG sobre tu documentación interna.',
     description:
       'Agentes Claude, RAG sobre documentación interna, asistentes de soporte, generación de contenido y automatización de tareas de soporte. IA integrada a tu proceso real.',
     accent: 'bioluminescent',
@@ -66,6 +70,7 @@ export const products: Product[] = [
     timeline: '6 — 12 semanas',
     deliverables: 22,
     coverage: 'Retail Link',
+    tagline: 'Retail Link, OTIF, scorecards y conciliación automatizada.',
     description:
       'Aplicaciones específicas para proveedores: integración con Retail Link, OTIF, scorecards, forecast assist y conciliación automática. Una sola construcción, escala por SKU.',
     accent: 'coral',
@@ -78,6 +83,7 @@ export const products: Product[] = [
     timeline: '3 — 6 semanas',
     deliverables: 9,
     coverage: 'Lighthouse 95+',
+    tagline: 'Páginas editoriales con animaciones canvas y rendimiento auditado.',
     description:
       'Páginas de marca con presupuesto editorial — animaciones canvas, glass-morphism real, rendimiento auditado. La que estás viendo es de las nuestras.',
     accent: 'lagoon',
@@ -90,6 +96,7 @@ export const products: Product[] = [
     timeline: '4 — 8 semanas',
     deliverables: 16,
     coverage: 'n8n · Zapier · Make',
+    tagline: 'Pipelines y ETL ligeros que conectan tus herramientas.',
     description:
       'Pipelines que conectan tus herramientas — ETL ligeros, sincronización entre sistemas, alertas inteligentes. Reducimos trabajo manual sin reemplazar lo que ya funciona.',
     accent: 'kelp',
