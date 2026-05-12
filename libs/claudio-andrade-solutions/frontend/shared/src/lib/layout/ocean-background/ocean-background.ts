@@ -386,16 +386,16 @@ export class OceanBackground {
     let lastT = performance.now();
 
     // Pausa por scroll + visibilidad. La regla `cubierto por hero` SOLO aplica
-    // en home: el hero tiene bg-mesh-deep opaco y los peces NO se ven mientras
-    // el usuario lee el primer pliegue → pausamos para ahorrar GPU. En las
-    // demás rutas el page-header solo cubre los primeros ~500px y abajo del
-    // header los peces son visibles desde el primer scroll-Y, así que el
-    // canvas debe estar animando desde el momento en que la página carga —
-    // si pausamos hasta `scrollY > 0.7vh`, el usuario ve los peces congelados
-    // en la zona del depth-transition y siente que es una imagen estática.
-    // La fluidez del background es prioridad sobre el ahorro GPU en internas.
+    // en home Y SOLO en scrollY === 0: el hero (100vh, poster opaco) cubre el
+    // viewport completo únicamente en su sitio inicial. Apenas el usuario
+    // mueve el scroll 1px, el hero (en flujo normal) se desplaza hacia arriba
+    // y la franja inferior del viewport revela el canvas fijo — los peces
+    // deben estar animando desde ese mismo frame. Un umbral más amplio (p.ej.
+    // 0.7vh) mantiene los peces congelados durante el 70% del scroll del
+    // hero, leyéndose como imagen estática justo antes de la transición al
+    // siguiente segmento. La fluidez del background gana al ahorro GPU.
     let isHomePage = this.router.url === '/' || this.router.url.startsWith('/?');
-    let isCovered = isHomePage && window.scrollY < window.innerHeight * 0.7;
+    let isCovered = isHomePage && window.scrollY === 0;
     let isTabVisible = !document.hidden;
     const isActive = (): boolean => !isCovered && isTabVisible;
 
@@ -421,9 +421,9 @@ export class OceanBackground {
       .subscribe((event) => {
         const url = event.urlAfterRedirects;
         isHomePage = url === '/' || url.startsWith('/?');
-        // Reevaluar covered: en internas nunca está covered; en home depende
-        // del scrollY actual.
-        isCovered = isHomePage && window.scrollY < window.innerHeight * 0.7;
+        // Reevaluar covered: en internas nunca está covered; en home solo si
+        // estamos exactamente en scrollY=0 (hero cubriendo todo el viewport).
+        isCovered = isHomePage && window.scrollY === 0;
         if (isActive()) start();
         else stop();
       });
@@ -438,7 +438,7 @@ export class OceanBackground {
       requestAnimationFrame(() => {
         scrollScheduled = false;
         const wasCovered = isCovered;
-        isCovered = window.scrollY < window.innerHeight * 0.7;
+        isCovered = window.scrollY === 0;
         if (wasCovered === isCovered) return;
         if (isActive()) start();
         else stop();
