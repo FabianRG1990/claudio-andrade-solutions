@@ -159,18 +159,23 @@ class LakeFish {
       b.y = a.y + (ddy / d) * this.segLen;
     }
 
-    // Onda lateral — solo activa con velocidad. Antes el cuerpo
-    // ondulaba aún quieto (`+ 0.3`) y se mecía hasta 5px lateral con
-    // velocidad alta — el resultado era un pez "balanceándose como en
-    // las olas", efecto que el usuario rechaza. Ahora idle = 0 (cuerpo
-    // recto al detenerse) y la amplitud por velocidad es muy chica
-    // (`speed * 0.10` cap 0.8px). Los peces ahora glidean con cuerpo
-    // casi recto y solo la cola sigue dando vida.
+    // Onda lateral — amplitud restaurada al valor original, PERO
+    // confinada al tramo final del espinazo (la cola). El usuario rechazó
+    // el balanceo del cuerpo entero, pero pidió devolver el movimiento
+    // de la cola. Solución: cambiar la curva de amplitud-por-segmento
+    // de `t²` (rampa suave desde la cabeza) a `t^6` (concentrada en los
+    // últimos 2-3 segmentos). Resultado por segmento (11 segs):
+    //   i=5 (mitad):       t=0.5 → t^6 = 0.016  (rígido)
+    //   i=8 (inicio cola): t=0.8 → t^6 = 0.262  (mild)
+    //   i=10 (cola tip):   t=1.0 → t^6 = 1.000  (full)
+    // El cuerpo queda recto al gliding; solo la cola ondula con la
+    // amplitud original (idle 0.3, hasta ~5.3 con velocidad alta).
     this.phase += dt * (3.5 + speed * 0.6);
-    const baseAmp = Math.min(speed * 0.10, 0.8);
+    const baseAmp = Math.min(speed * 0.45, 5) + 0.3;
     for (let i = 2; i < this.spine.length; i++) {
       const t = i / (this.spine.length - 1);
-      const wave = Math.sin(this.phase - t * 4.2) * baseAmp * t * t;
+      const tailMask = Math.pow(t, 6);
+      const wave = Math.sin(this.phase - t * 4.2) * baseAmp * tailMask;
       const a = this.spine[i - 1];
       const b = this.spine[i];
       const tx = b.x - a.x;
