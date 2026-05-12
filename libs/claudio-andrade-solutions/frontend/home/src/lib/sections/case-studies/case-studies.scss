@@ -96,15 +96,22 @@
 
 .case-row__media-inner {
   position: relative;
-  // Mobile: 5/6 (un toque más square que el original 4/5 — más teaser).
-  // Desktop: 1/1 cuadrado · ≈ 20 % menos alto que el 4/5 de productos.
-  // Cuadrado funciona porque las capturas mobile (header arriba) siguen
-  // mostrando la zona crítica con object-position: center top.
+  // Mobile (< 768): 5/6 portrait — los teasers se leen como cards
+  // dominantes de la pila.
+  // Tablet (768-1023): 16/10 landscape — en iPad portrait 5/6 hacía la
+  // imagen 920px de alto, robando la mitad de la página. 16/10 deja la
+  // imagen como una "tira" sobre el texto, proporcionada al viewport.
+  // Desktop (≥ 1024): 1/1 cuadrado — el grid 2-col aplana el contenedor
+  // y el cuadrado queda equilibrado contra la columna de texto.
   aspect-ratio: 5 / 6;
   overflow: hidden;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
   background: rgb(var(--tide));
   isolation: isolate;
+
+  @media (min-width: 768px) {
+    aspect-ratio: 16 / 10;
+  }
 
   @media (min-width: 1024px) {
     aspect-ratio: 1 / 1;

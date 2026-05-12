@@ -4,7 +4,14 @@
     <meta charset="utf-8" />
     <title>Claudio Andrade Solutions — Soluciones tecnológicas a medida</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- viewport-fit=cover habilita `env(safe-area-inset-*)` en iOS para que
+         el nav fijo y los CTAs respeten notch / dynamic island / home indicator
+         (iPhone X+). Sin este flag, los insets devuelven 0 y el contenido se
+         puede meter bajo el notch en landscape. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta
       name="description"
       content="Claudio Andrade Solutions es una consultora tecnológica enfocada en soluciones a medida: auditorías, sistemas, integraciones de IA, apps verticales y automatización para empresas que ya tienen tracción."

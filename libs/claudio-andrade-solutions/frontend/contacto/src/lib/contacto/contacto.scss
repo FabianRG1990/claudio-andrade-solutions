@@ -29,6 +29,16 @@
     padding-block: 6.5rem 2.5rem;
   }
 
+  // Landscape corto (phone/tablet girado, height ≤ 540px): el "single-screen"
+  // de desktop apretaba el form. Devolvemos el flow vertical scrolleable y
+  // recortamos paddings para no perder superficie útil.
+  @media (orientation: landscape) and (max-height: 540px) {
+    height: auto;
+    min-height: 0;
+    display: block;
+    padding-block: clamp(4.5rem, 3.5rem + 2vw, 6rem) clamp(2rem, 1.5rem + 1vw, 2.5rem);
+  }
+
   &::after {
     content: '';
     pointer-events: none;

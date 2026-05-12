@@ -25,10 +25,20 @@
   margin-inline: auto;
   max-width: 80rem;
   // Padding vertical recortado al mínimo legible.
-  padding: 1.25rem 1.5rem;
+  // Padding inline + bottom: respetan safe-area-inset para que en iOS con
+  // notch landscape y home indicator inferior el footer no quede tapado.
+  padding:
+    1.25rem
+    max(1.5rem, env(safe-area-inset-right))
+    max(1.25rem, calc(0.75rem + env(safe-area-inset-bottom)))
+    max(1.5rem, env(safe-area-inset-left));
 
   @media (min-width: 1024px) {
-    padding: 1.5rem 2rem;
+    padding:
+      1.5rem
+      max(2rem, env(safe-area-inset-right))
+      max(1.5rem, calc(1rem + env(safe-area-inset-bottom)))
+      max(2rem, env(safe-area-inset-left));
   }
 }
 
@@ -188,11 +198,26 @@
 }
 
 .footer__nav-link {
+  // Padding-block 0.5rem (= 8px arriba/abajo) + line-height ~20px del texto
+  // deja un hit area de ~36px de alto — cumple WCAG 2.2 SC 2.5.8 (24×24
+  // mínimo) y se acerca al objetivo iOS HIG / WCAG 2.5.5 AAA (44×44). Es
+  // crítico en mobile donde estos links se tocan con el dedo. En desktop
+  // (pointer: fine) el padding queda como respiro visual.
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0;
   color: rgb(var(--foam) / 0.75);
   transition: color 500ms;
+  touch-action: manipulation;
 
   &:hover {
     color: rgb(var(--lagoon));
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--lagoon));
+    outline-offset: 4px;
+    border-radius: 4px;
   }
 }
 

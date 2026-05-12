@@ -27,6 +27,17 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+
+  // Landscape corto (phone girado, height ≤ 540px): el 100dvh + padding-top
+  // 8rem dejaba el título empujado fuera del viewport. Soltamos el min-height
+  // y achicamos el padding superior para que el contenido respire en la
+  // franja disponible. La sección crece naturalmente con el contenido
+  // (sigue justify-center, pero ahora sobre auto height).
+  @media (orientation: landscape) and (max-height: 540px) {
+    min-height: auto;
+    padding-top: clamp(5rem, 4rem + 2vw, 7rem);
+    padding-bottom: clamp(2.5rem, 2rem + 2vw, 4rem);
+  }
 }
 
 .page-header__bubbles {

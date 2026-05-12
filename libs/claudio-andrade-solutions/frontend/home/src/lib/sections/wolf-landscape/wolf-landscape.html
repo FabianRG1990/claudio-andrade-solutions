@@ -1,50 +1,62 @@
 <section class="hero">
-  <!-- Fondo: imagen estática MK6 (lago + lobo wireframe + skyline + cielo
-       estrellado). El `<picture>` negocia formato por compatibilidad del
-       navegador: AVIF (~60 KB) → WebP (~135 KB) → PNG (~1.8 MB fallback).
-       Sobre esta imagen viven dos capas de animación:
-         1. `<app-wolf-lake-flow>` — canvas WebGL que aplica un flow map
-            al área del agua, desplazando la textura existente hacia abajo
-            del frame (hacia el espectador). No genera olas nuevas ni
-            eventos — solo anima el patrón que la imagen ya pinta. Si
-            falla WebGL o el usuario pidió reduced-motion, queda la
-            imagen estática.
-         2. `<app-wolf-sky>` — 40 estrellas CSS que titilan sobre el cielo
-            pintado en el poster (no genera estrellas nuevas, solo añade
-            vida a las que ya existen). -->
-  <picture>
-    <source srcset="hero-wolf/hero-mk6.avif" type="image/avif" />
-    <source srcset="hero-wolf/hero-mk6.webp" type="image/webp" />
-    <img
-      class="hero__bg"
-      src="hero-wolf/hero-mk6.png"
-      alt=""
-      aria-hidden="true"
-      fetchpriority="high"
-      decoding="async"
-    />
-  </picture>
+  <!-- `.hero__scene` envuelve la imagen + todas las capas animadas. Es la
+       pieza clave del responsive del hero:
+         · En viewports angostos (< 1024px), el wrapper tiene aspect-ratio
+           1672/941 (= ratio nativo del hero-mk6.png), así la imagen se
+           muestra COMPLETA sin recorte — wolf incluido. El contenido
+           editorial fluye debajo.
+         · En viewports anchos (≥ 1024px), el wrapper se vuelve `position:
+           absolute; inset: 0;` cubriendo todo el hero como fondo full-bleed
+           (comportamiento original). El aspect-ratio del viewport en
+           desktop coincide visualmente con el de la imagen, así que el
+           `object-fit: cover` apenas recorta.
+       Los tres componentes interactivos (`<app-wolf-lake-flow>`,
+       `<app-wolf-sky>`, `<app-wolf-lake-canvas>`) son `position: absolute;
+       inset: 0;` por dentro — siguen automáticamente el rect del `.hero__scene`
+       y el ResizeObserver en cada uno mantiene su canvas sincronizado al
+       tamaño del wrapper. La función `imgUVToCanvasUV` que mapea UV-de-imagen
+       a coordenadas-de-canvas asume `object-fit: cover` y funciona idéntico
+       cuando el contenedor y la imagen comparten aspect-ratio (caso mobile)
+       como cuando el contenedor es más ancho (caso desktop). -->
+  <div class="hero__scene">
+    <!-- Imagen estática MK6 (lago + lobo wireframe + skyline + cielo
+         estrellado). El `<picture>` negocia formato por compatibilidad del
+         navegador: AVIF (~60 KB) → WebP (~135 KB) → PNG (~1.8 MB fallback). -->
+    <picture>
+      <source srcset="hero-wolf/hero-mk6.avif" type="image/avif" />
+      <source srcset="hero-wolf/hero-mk6.webp" type="image/webp" />
+      <img
+        class="hero__bg"
+        src="hero-wolf/hero-mk6.png"
+        alt=""
+        aria-hidden="true"
+        fetchpriority="high"
+        decoding="async"
+      />
+    </picture>
 
-  <!-- Capa de agua animada: flow map WebGL. Se monta encima de la imagen,
-       fade-in cuando todo está listo. Si el render falla por cualquier
-       motivo (no WebGL, prefers-reduced-motion, error de carga), la
-       imagen estática debajo sigue visible. -->
-  <app-wolf-lake-flow />
+    <!-- Capa de agua animada: flow map WebGL. Se monta encima de la imagen,
+         fade-in cuando todo está listo. Si el render falla por cualquier
+         motivo (no WebGL, prefers-reduced-motion, error de carga), la
+         imagen estática debajo sigue visible. -->
+    <app-wolf-lake-flow />
 
-  <!-- Capa de cielo: detecta las estrellas reales pintadas en el poster y
-       coloca halos suaves encima que titilan en aditivo (mix-blend: screen).
-       No crea estrellas nuevas — sólo le añade vida a las que ya existen. -->
-  <app-wolf-sky />
+    <!-- Capa de cielo: detecta las estrellas reales pintadas en el poster y
+         coloca halos suaves encima que titilan en aditivo (mix-blend: screen).
+         No crea estrellas nuevas — sólo le añade vida a las que ya existen. -->
+    <app-wolf-sky />
 
-  <!-- Canvas interactivo: peces ambientales + pez del cursor con física
-       de profundidad, todos clamped al polígono del lago. Loop infinito
-       (la simulación corre, no termina). Sin animación si el usuario
-       pidió prefers-reduced-motion. -->
-  <app-wolf-lake-canvas />
+    <!-- Canvas interactivo: peces ambientales + pez del cursor con física
+         de profundidad, todos clamped al polígono del lago. Loop infinito
+         (la simulación corre, no termina). Sin animación si el usuario
+         pidió prefers-reduced-motion. -->
+    <app-wolf-lake-canvas />
 
-  <!-- Cierre inferior — funde la base del hero al abismo puro para que la
-       siguiente sección no muestre una costura horizontal. -->
-  <div class="hero__seam" aria-hidden="true"></div>
+    <!-- Cierre inferior — funde la base de la escena al abismo puro para
+         que el contenido editorial (mobile) o la siguiente sección (desktop)
+         no muestre una costura horizontal. -->
+    <div class="hero__seam" aria-hidden="true"></div>
+  </div>
 
   <!-- Marco superior — solo columna izquierda. La derecha se quitó porque
        quedaba sobre la cara del lobo. -->

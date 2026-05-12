@@ -3,22 +3,66 @@
 @use 'mixins' as m;
 
 // =============================================================================
-// Hero — capítulo de apertura. Fondo: imagen estática (hero-mk2.png) que
-// ocupa toda la sección. Sobre ella vive el copy editorial. La altura es
-// 100dvh y termina con un seam que funde al abismo (#06091A).
+// Hero — capítulo de apertura. La arquitectura responsive vive en dos modos:
+//
+//   • Mobile / narrow tablet (< 1024px): el hero es un flex column. El
+//     `.hero__scene` toma su aspect-ratio del hero-mk6 (1672/941), así la
+//     imagen se muestra COMPLETA (sin recorte, con lobo, lago, ciudad y
+//     cielo visibles). Debajo fluye el contenido editorial — título, copy,
+//     CTA, wave card. El usuario ve la escena entera + scrollea al texto.
+//
+//   • Desktop / wide laptop (≥ 1024px): comportamiento original. El hero
+//     ocupa 100dvh, `.hero__scene` se vuelve `position: absolute; inset: 0;`
+//     y la imagen se hace cover. El contenido editorial flota sobre la
+//     imagen.
+//
+// El usuario pidió explícitamente: "la imagen del hero tiene que estar
+// presente en el teléfono. O sea, ocupo que la imagen del hero se haga más
+// pequeña, no que la recortes, sino que la reduzcas el tamaño y la acoples
+// a diferentes dispositivos." — el wrapper con aspect-ratio resuelve esto
+// sin necesidad de un crop portrait separado.
 // =============================================================================
 
 .hero {
   position: relative;
   isolation: isolate;
-  min-height: 100dvh;
   overflow: hidden;
   background: #06091A;
+  display: flex;
+  flex-direction: column;
+
+  // Desktop / wide: el hero ocupa el viewport entero porque el `.hero__scene`
+  // se vuelve absoluto y el contenido flota sobre la imagen.
+  @media (min-width: 1024px) {
+    min-height: 100dvh;
+  }
+}
+
+// ─── Escena (imagen + capas animadas) ────────────────────────────────────────
+// Wrapper con aspect-ratio que mantiene la imagen completa visible en mobile
+// y se transforma en background full-bleed en desktop.
+.hero__scene {
+  position: relative;
+  width: 100%;
+  // Aspect ratio nativo de `/hero-wolf/hero-mk6.png` (1672 × 941). Si en el
+  // futuro se cambia ese asset por otro tamaño, hay que actualizar este
+  // valor y los `IMG_W`/`IMG_H` en `wolf-lake-canvas.ts` y `wolf-lake-flow.ts`.
+  aspect-ratio: 1672 / 941;
+  overflow: hidden;
+
+  @media (min-width: 1024px) {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+  }
 }
 
 // ─── Fondo estático ──────────────────────────────────────────────────────────
-// La imagen cubre toda la sección (object-fit: cover) y se ancla al cuadrante
-// derecho-medio para preservar el lobo en mobile cuando el aspecto cambia.
+// `object-fit: cover` + `object-position: center` — cuando el contenedor
+// comparte aspect-ratio con la imagen (caso mobile), cover y contain producen
+// el mismo render: imagen completa sin distorsión. Cuando el contenedor es
+// más ancho (caso desktop full-bleed), cover llena pantalla con recorte
+// mínimo arriba/abajo.
 .hero__bg {
   position: absolute;
   inset: 0;
@@ -32,21 +76,31 @@
 }
 
 // ─── Cierre inferior ─────────────────────────────────────────────────────────
-// Funde la base al abismo puro para que la siguiente sección entre sin línea
-// de costura horizontal visible.
+// Funde la base de la escena al abismo puro. Vive dentro de `.hero__scene`,
+// así que en mobile cierra el banner antes del contenido editorial, y en
+// desktop cierra el hero antes de la siguiente sección. En ambos casos sin
+// línea de costura horizontal visible.
 .hero__seam {
   pointer-events: none;
   position: absolute;
   inset-inline: 0;
   bottom: 0;
   z-index: 3;
-  height: 11rem;
+  // Mobile: el banner es corto (~200px en phone 360px), así que un seam de
+  // 5rem comería el 40 % de la imagen — perderíamos parte del lago donde
+  // nadan los peces. Lo bajamos a 2.5rem para que solo el último ~20 % de
+  // la imagen reciba el degradé hacia el abismo. Desktop: 11rem original.
+  height: 2.5rem;
   background: linear-gradient(
     180deg,
     transparent 0%,
     rgb(6 9 26 / 0.55) 45%,
     #06091A 100%
   );
+
+  @media (min-width: 1024px) {
+    height: 11rem;
+  }
 }
 
 // ─── Telemetría superior ─────────────────────────────────────────────────────
@@ -57,14 +111,21 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 7rem;
+  // Top adaptado al nav (que está en `top: max(1rem, safe-area-inset-top)`
+  // con altura ~2.75rem). 4.25rem deja un respiro de ~0.5rem sobre el nav y
+  // sigue dentro del banner en mobile (banner es ~13rem en phone 360px) y
+  // bajo el nav en desktop.
+  top: max(4.25rem, calc(env(safe-area-inset-top) + 3.25rem));
   z-index: 10;
   margin-inline: auto;
   display: flex;
   max-width: 80rem;
   align-items: flex-start;
   justify-content: space-between;
-  padding-inline: var(--container-px);
+  // Padding inline respeta safe-area en iOS landscape con notch.
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 
   // Entrada escalonada — primero entra la escena (bg image + agua + cielo +
   // peces) heredando el fade-in de .app-main, luego este eyebrow superior es
@@ -79,7 +140,7 @@
     transform 700ms 700ms var(--ease-fluid);
 
   @media (min-width: 1024px) {
-    top: 8rem;
+    top: max(8rem, calc(env(safe-area-inset-top) + 7rem));
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -129,28 +190,40 @@
 }
 
 // ─── Capa principal ──────────────────────────────────────────────────────────
+// Mobile: el container fluye después del scene-banner. Padding-top corto —
+// el contenido empieza justo debajo del banner con respiro mínimo.
+// Desktop: container ocupa todo el viewport (min-height: 100dvh) y el
+// contenido se centra vertical sobre la imagen full-bleed.
 .hero__container {
   position: relative;
   z-index: 10;
   margin-inline: auto;
   display: flex;
-  min-height: 100dvh;
+  width: 100%;
   max-width: 80rem;
   flex-direction: column;
-  justify-content: center;
-  padding-top: clamp(8rem, 4rem + 12vw, 14rem);
-  padding-inline: var(--container-px);
-  padding-bottom: clamp(4rem, 2.5rem + 4vw, 8rem);
+  padding-top: clamp(2rem, 1.25rem + 3vw, 4rem);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+  padding-bottom: clamp(3rem, 2rem + 4vw, 8rem);
+
+  @media (min-width: 1024px) {
+    min-height: 100dvh;
+    justify-content: center;
+    padding-top: clamp(8rem, 4rem + 12vw, 14rem);
+  }
 }
 
 .hero__grid {
   display: grid;
-  gap: 3rem;
+  gap: 2rem;
 
   @media (min-width: 1024px) {
     grid-template-columns: 1.5fr 1fr;
     align-items: end;
     margin: 3rem 0 0 0;
+    gap: 3rem;
   }
 }
 

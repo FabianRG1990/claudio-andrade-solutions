@@ -24,10 +24,17 @@
 }
 
 // ─── Left column ─────────────────────────────────────────────────────────────
+// Sticky se activa solo a partir de 1280px. En el rango 1024-1279 (laptop
+// chica, iPad landscape, viewport intermedio) el `top: 8rem` dejaba la
+// columna izquierda muy pegada al nav y el contenido de la derecha pasaba
+// "bajo" la columna en una vertical larga — ergonómicamente confuso. Desde
+// 1280px hay aire suficiente para que el sticky se lea como ancla, no como
+// obstáculo. En tablet portrait (768px) el grid sigue 1-col, así que la
+// columna izquierda no tiene sentido sticky.
 .availability__lead {
-  @media (min-width: 1024px) {
+  @media (min-width: 1280px) {
     position: sticky;
-    top: 8rem;
+    top: max(8rem, calc(env(safe-area-inset-top) + 7rem));
   }
 }
 

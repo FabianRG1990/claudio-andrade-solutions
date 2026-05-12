@@ -60,8 +60,24 @@
   display: grid;
   gap: 1.25rem;
 
+  // Tablet portrait (iPad 768px): 3 cards apiladas dejaban media página
+  // muerta. Pasamos a 2-col con la card highlight ocupando el ancho completo
+  // como banda inferior — patrón de pricing tables de Stripe/Linear cuando
+  // hay un plan destacado.
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+
+    .engagement-card--highlight {
+      grid-column: 1 / -1;
+    }
+  }
+
   @media (min-width: 1024px) {
     grid-template-columns: repeat(3, 1fr);
+
+    .engagement-card--highlight {
+      grid-column: auto;
+    }
   }
 }
 

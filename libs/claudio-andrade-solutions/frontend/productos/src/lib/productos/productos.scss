@@ -55,13 +55,12 @@
 
 .product-row__media-inner {
   position: relative;
-  aspect-ratio: 5 / 6;
+  // 4:3 alineado al aspecto nativo de las imágenes (1448×1086).
+  // Screenshots de dashboards/UIs son inherentemente landscape — forzar
+  // portrait recortaba el encuadre central del producto.
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
-
-  @media (min-width: 1024px) {
-    aspect-ratio: 4 / 5;
-  }
 }
 
 .product-row__image {

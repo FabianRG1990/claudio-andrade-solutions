@@ -23,7 +23,11 @@
 // por el resto del sitio".
 .floating-nav-brand {
   position: absolute;
-  top: 1rem;
+  // top/padding usan max(base, env(safe-area-inset-*)) para que en notch
+  // landscape (iPhone X+) la marca baje fuera del recorte. Si el browser no
+  // soporta env() (todos los modernos lo soportan), max() ignora el valor
+  // inválido y mantiene el base.
+  top: max(1rem, env(safe-area-inset-top));
   left: 0;
   right: 0;
   // 69 — un punto debajo del rail-fixed (70) para que cualquier solapamiento
@@ -35,8 +39,11 @@
   width: 100%;
   max-width: 80rem;
   // Padding fluido — alineado al `.hero__container` para que la marca quede
-  // a la misma X que el título del hero.
-  padding-inline: var(--container-px);
+  // a la misma X que el título del hero. Suma safe-area en los lados para
+  // que en landscape iOS el contenido no se meta bajo la curva del display.
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
   // El bar deja pasar clicks por el espacio que no ocupa el brand link;
   // solo el hijo visible captura eventos (vía pointer-events: auto puntual).
   pointer-events: none;
@@ -46,7 +53,7 @@
   }
 
   @media (min-width: 1024px) {
-    top: 1.5rem;
+    top: max(1.5rem, env(safe-area-inset-top));
   }
 }
 
@@ -57,7 +64,7 @@
 // destaca solo por el hover hermoso de cada link.
 .floating-nav-rail {
   position: fixed;
-  top: 1rem;
+  top: max(1rem, env(safe-area-inset-top));
   left: 0;
   right: 0;
   // z-index 70 — arriba del .grain::before (z:60) que vive en `<body>` con
@@ -69,7 +76,9 @@
   align-items: center;
   width: 100%;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
   pointer-events: none;
 
   > * {
@@ -77,7 +86,7 @@
   }
 
   @media (min-width: 1024px) {
-    top: 1.5rem;
+    top: max(1.5rem, env(safe-area-inset-top));
   }
 
   // Entrada por boot — el rail aterriza desde arriba (-10px → 0). Delay 650ms,
@@ -300,8 +309,14 @@
   min-height: 100dvh;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 1.5rem;
-  padding-bottom: 3rem;
+  // Safe-area: el home indicator de iPhone vive en la franja inferior;
+  // sumarlo al padding-bottom evita que el último link quede tapado por el
+  // gesto bar. Los lados también respetan el inset para landscape con notch.
+  padding:
+    1.5rem
+    max(1.5rem, env(safe-area-inset-right))
+    max(3rem, calc(2rem + env(safe-area-inset-bottom)))
+    max(1.5rem, env(safe-area-inset-left));
 }
 
 .mobile-menu__list {
