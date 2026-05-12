@@ -355,17 +355,26 @@ const FRAG_SHADER = /* glsl */ `
     }
 
     // ─── Máscara del agua: textura PNG con feather Gaussiano ─────────────
-    // Trazada por polyline siguiendo el contorno real de las rocas y la
-    // orilla; el blur sigma=8 px da una transición agua↔roca naturalmente
-    // suave, sin el "salto" visible que tenía la versión procedural.
+    // Trazada por polyline siguiendo el contorno real. El blur ancho
+    // (sigma=24) provee una zona de transición de varias decenas de
+    // píxeles a cada lado de la línea.
+    //
+    // IMPORTANTE: la línea del polyline NO se mueve. Lo que se hace acá
+    // es atenuar la AMPLITUD del flujo de forma no-lineal — el mask se
+    // eleva a la cuarta antes de multiplicar por la amplitud máxima.
+    // Resultado:
+    //   • Justo en la orilla (mask≈0.5): amplitud = 0.5^4 = 6% de full,
+    //     ~3 px de desplazamiento. Imperceptible al ojo pero NO cero —
+    //     hay continuidad de movimiento con el cuerpo del lago.
+    //   • 20-30 px adentro (mask≈0.85): ~52% de full.
+    //   • Centro del lago (mask≈1.0): amplitud completa.
+    // El ojo no puede ubicar dónde "empieza" el movimiento porque la
+    // rampa es muy gradual y arranca con valores subliminales.
     float mask = texture2D(u_mask, imgUV).r;
+    float maskCurve = mask * mask * mask * mask;
 
-    // Flow amount con perspectiva: más flujo cerca del bottom del frame
-    // (lago cerca del espectador), menos cerca del horizonte. La máscara
-    // ya provee transición suave en el borde con las rocas (Gaussian blur),
-    // así que no necesitamos atenuación adicional en el waterline.
     float perspective = 0.20 + 0.80 * imgUV.y;
-    float amount = MAX_AMOUNT * mask * perspective;
+    float amount = MAX_AMOUNT * maskCurve * perspective;
 
     // Dos fases offset por 0.5 del período. Cada una avanza linealmente
     // dentro de [0..1) y wrap-ea al final. La diferencia de medio período
