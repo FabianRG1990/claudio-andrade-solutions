@@ -373,7 +373,17 @@ const FRAG_SHADER = /* glsl */ `
     float mask = texture2D(u_mask, imgUV).r;
     float maskCurve = mask * mask * mask * mask;
 
-    float perspective = 0.20 + 0.80 * imgUV.y;
+    // Perspectiva real: el lago se aleja hacia la ciudad (top del agua).
+    // Las olas/ondas en la lejanía deben verse mucho más chicas que en el
+    // frente — si todas tienen la misma amplitud en UV-space, las del
+    // fondo parecen desproporcionadamente grandes contra los features
+    // (reflejos, textura) que SÍ están perspectivados en el bitmap.
+    //
+    // depth = 0 en y=0.30 (justo arriba del waterline más alto), 1.0 en
+    // y=1.0 (foreground). Cuadrado para que el fondo casi no se mueva
+    // y el frente reciba la amplitud máxima.
+    float depth = clamp((imgUV.y - 0.30) / 0.70, 0.0, 1.0);
+    float perspective = depth * depth;
     float amount = MAX_AMOUNT * maskCurve * perspective;
 
     // Dos fases offset por 0.5 del período. Cada una avanza linealmente
