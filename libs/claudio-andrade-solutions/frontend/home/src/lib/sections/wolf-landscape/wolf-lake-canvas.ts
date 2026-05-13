@@ -344,6 +344,18 @@ class GlowFish {
   orbit: { cx: number; cy: number; rx: number; ry: number; phase: number; speed: number };
   target: Vec;
 
+  /** Posición que el pez "MIRA" durante hover. Decoupled del `target`
+   *  (que es la posición a la que el cuerpo se mueve). En modo hover el
+   *  cuerpo está anclado (target=anchor fijo) pero la cabeza yaw hacia
+   *  el cursor — esto es el patrón "predator strike post" de Naughty Dog
+   *  AI: el cuerpo queda quieto en su sitio de acecho mientras solo la
+   *  cabeza tracking. Fix del bug "target chatter" / "IK popping" cuando
+   *  el usuario mueve el cursor rápidamente sobre el pez: el cuerpo no
+   *  reacciona porque su target no cambia; la cabeza tracking absorbe
+   *  el movimiento a través de un look-target con low-pass de tau ~250ms.
+   *  En cruising mode no se usa (el kinematic usa `target` directamente). */
+  lookTarget: Vec;
+
   // Wander state (state machine: cruising → pausing → cruising; usado por applyWander)
   wanderTarget: Vec;
   wanderState: 'cruising' | 'pausing' = 'cruising';
@@ -372,6 +384,7 @@ class GlowFish {
     this.prevHeading = this.heading;
     this.orbit = opts.orbit;
     this.target = { x: start.x, y: start.y };
+    this.lookTarget = { x: start.x, y: start.y };
     this.wanderTarget = { x: opts.orbit.cx, y: opts.orbit.cy };
     // Init chain — N vértebras alineadas en línea recta detrás de la cabeza
     // (asumiendo heading inicial = facing right). chainJoints[0] está en
@@ -554,30 +567,37 @@ class GlowFish {
       // bicycle es forward-only y NO puede parar en sitio — overshoot
       // y orbita inevitable. En su lugar: position lerp hacia target
       // + heading lerp lento + sway + bob + twitch.
+      // Vector hacia el position target (anchor, frozen durante hover).
+      // El cuerpo se desplaza hacia ahí pero MUY lentamente — el anchor
+      // se setea al inicio del hover en la posición del pez, así que
+      // dxh/dyh suelen ser ~0 y la posición queda lockeada.
       const dxh = this.target.x - this.position.x;
       const dyh = this.target.y - this.position.y;
-      const tdist = Math.hypot(dxh, dyh);
 
-      // 1) Heading lerp — pez "gira la cabeza" hacia el target a rate
-      //    PROPORCIONAL a la distancia. Cuando el target está casi
-      //    encima (tdist < 30 px), el rate baja → no spin sobre el eje
+      // Vector hacia el lookTarget (cursor smoothed, separado del target
+      // de cuerpo). Esto es lo que usa el heading lerp — la cabeza
+      // tracking el cursor mientras el cuerpo queda quieto.
+      const lookDx = this.lookTarget.x - this.position.x;
+      const lookDy = this.lookTarget.y - this.position.y;
+      const lookDist = Math.hypot(lookDx, lookDy);
+
+      // 1) Heading lerp — pez "gira la cabeza" hacia el lookTarget a rate
+      //    PROPORCIONAL a la distancia. Cuando el lookTarget está casi
+      //    encima (lookDist < 30 px), el rate baja → no spin sobre el eje
       //    aunque el cursor wobblee un píxel.
       //
       //    Deadband 3 px: el bob vertical aplica un offset de ±1.5 px a
-      //    position.y cada frame, lo que genera un dyh oscilante y un
-      //    atan2 que apunta hacia arriba/abajo alternadamente. Con el
-      //    deadband viejo de 0.5 px el lerp se disparaba todo el tiempo
-      //    intentando "mirar el bob" y acumulaba drift lento (~0.003 rad
-      //    por twitch) que después de 2-3s producía el "camarón girando
-      //    sobre el eje" reportado. Con 3 px de deadband el bob queda
-      //    completamente dentro de la zona muerta y solo movimientos
-      //    reales del cursor disparan rotación.
-      if (tdist > 3) {
-        const targetAngle = Math.atan2(dyh, dxh);
+      //    position.y cada frame; con deadband de 0.5 px el lerp se
+      //    disparaba intentando "mirar el bob" y acumulaba drift que
+      //    después de 2-3s producía giro sobre el eje. Con 3 px el bob
+      //    queda en zona muerta y solo movimientos reales del cursor
+      //    disparan rotación.
+      if (lookDist > 3) {
+        const targetAngle = Math.atan2(lookDy, lookDx);
         let diff = targetAngle - this.heading;
         while (diff > Math.PI) diff -= 2 * Math.PI;
         while (diff < -Math.PI) diff += 2 * Math.PI;
-        const rate = 0.4 * Math.min(1, tdist / 30);
+        const rate = 0.4 * Math.min(1, lookDist / 30);
         const turn = Math.sign(diff) * Math.min(Math.abs(diff), rate * _dt);
         this.heading += turn;
       }
@@ -1620,6 +1640,18 @@ export class WolfLakeCanvas {
     // de station-keeping donde se pueden acumular bugs visuales sutiles.
     let cursorIdleWhileHovering = 0; // segundos
     let cursorDisengaged = false;
+
+    // Hover state — anchor (position target congelado al entrar al hover,
+    // "strike post" estilo Naughty Dog AI) y look target (smoothed cursor
+    // que la cabeza tracking). Decouple del body y head es el fix
+    // canónico de "target chatter / IK popping" cuando el cursor wigglea
+    // sobre el personaje (Octocat 404, Lusion hero scenes). El low-pass
+    // del cursor (tau ~250ms) filtra wiggles antes de que lleguen al rig.
+    let hoverAnchorX = 0;
+    let hoverAnchorY = 0;
+    let hoverLookX = 0;
+    let hoverLookY = 0;
+    let hoverStateInitialized = false;
     const onMove = (e: PointerEvent): void => {
       const rect = host.getBoundingClientRect();
       const px = e.clientX - rect.left;
@@ -2042,8 +2074,6 @@ export class WolfLakeCanvas {
       if (cursorOnWater) {
         cursorFish.glowBoostTarget = 0.85;
         if (!cursorFishEscaping) {
-          // Modo cazador — target = cursor position con smoothing rápido.
-          cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
           // Distancia y radios de hover.
           const dToCursor = Math.hypot(
             cursorFish.position.x - pointer.x,
@@ -2077,6 +2107,45 @@ export class WolfLakeCanvas {
           cursorFish.isHovering = cursorFish.isHovering
             ? (dToCursor < hoverRadiusExit && !cursorBehindFish)
             : dToCursor < hoverRadiusEnter;
+
+          // ─── Body / head decoupling (fix de "target chatter") ─────
+          // Cuando el cursor wigglea sobre el pez en hover, el chain del
+          // cuerpo persigue cada cambio y se retuerce (Naughty Dog GDC:
+          // "IK popping"). Solución canónica de tres capas:
+          //   1) Dead zone: el cuerpo se ANCLA al entrar al hover (target
+          //      congelado en la posición del pez), wiggles del cursor
+          //      no afectan position.
+          //   2) Decouple head: la cabeza yaw hacia un lookTarget separado
+          //      (usado en update() hover branch), el cuerpo no sigue.
+          //   3) Low-pass del cursor: el lookTarget lerps hacia el cursor
+          //      con tau ~250ms (rate dt*4), filtra wiggles antes del rig.
+          //
+          // En cruising mode los dos targets coinciden (heading y position
+          // usan el mismo, kinematic bicycle normal).
+          if (cursorFish.isHovering) {
+            if (!hoverStateInitialized) {
+              hoverAnchorX = cursorFish.position.x;
+              hoverAnchorY = cursorFish.position.y;
+              hoverLookX = pointer.x;
+              hoverLookY = pointer.y;
+              hoverStateInitialized = true;
+            }
+            // Body anchored — sin setTargetSmooth, asignación directa.
+            cursorFish.target.x = hoverAnchorX;
+            cursorFish.target.y = hoverAnchorY;
+            // Head tracking — low-pass del cursor (tau ~250ms).
+            const lookLerp = Math.min(1, dt * 4);
+            hoverLookX += (pointer.x - hoverLookX) * lookLerp;
+            hoverLookY += (pointer.y - hoverLookY) * lookLerp;
+            cursorFish.lookTarget.x = hoverLookX;
+            cursorFish.lookTarget.y = hoverLookY;
+          } else {
+            hoverStateInitialized = false;
+            cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
+            // En cruising, lookTarget sigue al target (no decoupling).
+            cursorFish.lookTarget.x = cursorFish.target.x;
+            cursorFish.lookTarget.y = cursorFish.target.y;
+          }
 
           // huntingBoost adaptativo: interpolación entre
           //   • matchBoost (cuando está cerca, va al ritmo del cursor)
