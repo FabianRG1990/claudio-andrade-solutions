@@ -781,7 +781,16 @@ class GlowFish {
     //    reposo el cuerpo "respira" lento (~0.16 Hz), en burst late a
     //    ~1 Hz (carangiform real swimming es ~1-3 Hz, mapeo conservador
     //    para no over-animar en pantalla).
-    const targetBodyEffort = Math.min(1, this.speed / 1.5);
+    //
+    // En modo hover (station-keeping), el pez NO se traslada pero el
+    // usuario quiere que SE VEA NADANDO en el sitio — como "remando
+    // contra corriente". Forzamos bodyEffort=0.6 (cruising sostenido)
+    // → cola ondula a ~0.64 Hz con amplitud visible. La posición sigue
+    // lockeada por el position-lerp del hover branch, así que el pez
+    // se queda donde está pero con la animación completa de nado.
+    const targetBodyEffort = this.isHovering
+      ? 0.6
+      : Math.min(1, this.speed / 1.5);
     this.bodyEffort += (targetBodyEffort - this.bodyEffort) * Math.min(1, _dt * 4);
     // Rhythm jitter — variación lenta natural del omega (~±8%) usando
     // un sin de baja frecuencia desfasado por instancia (swimPhase es
@@ -1557,6 +1566,13 @@ export class WolfLakeCanvas {
 
     // ─── Pointer tracking — clientX/Y a canvas-px
     const pointer = { active: false, x: 0, y: 0 };
+    // Velocidad del cursor smoothed (px/s). Se calcula frame a frame en
+    // el tick loop usando dt. Drives el "match speed" del pez cazador:
+    // cuando el cursor se mueve rápido, el pez también; cuando el cursor
+    // se queda quieto cerca, el pez no embiste, baja a velocidad ambiente.
+    let prevPointerX = 0;
+    let prevPointerY = 0;
+    let cursorSpeedSmoothed = 0;
     const onMove = (e: PointerEvent): void => {
       const rect = host.getBoundingClientRect();
       const px = e.clientX - rect.left;
@@ -1930,28 +1946,70 @@ export class WolfLakeCanvas {
         ? false
         : applyWallAvoidance(cursorFish, dt);
 
+      // Cursor velocity tracking — para el match-speed del pez cazador.
+      // Smoothed (lerp 0.3) para evitar spikes por pointermove con dt
+      // chiquito. Cuando pointer.active=false, decae a 0.
+      if (pointer.active) {
+        const cdx = pointer.x - prevPointerX;
+        const cdy = pointer.y - prevPointerY;
+        const rawCursorSpeed = Math.hypot(cdx, cdy) / Math.max(dt, 1e-6);
+        cursorSpeedSmoothed = cursorSpeedSmoothed * 0.7 + rawCursorSpeed * 0.3;
+      } else {
+        cursorSpeedSmoothed *= 0.85;
+      }
+      prevPointerX = pointer.x;
+      prevPointerY = pointer.y;
+
       if (cursorOnWater) {
         cursorFish.glowBoostTarget = 0.85;
-        cursorFish.huntingBoost = 1.9;
         if (!cursorFishEscaping) {
-          // Modo cazador — target = cursor position con smoothing rápido,
-          // huntingBoost=1.9 → energy constante 1.0 y speed multiplicado
-          // para perseguir como depredador.
+          // Modo cazador — target = cursor position con smoothing rápido.
           cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
-          // Hover detection con HYSTERESIS — el pez entra al hover a 14 +
-          // size*1.4 (≈45 px), pero solo sale cuando el cursor se aleja
-          // a 1.6× ese radio (≈72 px). Sin la hysteresis, microvibraciones
-          // del cursor hacían parpadear isHovering entre frames y el pez
-          // entraba/salía del station-keeping varias veces por segundo.
+          // Distancia y radios de hover.
           const dToCursor = Math.hypot(
             cursorFish.position.x - pointer.x,
             cursorFish.position.y - pointer.y,
           );
           const hoverRadiusEnter = 14 + cursorFish.size * 1.4;
           const hoverRadiusExit = hoverRadiusEnter * 1.6;
+          // Hover detection con HYSTERESIS — el pez entra al hover a ≈45 px,
+          // pero solo sale cuando el cursor se aleja a 1.6× ese radio (≈72 px).
+          // Sin la hysteresis, microvibraciones del cursor hacían parpadear
+          // isHovering entre frames y el pez entraba/salía del station-keeping
+          // varias veces por segundo.
           cursorFish.isHovering = cursorFish.isHovering
             ? dToCursor < hoverRadiusExit
             : dToCursor < hoverRadiusEnter;
+
+          // huntingBoost adaptativo: interpolación entre
+          //   • matchBoost (cuando está cerca, va al ritmo del cursor)
+          //   • sprintBoost (cuando está lejos, embiste a full)
+          // según la distancia normalizada al cursor.
+          //
+          //   distFactor = 0 cuando dToCursor < closeRadius (cerca)
+          //   distFactor = 1 cuando dToCursor > farRadius (lejos)
+          //
+          // matchBoost convierte la velocidad del cursor (px/s smoothed) a
+          // un factor del speed ambiente: si el cursor se mueve a 432 px/s
+          // (2× ambient maxSpeed de 216 px/s), matchBoost = 2.0. Min 1.0
+          // para que aún con cursor quieto el pez no quede totalmente
+          // congelado (sigue glide-ando hasta el hover). Cap 3.0 para
+          // que un swipe rápido del cursor no haga al pez teleportar.
+          const closeRadius = hoverRadiusExit; // ~72 px
+          const farRadius = 500;
+          // distFactor con curva sqrt — rampa rápido los primeros ~150 px,
+          // y satura suave hacia farRadius. Sin esto, la transición de
+          // "casi cerca" a "lejos" se sentía gradual. Ahora apenas el pez
+          // se separa unos 100 px, ya empieza a sprintar fuerte.
+          const distNorm = Math.min(1, Math.max(0, (dToCursor - closeRadius) / (farRadius - closeRadius)));
+          const distFactor = Math.sqrt(distNorm);
+          const nominalPxPerSec = 216; // 3.6 px/frame * 60 fps
+          const matchBoost = Math.max(1.0, Math.min(4.0, cursorSpeedSmoothed / nominalPxPerSec));
+          // sprintBoost = 6.0 → maxSpeed efectivo ≈ 21.6 px/frame ≈ 1300 px/s
+          // a distancia farRadius+. El pez se ve claramente "acelerando para
+          // alcanzar" cuando está lejos, no solo "moviéndose más rápido".
+          const sprintBoost = 6.0;
+          cursorFish.huntingBoost = matchBoost + distFactor * (sprintBoost - matchBoost);
         }
       } else {
         cursorFish.glowBoostTarget = 0.4;
