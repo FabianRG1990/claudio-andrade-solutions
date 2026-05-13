@@ -562,7 +562,17 @@ class GlowFish {
       //    PROPORCIONAL a la distancia. Cuando el target está casi
       //    encima (tdist < 30 px), el rate baja → no spin sobre el eje
       //    aunque el cursor wobblee un píxel.
-      if (tdist > 0.5) {
+      //
+      //    Deadband 3 px: el bob vertical aplica un offset de ±1.5 px a
+      //    position.y cada frame, lo que genera un dyh oscilante y un
+      //    atan2 que apunta hacia arriba/abajo alternadamente. Con el
+      //    deadband viejo de 0.5 px el lerp se disparaba todo el tiempo
+      //    intentando "mirar el bob" y acumulaba drift lento (~0.003 rad
+      //    por twitch) que después de 2-3s producía el "camarón girando
+      //    sobre el eje" reportado. Con 3 px de deadband el bob queda
+      //    completamente dentro de la zona muerta y solo movimientos
+      //    reales del cursor disparan rotación.
+      if (tdist > 3) {
         const targetAngle = Math.atan2(dyh, dxh);
         let diff = targetAngle - this.heading;
         while (diff > Math.PI) diff -= 2 * Math.PI;
@@ -1603,6 +1613,13 @@ export class WolfLakeCanvas {
     let prevPointerX = 0;
     let prevPointerY = 0;
     let cursorSpeedSmoothed = 0;
+    // Engagement timeout — si el pez ya alcanzó el cursor (hovering) y
+    // este se queda quieto 3 segundos, el pez "pierde interés" y vuelve
+    // a patrullaje. El flag persiste hasta que el cursor se mueva de
+    // nuevo, momento en el que se re-engancha. Esto evita estados largos
+    // de station-keeping donde se pueden acumular bugs visuales sutiles.
+    let cursorIdleWhileHovering = 0; // segundos
+    let cursorDisengaged = false;
     const onMove = (e: PointerEvent): void => {
       const rect = host.getBoundingClientRect();
       const px = e.clientX - rect.left;
@@ -1958,8 +1975,20 @@ export class WolfLakeCanvas {
       // cualquier pez ambiental. Comportamiento explícito pedido por el
       // usuario: "que no me espere ni se quede en la animación de que
       // me esté siguiendo".
+      //
+      // Edge gutter — ~8 px (≈0.5rem) en los bordes izquierdo y derecho
+      // del canvas. Si el cursor entra en esa franja, lo tratamos como
+      // off-water aunque el mask diga lo contrario. Esto evita bugs
+      // visuales cuando el cursor se acerca demasiado al borde de la
+      // pantalla (o sale por el costado): el pez deja de perseguir y
+      // vuelve a patrullaje en lugar de quedarse brincando contra una
+      // orilla geométrica del canvas. Análogo al comportamiento de
+      // arriba/abajo (mask < 0.35).
+      const edgeGutterPx = 8;
+      const cursorInEdgeGutter = pointer.x < edgeGutterPx
+        || pointer.x > cw - edgeGutterPx;
       let cursorOnWater = false;
-      if (pointer.active) {
+      if (pointer.active && !cursorInEdgeGutter && !cursorDisengaged) {
         const iuv = canvasUVToImgUV({ x: pointer.x / cw, y: pointer.y / ch }, cw, ch, IMG_W, IMG_H);
         if (sampleMask(mask, iuv.x, iuv.y) > 0.35) {
           cursorOnWater = true;
@@ -1989,6 +2018,26 @@ export class WolfLakeCanvas {
       }
       prevPointerX = pointer.x;
       prevPointerY = pointer.y;
+
+      // Engagement state — el pez "pierde interés" cuando lleva ≥ 3s en
+      // hover y el cursor sigue inmóvil. Threshold de 25 px/s para
+      // "moving" — debajo de eso el cursor está esencialmente quieto
+      // (smoothing tiene tau ~50ms así que movimientos reales lo elevan
+      // bien por encima). Mientras hovering+disengaged se mantiene en
+      // false, sumamos dt; al pasar 3s flippeamos cursorDisengaged a
+      // true y cursorOnWater se hará false la próxima vuelta → el pez
+      // sale de hover y vuelve a wander. Persiste hasta que el cursor
+      // se mueva (re-enganche).
+      const cursorIsMoving = cursorSpeedSmoothed > 25;
+      if (cursorIsMoving) {
+        cursorIdleWhileHovering = 0;
+        cursorDisengaged = false;
+      } else if (cursorFish.isHovering && !cursorDisengaged) {
+        cursorIdleWhileHovering += dt;
+        if (cursorIdleWhileHovering >= 3.0) {
+          cursorDisengaged = true;
+        }
+      }
 
       if (cursorOnWater) {
         cursorFish.glowBoostTarget = 0.85;
