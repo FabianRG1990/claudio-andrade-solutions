@@ -94,6 +94,11 @@ class LakeFish {
   wanderState: 'cruising' | 'pausing' = 'cruising';
   /** Segundos restantes de pausa antes de elegir nuevo waypoint. */
   pauseTimer = 0;
+  /** Tiempo (s) chasing el current wanderTarget. Si excede ~7s sin
+   *  llegar, applyWander fuerza pick de nuevo target — failsafe contra
+   *  fish stuck oscilando alrededor de un target inalcanzable
+   *  (e.g., target straight above with kinematic motion overshooting). */
+  wanderChaseTime = 0;
 
   // ─── Física real de pez (sólo modo 'ambient') ──────────────────────────────
   /** Dirección actual a la que mira la cabeza (radianes). Solo usada en
@@ -534,6 +539,786 @@ class LakeFish {
 }
 
 // =============================================================================
+// GlowFish — pez silueta-luminosa al estilo de la imagen de referencia.
+// Cuerpo ovalado outlined con luz azul (no construido por puntos sueltos
+// como LakeFish), aletas pequeñas outlined, núcleo brillante longitudinal,
+// ojo destacado, halo soft. Movimiento simple (lerp + heading smoothing,
+// SIN FABRIK, SIN spine articulado), tipo pez dorado patrullando.
+// Compatible con applyWander y clampSpineToLake porque expone los mismos
+// fields (spine como array de 1 elemento sincronizado a position).
+// =============================================================================
+
+interface GlowFishColor {
+  /** Línea brillante del rim (luz que traza la silueta). */
+  rim: string;
+  /** Color del fill translúcido del cuerpo (azul oscuro). */
+  body: string;
+  /** Color del núcleo / espina central brillante. */
+  core: string;
+  /** Color del halo exterior (azul saturado). */
+  halo: string;
+}
+
+/**
+ * Perfil corporal del GlowFish — 13 secciones transversales muestreadas
+ * del silhouette Bezier original. Cada entrada es `[xCoeff, topY, bottomY]`
+ * en unidades de `s` (size). xCoeff +2.20 = nariz, -1.55 = base de cola.
+ * topY es la altura del dorso (negativa = arriba), bottomY es la del
+ * vientre (positiva = abajo). El centro de cada sección está en y=0
+ * relativo al sistema local del pez.
+ *
+ * El render bend-friendly construye el silueta uniendo estos puntos
+ * (top profile head→tail + bottom profile tail→head) y aplica un
+ * desplazamiento vertical waveY(x) común a top y bottom de cada sección,
+ * de modo que la sección entera se traslada lateralmente — la espina se
+ * curva, las cross-sections siguen rígidas. Esto reproduce el carangiform
+ * swimming de los teleósteos: onda viajera con amplitud cuadrática
+ * creciente desde la cabeza hasta la cola.
+ *
+ * Mantener este array sincronizado con cualquier cambio del silhouette
+ * para que el rest-pose (effort=0) coincida con el diseño base.
+ */
+const GLOW_BODY_PROFILE: ReadonlyArray<readonly [number, number, number]> = [
+  [ 2.20,  0.00,  0.00], // nariz
+  [ 2.00, -0.13,  0.06],
+  [ 1.70, -0.29,  0.15],
+  [ 1.35, -0.45,  0.24],
+  [ 0.95, -0.57,  0.32],
+  [ 0.55, -0.64,  0.33],
+  [ 0.20, -0.66,  0.33], // joroba peak
+  [-0.20, -0.60,  0.31],
+  [-0.55, -0.51,  0.28],
+  [-0.90, -0.41,  0.25],
+  [-1.20, -0.30,  0.21],
+  [-1.40, -0.22,  0.18],
+  [-1.55, -0.16,  0.16], // tail base
+];
+
+/** Wavelength (en unidades de longitud corporal) — carangiform típico. */
+const GLOW_WAVES_PER_BODY = 1.2;
+
+/**
+ * Perfil corporal del GlowFish — TOP view (vista de arriba/dorsal).
+ * Simétrico left/right (la silueta del pez vista desde arriba es igual
+ * de ambos lados). `[xUnit, halfWidth]` — `halfWidth` aplica
+ * positivamente y negativamente al render desde la espina (ambos lados).
+ *
+ * Usado cuando el heading del pez es predominantemente vertical (heading
+ * cerca de ±π/2) — el render hace crossfade entre side view y top view
+ * según |cos(heading)| vs |sin(heading)|. En vertical sólo top view
+ * es visible, lo que disuelve el "brinco" del flip dorsalSide (que
+ * ahora ocurre cuando sideAlpha=0, invisible al ojo).
+ *
+ * Forma: long thin oval (~25% width vs length), nariz y cola
+ * estrechas, máximo width en ~10-25% del cuerpo (justo detrás de
+ * la cabeza, donde el pez es más ancho lateralmente).
+ */
+const GLOW_TOP_PROFILE: ReadonlyArray<readonly [number, number]> = [
+  [ 2.20, 0.00], // nariz
+  [ 2.00, 0.10],
+  [ 1.70, 0.20],
+  [ 1.35, 0.30],
+  [ 0.95, 0.38],
+  [ 0.55, 0.42],
+  [ 0.20, 0.43], // máximo width
+  [-0.20, 0.42],
+  [-0.55, 0.38],
+  [-0.90, 0.32],
+  [-1.20, 0.24],
+  [-1.40, 0.16],
+  [-1.55, 0.10], // tail base
+];
+
+class GlowFish {
+  /** Posición del centro del pez en canvas-px. */
+  position: Vec;
+  /** Spine de 1 elemento que apunta a position — para compatibilidad con
+   *  applyWander (lee spine[0]) y clampSpineToLake (itera fish.spine). */
+  spine: Vec[];
+  /** Heading actual de la cabeza en radianes. Smooth-rotates hacia target. */
+  heading = 0;
+  /** Velocidad del frame anterior (delta de position). */
+  velocity: Vec = { x: 0, y: 0 };
+  prevPos: Vec;
+  /** Tamaño base — equivalente al "radio característico". El cuerpo extiende
+   *  ~size*1.8 horizontal y size*0.65 vertical. Aliased a bodyScale para
+   *  compatibilidad con applyWander/clampSpineToLake. */
+  size: number;
+  bodyScale: number;
+  speedScale: number;
+  finPhase = Math.random() * Math.PI * 2;
+  glowBoost = 0;
+  glowBoostTarget = 0;
+  color: GlowFishColor;
+
+  // ─── Física natural — animación fluida ──────────────────────────────────
+  /** Speed actual (px/frame). Calculado en update, leído en render para
+   *  drives del dorsal sweep dinámico y otras animaciones derivadas. */
+  speed = 0;
+  /** Heading del frame anterior, para calcular velocidad angular. */
+  prevHeading = 0;
+  /** Velocidad angular smoothed (rad/s). Drives el eye saccade. */
+  angularVel = 0;
+  /** Speed del frame anterior, para calcular aceleración. */
+  prevSpeed = 0;
+  /** Stretch X smoothed (squash-and-stretch). >1 al acelerar (cuerpo se
+   *  alarga), <1 al frenar (comprime). Y se ajusta inverso para mantener
+   *  proporción. Range típico [0.90, 1.12]. */
+  stretchX = 1;
+  /** Sign del Y-flip dorsal: +1 facing right (joroba up via local -y),
+   *  -1 facing left (joroba up requiere flip Y porque rotar π pondría
+   *  la joroba abajo). Snap con hysteresis ANCHA (~17°) + time-lock
+   *  (~250ms entre flips). La snap es invisible porque ocurre cuando
+   *  |cos(heading)|≈0 (X-scale al mínimo 15%) y la C-bend tiene al
+   *  cuerpo curvado en U. */
+  dorsalSide: 1 | -1 = 1;
+  /** Cooldown timer entre flips de dorsalSide. Evita que un pez con
+   *  heading oscilante alrededor de vertical flippee 10 veces por
+   *  segundo (problema visible: "se queda mal colocado"). */
+  flipCooldown = 0;
+  /** Banking lateral smoothed (radianes equivalentes en X-skew). Drives
+   *  el skew(1,0,bankSkew,1,0,0) durante giros — el cuerpo se inclina
+   *  hacia el lado del giro, igual que un avión vira. Computado de
+   *  `angularVel` con low-pass (k=4) y clamped a [-0.4, 0.4]. */
+  bankSkew = 0;
+  /** Bias del envelope de la onda corporal — sesga la onda hacia el lado
+   *  del giro, replicando la C-bend biomecánica que hacen los peces
+   *  reales antes/durante un cambio de dirección agresivo (C-start
+   *  maneuver de la literatura biomecánica). Smoothed con k=3, clamped
+   *  a [-1, 1]. */
+  turnBend = 0;
+  /** Versión retrasada de turnBend (k=1.5, tau ~650ms). Usada en el
+   *  tail (xUnit hacia -1.55) mientras turnBend (current) se usa en el
+   *  head (xUnit hacia 2.20). Resultado: cuando el head cambia rumbo,
+   *  la cola conserva temporariamente el bend antiguo → cuerpo forma
+   *  una S transient (overlapping action / follow-through Disney 12).
+   *  Aporta vida orgánica a los giros. */
+  delayedTurnBend = 0;
+  /** Speed smoothed con inercia (k=2, tau ~500ms). El kinematic update
+   *  computa el targetSpeed por alignment, pero currentSpeed lerps
+   *  hacia ahí — sensación de momentum, no de cambios discretos.
+   *  Position se integra con currentSpeed, no targetSpeed. */
+  currentSpeed = 0;
+  /** Phase del traveling wave del cuerpo (radianes). Avanza cada frame por
+   *  `dt * omega`, donde omega escala con `bodyEffort`. Drives la
+   *  undulación del silhouette — `sin(swimPhase + k·x)` desplaza cada
+   *  cross-section lateralmente con amplitud que crece hacia la cola. */
+  swimPhase = Math.random() * Math.PI * 2;
+  /** Effort signal smoothed [0..1]. Drives la amplitud y la frecuencia
+   *  del body wave. 0 = en reposo (breathing apenas perceptible, ~1 rad/s,
+   *  amp ~4% de s), 1 = burst activo (~6 rad/s, amp ~22% de s).
+   *  Smoothed con tau ~250ms para que cambios bruscos de speed no
+   *  produzcan jerk en la amplitud. */
+  bodyEffort = 0;
+
+  /** Orbit usada como ancla para clampSpineToLake. El wander libre la ignora. */
+  orbit: { cx: number; cy: number; rx: number; ry: number; phase: number; speed: number };
+  target: Vec;
+
+  // Wander state (mismos fields que LakeFish para drop-in con applyWander)
+  wanderTarget: Vec;
+  wanderState: 'cruising' | 'pausing' = 'cruising';
+  pauseTimer = 0;
+  wanderChaseTime = 0;
+  hoverDriftTarget: Vec | null = null;
+  hoverDriftTimer = 0;
+
+  constructor(start: Vec, opts: {
+    size: number;
+    speedScale: number;
+    color: GlowFishColor;
+    orbit: GlowFish['orbit'];
+  }) {
+    this.position = { x: start.x, y: start.y };
+    this.prevPos = { x: start.x, y: start.y };
+    this.spine = [this.position]; // alias por referencia
+    this.size = opts.size;
+    this.bodyScale = opts.size;
+    this.speedScale = opts.speedScale;
+    this.color = opts.color;
+    this.orbit = opts.orbit;
+    this.target = { x: start.x, y: start.y };
+    this.wanderTarget = { x: opts.orbit.cx, y: opts.orbit.cy };
+  }
+
+  setTargetSmooth(raw: Vec, smoothing: number): void {
+    this.target.x += (raw.x - this.target.x) * smoothing;
+    this.target.y += (raw.y - this.target.y) * smoothing;
+  }
+
+  /**
+   * Update — modelo cinemático tipo bicycle / Dubins (NO pivot in place).
+   *
+   * El pez SIEMPRE nada hacia adelante en su heading actual, como un auto
+   * o un barco. NO puede girar sobre su propio eje. Para alcanzar un
+   * target detrás suyo, debe sobrepasarlo, arcear, y volver — exactamente
+   * como hacen los peces reales (y por qué los tiburones quedan trabados
+   * en jaulas: tienen radio mínimo de giro grande y deben nadar curvas).
+   *
+   * Mecánica:
+   *   1) Steering: heading rota hacia atan2(target-pos), bounded por
+   *      `maxTurnRate` (rad/s). Esto crea un radio mínimo de giro.
+   *   2) Forward speed: SIEMPRE > 0 (clave — sin esto el pez podría
+   *      "frenarse" para pivotar). Modulado por alignment con target:
+   *      full speed cuando heading aligned, slower (pero NO cero) cuando
+   *      necesita girar mucho. Esto reproduce el "slow down for tight
+   *      turns" biomecánico real.
+   *   3) Position: integra velocity = forward * speed * dt. NO hay
+   *      "approach target" lerp — la trajectoria emerge de la integración
+   *      forward + steering.
+   *
+   * Resultado emergente: arcs naturales en lugar de pivot, U-turns
+   * cuando el target queda detrás, overshoot + correction loops.
+   *
+   * Radio mínimo: Rmin = forwardSpeed / maxTurnRate. Con
+   * forwardSpeed_min ~0.6 y maxTurnRate ~1.6 rad/s, Rmin ≈ 0.4 px/frame
+   * × 60 = ~25 px/s, que para un fish de size 30 da ~5x body length.
+   * Más restrictivo = más curvas dramáticas.
+   */
+  update(_dt: number, _isFollowing: boolean, depthFactor: number): void {
+    this.prevPos.x = this.position.x;
+    this.prevPos.y = this.position.y;
+
+    const dx = this.target.x - this.position.x;
+    const dy = this.target.y - this.position.y;
+    const dist = Math.hypot(dx, dy);
+
+    // 1) Steering — heading bounded turn rate hacia target.
+    let alignment = 1; // -1 (target detrás) a +1 (target adelante)
+    if (dist > 0.5) {
+      const targetAngle = Math.atan2(dy, dx);
+      let diff = targetAngle - this.heading;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      // Max turn rate más moderado — radio mínimo más amplio = arcs
+      // más graciosos, menos overshoot. Para 180° toma ~3.1s con
+      // velocidad típica = U-turn dramatic pero natural.
+      const maxTurnRate = 1.0; // rad/s ≈ 57°/s
+      const turn = Math.sign(diff) * Math.min(Math.abs(diff), maxTurnRate * _dt);
+      this.heading += turn;
+      alignment = Math.cos(diff); // proyección del heading sobre el target
+    }
+
+    // 2) Forward speed con MOMENTUM — targetSpeed por alignment,
+    //    currentSpeed lerps hacia ahí con tau ~500ms. La fish no
+    //    cambia velocidad instantánea: acelera y desacelera con inercia.
+    //    Resultado: tras un giro brusco, sigue gliding un instante;
+    //    al volver a alinearse con el target, acelera gradualmente.
+    const minSpeed = 1.4 * this.speedScale * depthFactor;
+    const maxSpeed = 2.6 * this.speedScale * depthFactor;
+    const speedFactor01 = 0.5 + 0.5 * alignment; // 0..1
+    // TURN SPEED DAMPING moderado — pequeña reducción durante turns
+    // (max 25%) para mantener forward motion visible. Sin damping
+    // excesivo, el head sigue avanzando y el chain-based body trail
+    // hace el visible curve, no parece "wagging in place".
+    const turnDamping = Math.min(0.25, Math.abs(this.angularVel) * 0.20);
+    const targetSpeed = (minSpeed + (maxSpeed - minSpeed) * speedFactor01) * (1 - turnDamping);
+    this.currentSpeed += (targetSpeed - this.currentSpeed) * Math.min(1, _dt * 2);
+
+    // 3) Integra currentSpeed (con inercia) en heading direction.
+    const vx = Math.cos(this.heading) * this.currentSpeed;
+    const vy = Math.sin(this.heading) * this.currentSpeed;
+    this.position.x += vx * _dt * 60;
+    this.position.y += vy * _dt * 60;
+
+    this.velocity.x = this.position.x - this.prevPos.x;
+    this.velocity.y = this.position.y - this.prevPos.y;
+    this.speed = Math.hypot(this.velocity.x, this.velocity.y);
+
+    // ─── Física natural ──────────────────────────────────────────────
+    // 1) Velocidad angular smoothed (para eye saccade). Diff de heading
+    //    normalizado a [-π, π], con lerp para evitar spikes.
+    let headingDelta = this.heading - this.prevHeading;
+    while (headingDelta > Math.PI) headingDelta -= 2 * Math.PI;
+    while (headingDelta < -Math.PI) headingDelta += 2 * Math.PI;
+    const rawAngVel = headingDelta / Math.max(_dt, 1e-6);
+    this.angularVel = this.angularVel * 0.85 + rawAngVel * 0.15;
+    this.prevHeading = this.heading;
+
+    // 2) Squash-and-stretch — el cuerpo se alarga al acelerar y comprime
+    //    al frenar. Mantiene el "volumen" del silhouette aplicando Y
+    //    inverso en render. Disney 12 principles aplicado a peces.
+    const accel = this.speed - this.prevSpeed;
+    this.prevSpeed = this.speed;
+    const targetStretch = 1 + Math.max(-0.10, Math.min(0.12, accel * 0.20));
+    this.stretchX += (targetStretch - this.stretchX) * Math.min(1, _dt * 8);
+
+    // 3) Y-flip dorsal con hysteresis ANCHA + time-lock.
+    //    HYSTERESIS = 0.30 (~17° dead zone) — el heading necesita estar
+    //    solidamente pasado de la vertical para flipear, no apenas
+    //    cruzando. Mata el flipeo repetido cuando el heading oscila
+    //    alrededor de vertical (problema visible: peces "stuck flipping").
+    //    flipCooldown = 250ms entre flips — segunda barrera contra
+    //    oscilación rápida.
+    if (this.flipCooldown > 0) {
+      this.flipCooldown = Math.max(0, this.flipCooldown - _dt);
+    }
+    const cosH = Math.cos(this.heading);
+    // Hysteresis ESTRECHA — el flip ocurre casi en vertical (cosH≈0)
+    // donde sideAlpha=|cosH|≈0 y top view es la dominante. Invisible.
+    const HYSTERESIS = 0.05;
+    let newDorsal: 1 | -1 = this.dorsalSide;
+    if (this.flipCooldown <= 0) {
+      if (this.dorsalSide === 1 && cosH < -HYSTERESIS) newDorsal = -1;
+      else if (this.dorsalSide === -1 && cosH > HYSTERESIS) newDorsal = 1;
+      if (newDorsal !== this.dorsalSide) {
+        this.flipCooldown = 0.25; // 250ms
+      }
+    }
+    this.dorsalSide = newDorsal;
+
+    // 3b) Banking — el cuerpo se inclina hacia el lado del giro.
+    //     bankSkew es un X-skew (afín 2D) — equivale a "lean" sin
+    //     agregar otro rotate. Clamped para no over-skew.
+    const targetBankSkew = Math.max(-0.4, Math.min(0.4, this.angularVel * 0.18));
+    this.bankSkew += (targetBankSkew - this.bankSkew) * Math.min(1, _dt * 4);
+
+    // 3c) C-bend AMPLIFICADA — el cuerpo se curva HACIA el giro durante
+    //     turns. Es la "preparatory C-bend" del C-start maneuver
+    //     biomecánico (PMC8943085). Coeficiente alto (0.85) para que la
+    //     curvatura sea visualmente DOMINANTE durante el giro y enmascare
+    //     el Y-flip. Smoothed con k=3 (tau ~330ms) para persistir un
+    //     instante después del giro y luego relajarse.
+    const targetTurnBend = Math.max(-1, Math.min(1, this.angularVel * 0.85));
+    this.turnBend += (targetTurnBend - this.turnBend) * Math.min(1, _dt * 3);
+    // delayedTurnBend lerps MUY LENTO (k=1.0, tau ~1000ms). En la cola
+    // este bend es lo que se aplica → durante turns rápidos, tail mantiene
+    // el bend antiguo casi 1s después que el head ya cambió → S transient
+    // dramática y persistente (overlapping action visible).
+    this.delayedTurnBend += (this.turnBend - this.delayedTurnBend) * Math.min(1, _dt * 1.0);
+
+    // 4) Body undulation — traveling wave (carangiform swimming). El
+    //    `bodyEffort` es smoothed para que la amplitud no cambie con jerk
+    //    cuando el speed pega saltos. Speed range típico [0..3] px/frame
+    //    → mapeo a [0..1]. La frecuencia (omega) escala linealmente: en
+    //    reposo el cuerpo "respira" lento (~0.16 Hz), en burst late a
+    //    ~1 Hz (carangiform real swimming es ~1-3 Hz, mapeo conservador
+    //    para no over-animar en pantalla).
+    const targetBodyEffort = Math.min(1, this.speed / 1.5);
+    this.bodyEffort += (targetBodyEffort - this.bodyEffort) * Math.min(1, _dt * 4);
+    // Rhythm jitter — variación lenta natural del omega (~±8%) usando
+    // un sin de baja frecuencia desfasado por instancia (swimPhase es
+    // único por pez, así que cada uno tiene su propio "carácter rítmico").
+    // Resultado: ratos late más fuerte/débil sin patrón mecánico.
+    const rhythmVar = 1 + Math.sin(this.swimPhase * 0.13) * 0.08;
+    const swimOmega = (1.0 + 5.0 * this.bodyEffort) * rhythmVar;
+    this.swimPhase += _dt * swimOmega;
+
+    // Fin idle phase — wiggle suave de aletas (dorsal/pectoral), rate
+    //  driven by speed. La cola NO usa este phase; está acoplada al
+    //  traveling wave del cuerpo (continuación natural de la onda).
+    this.finPhase += _dt * (1.8 + this.speed * 0.3);
+
+    // Glow boost smoothing.
+    this.glowBoost += (this.glowBoostTarget - this.glowBoost) * Math.min(1, _dt * 4);
+  }
+
+  /**
+   * Render — silueta-luminosa estilo imagen de referencia:
+   *   1) Halo soft exterior radial
+   *   2) Cuerpo: silueta ovalada outlined con rim brillante + fill translúcido
+   *   3) Núcleo central: línea longitudinal de luz que termina en spot brillante
+   *   4) Ojo: dot blanco-azul muy brillante en el head
+   *   5) Aleta dorsal arriba (triangular outlined)
+   *   6) Dos aletas pectorales (splayed outlined)
+   *   7) Cola pequeña en V outlined
+   *
+   * `depthScale` aplica como ctx.scale uniforme alrededor del centro.
+   */
+  render(ctx: CanvasRenderingContext2D, depthScale: number): void {
+    ctx.save();
+    ctx.translate(this.position.x, this.position.y);
+    ctx.scale(depthScale, depthScale);
+    ctx.rotate(this.heading);
+    // Banking — X-skew lateral según angularVel (lean into turn).
+    // Aplicado en el frame outer; ambas vistas heredan el lean.
+    if (Math.abs(this.bankSkew) > 0.001) {
+      ctx.transform(1, 0, this.bankSkew, 1, 0, 0);
+    }
+    ctx.globalCompositeOperation = 'lighter';
+
+    const s = this.size;
+    const boost = this.glowBoost;
+    // Speed factor 0..1 para drives de aletas dinámicas
+    const speedFactor = Math.min(1, this.speed / 3.0);
+
+    // ─── Multi-view billboard (side ↔ top crossfade) ──────────────────
+    // Premium 2.5D: dos views procedurales mezclando alpha según heading.
+    //   • Side view: full cuando heading horizontal (|cos|=1)
+    //   • Top view:  full cuando heading vertical (|sin|=1)
+    //   • In between: cross-fade — three-quarter view ilusión
+    //
+    // El "brinco" del flip dorsalSide se disuelve aquí: el flip ocurre
+    // cuando cos(heading)≈0 → exactamente cuando sideAlpha→0 → el flip
+    // es invisible. Top view (sin dorsalSide concept, simétrico L/R)
+    // toma el relevo. Side view re-aparece del otro lado mirrored sin
+    // discontinuidad visible.
+    //
+    // Nado vertical (heading=±π/2) ahora muestra TOP view: pez visto
+    // desde arriba con dos pectorales splayed, dos ojos, silhouette
+    // simétrica. Resuelve el "calcomanía subiendo" de antes.
+    const sinHR = Math.sin(this.heading);
+    // Morph factor — 0 = side profile, 1 = top profile, smooth ease.
+    // Computed aquí (antes de waveAt) para que la wave amplitude pueda
+    // escalar con view angle (vertical = más visible serpentear).
+    const viewMorph = sinHR * sinHR;
+    const sy = 2 - this.stretchX; // squash-and-stretch (compartido)
+
+    // ─── Body undulation — traveling wave (carangiform) ───────────────
+    // La onda viajera se aplica a CADA cross-section del cuerpo (top y
+    // bottom de la misma sección se trasladan juntos), a las vértebras,
+    // a la espina y al tail. Resultado: la espina del pez se curva como
+    // una S viajera; las cross-sections rígidas la siguen. Esto reemplaza
+    // el silhouette estático que sólo trasladaba al pez como un bloque.
+    //
+    //   waveY(x) = env(x) · ampPx · sin(swimPhase + k·x)
+    //
+    //   • env(x) = u² donde u = 0 en cabeza, 1 en cola — quadratic
+    //     envelope: la cabeza casi no se mueve, la cola hace todo el
+    //     latigazo (igual que peces reales tipo carangiform).
+    //   • ampPx escala con bodyEffort: en reposo ~4% del size (apenas
+    //     "breathing"), en burst ~22% (latigazo activo).
+    //   • k corresponde a 1.2 wavelengths a lo largo del cuerpo,
+    //     valor típico para teleósteos. La onda viaja head→tail (signo
+    //     positivo en `+ k·x` con x decreciente hacia la cola).
+    const xNoseUnit = 2.20;
+    const xTailUnit = -1.55;
+    const bodyLenUnit = xNoseUnit - xTailUnit; // 3.75
+    const k = (Math.PI * 2 * GLOW_WAVES_PER_BODY) / bodyLenUnit;
+    // Wave amplitude SCALES con viewMorph (1.0× side → 1.7× top). En
+    // vertical el body serpentea visiblemente más (motion lateral es
+    // la dominante vista desde arriba). Smooth scale → fluidez sin pop.
+    const viewAmpBoost = 1 + 0.7 * viewMorph;
+    const ampPx = s * (0.04 + 0.18 * this.bodyEffort) * viewAmpBoost;
+    // C-bend bias con TAIL-LEADS (overlapping action) — el head usa
+    // turnBend current; el tail usa delayedTurnBend (lag ~650ms). Cuando
+    // el head cambia rumbo, el tail conserva temporariamente el bend
+    // antiguo → cuerpo forma una S transient. Es el seguimiento orgánico
+    // que hace que el giro NO se sienta como bloque rígido — la energía
+    // del giro propaga del head al tail con delay biomecánico real.
+    //
+    // Asymmetric tail stroke: durante turns, la onda late MÁS FUERTE
+    // del lado contrario al giro (el lado que empuja agua para girar).
+    // Es el mecanismo de propulsión real del C-start. Magnitude
+    // proporcional al turnBend.
+    const N = GLOW_BODY_PROFILE.length;
+
+    // waveAt — wave + C-bend bias. La C-bend usa tail-leads (overlapping
+    // action / Disney 12): turnBend para el head, delayedTurnBend para
+    // la cola. Cuando el head cambia rumbo, la cola conserva el bend
+    // antiguo → S transient.
+    const waveAt = (xUnit: number): number => {
+      const u = (xNoseUnit - xUnit) / bodyLenUnit; // 0 head → 1 tail
+      const env = u * u;
+      const sinVal = Math.sin(this.swimPhase + k * xUnit);
+      // Bend interpolado head→tail (tail-leads / overlapping action).
+      const cBendLocal = this.turnBend * (1 - u) + this.delayedTurnBend * u;
+      // C-bend bias del envelope — sesga la onda hacia el lado del giro.
+      const cBendPx = cBendLocal * env * ampPx * 1.5;
+      // Asymmetric tail stroke — la onda late más fuerte del lado contrario.
+      const asymmetry = 1 - Math.sign(sinVal) * cBendLocal * 0.40;
+      return cBendPx + env * ampPx * sinVal * asymmetry;
+    };
+
+    // tangentAt — pendiente local de la espina (finite difference de waveAt).
+    const dxTan = 0.05;
+    const tangentAt = (xUnit: number): number => Math.atan2(
+      waveAt(xUnit + dxTan) - waveAt(xUnit - dxTan),
+      2 * dxTan * s,
+    );
+
+    // mapToSpine — cada cross-section perpendicular al tangente local de
+    // la espina. Single source of truth para silueta, vértebras, ojo,
+    // aletas, cola.
+    const mapToSpine = (xUnit: number, yUnitSigned: number): Vec => {
+      const sx = xUnit * s;
+      const sy = waveAt(xUnit);
+      const θ = tangentAt(xUnit);
+      const perpX = Math.sin(θ);
+      const perpY = -Math.cos(θ);
+      return {
+        x: sx - perpX * yUnitSigned * s,
+        y: sy - perpY * yUnitSigned * s,
+      };
+    };
+
+    // ─── 1) Halo exterior soft ───
+    const haloR = s * 4.6;
+    const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, haloR);
+    halo.addColorStop(0, hexA(this.color.halo, 0.32 + boost * 0.20));
+    halo.addColorStop(0.35, hexA(this.color.halo, 0.16 + boost * 0.12));
+    halo.addColorStop(0.7, hexA(this.color.halo, 0.05));
+    halo.addColorStop(1, hexA(this.color.halo, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, haloR, haloR * 0.62, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Quadratic-through-midpoints helper para suavizar polyline.
+    // Definido aquí (antes de los views) para que ambos lo compartan.
+    const smoothPath = (pts: Vec[]): void => {
+      if (pts.length < 2) return;
+      ctx.lineTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length - 1; i++) {
+        const mx = (pts[i].x + pts[i + 1].x) * 0.5;
+        const my = (pts[i].y + pts[i + 1].y) * 0.5;
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+      }
+      ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    };
+
+    // ══════════════════════════════════════════════════════════════════
+    // MORPHED VIEW — UNA sola silueta que se transforma continuamente
+    // entre side profile (asimétrica, joroba+vientre, 1 ojo, 1 pec) y
+    // top profile (simétrica, 2 ojos, 2 pecs). View-Dependent Deformation:
+    // los vertices del silhouette + features lerp entre ambos profiles
+    // según m = sin²(heading). Single coherent shape en todo momento,
+    // sin overlap de capas — la transición es la deformación misma.
+    //
+    // m = 0 (heading horizontal): pure side profile
+    // m = 1 (heading vertical):   pure top profile
+    // m = 0.5 (heading 45°):     three-quarter view real
+    //
+    // El dorsalSide flip aplica a ALL the morphed Y, pero al ocurrir
+    // (cosH≈0, m≈1) la silueta es simétrica → flip invisible.
+    {
+      ctx.save();
+      // Sin yaw X-squash — la silueta morpheada YA representa el cambio
+      // de view angle por su forma, no por compresión X.
+      ctx.scale(this.stretchX, this.dorsalSide * sy);
+      ctx.translate(-2.20 * s, 0); // anchor en HEAD post-scale
+      ctx.globalAlpha = 1;
+
+      // Morph factor — alias del viewMorph computado al inicio
+      const m = viewMorph;
+      const morphY = (sideYU: number, topYU: number): number =>
+        sideYU * (1 - m) + topYU * m;
+
+      // ─── Silueta morpheada (side ↔ top profile, single coherent) ────
+      // Cada anchor del silhouette: morphY entre el profile asimétrico
+      // (BODY_PROFILE) y el simétrico (TOP_PROFILE). Single shape que
+      // se transforma continuamente con m. NO overlapping de capas.
+      const topPts: Vec[] = new Array(N);
+      const botPts: Vec[] = new Array(N);
+      for (let i = 0; i < N; i++) {
+        const [xUnit, sideTopY, sideBotY] = GLOW_BODY_PROFILE[i];
+        const topHalfW = GLOW_TOP_PROFILE[i][1];
+        // Top edge of silhouette: side gives joroba (-Y), top gives -halfW
+        topPts[i] = mapToSpine(xUnit, morphY(sideTopY, -topHalfW));
+        // Bottom edge: side gives vientre (+Y), top gives +halfW
+        botPts[i] = mapToSpine(xUnit, morphY(sideBotY, +topHalfW));
+      }
+
+    ctx.beginPath();
+    ctx.moveTo(topPts[0].x, topPts[0].y); // nariz
+    smoothPath(topPts);
+    ctx.lineTo(botPts[N - 1].x, botPts[N - 1].y);
+    const botReversed: Vec[] = [];
+    for (let i = N - 1; i >= 0; i--) botReversed.push(botPts[i]);
+    smoothPath(botReversed);
+    ctx.closePath();
+    ctx.fillStyle = hexA(this.color.body, 0.42 + boost * 0.15);
+    ctx.fill();
+    ctx.strokeStyle = hexA(this.color.rim, 0.88 + boost * 0.12);
+    ctx.lineWidth = Math.max(0.7, s * 0.13);
+    ctx.stroke();
+
+    // ─── 3) Espina central + vertebrae spots (siguen la onda) ─────────
+    // La espina conectora también ondula — la construyo como polyline
+    // de N samples con waveY aplicado a cada uno. Cada vertebra se
+    // posiciona en su xUnit con su propio waveAt(xUnit) → quedan
+    // exactamente sobre la espina curvada.
+    const spinePts: Vec[] = [];
+    for (let i = 0; i < N; i++) {
+      const xUnit = GLOW_BODY_PROFILE[i][0];
+      spinePts.push({ x: xUnit * s, y: waveAt(xUnit) });
+    }
+    // Render espina como path stroked con gradiente longitudinal tenue.
+    const spineLen = s * 3.40;
+    const spineGrad = ctx.createLinearGradient(-spineLen * 0.5, 0, spineLen * 0.5, 0);
+    spineGrad.addColorStop(0, hexA(this.color.core, 0));
+    spineGrad.addColorStop(0.12, hexA(this.color.core, 0.55));
+    spineGrad.addColorStop(0.85, hexA(this.color.core, 0.55));
+    spineGrad.addColorStop(1, hexA(this.color.core, 0));
+    ctx.strokeStyle = spineGrad;
+    ctx.lineWidth = Math.max(0.6, s * 0.14);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(spinePts[0].x, spinePts[0].y);
+    smoothPath(spinePts);
+    ctx.stroke();
+
+    // Vertebrae spots — sobre la espina articulada + bio-pulse synced
+    // al wave. Cada vertebra brilla extra cuando el peak de la onda
+    // pasa por su xUnit — efecto de "muscle activation visible".
+    // [xUnit, brightnessFactor]. brightness 0..1.
+    const vertebrae: Array<[number, number]> = [
+      [-1.10, 0.45],
+      [-0.40, 0.70],
+      [ 0.30, 1.00],   // el más bright (heart)
+      [ 0.95, 0.65],
+      [ 1.55, 0.40],
+    ];
+    for (const [vxUnit, vAlpha] of vertebrae) {
+      const v = mapToSpine(vxUnit, 0); // sobre el centerline articulado
+      // Bio-pulse AMPLIFICADA — el peak local de la onda aumenta brillo
+      // (max +60%). Visible muscle activation que viaja head→tail
+      // con la onda corporal. Más dramático que la versión anterior
+      // (0.18 → 0.55) para que las "vértebras se vean activarse".
+      const wavePhaseLocal = Math.sin(this.swimPhase + k * vxUnit);
+      const pulse = 1 + 0.55 * Math.max(0, wavePhaseLocal) * (0.4 + 0.6 * this.bodyEffort);
+      // Per-vertebra Y-jitter — pequeña oscilación independiente
+      // perpendicular a la espina (muscle fiber twitches). Phase
+      // distinta por vértebra para que no se vean sincronizadas.
+      const jitterMag = Math.sin(this.swimPhase * 2.7 + vxUnit * 8.3) * s * 0.025;
+      const θj = tangentAt(vxUnit);
+      const jitterX = Math.sin(θj) * jitterMag;
+      const jitterY = -Math.cos(θj) * jitterMag;
+      const cx = v.x + jitterX;
+      const cy = v.y + jitterY;
+      const r = s * (0.18 + vAlpha * 0.10);
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.4);
+      g.addColorStop(0, hexA('#dde6ff', 0.85 * vAlpha * pulse + boost * 0.10));
+      g.addColorStop(0.35, hexA(this.color.core, 0.78 * vAlpha * pulse));
+      g.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ─── 4) Ojos morpheados — DOS, posición se separa con m ────────────
+    // En side view (m=0) ambos ojos están en yUnit=0 (overlapping =
+    // single visual eye). En top view (m=1) están en ±0.22 (mirror).
+    // En entre, se separan suavemente — sin "aparecer" segundo ojo
+    // discreto, simplemente la silueta única se separa en dos.
+    const eyeR = s * 0.22;
+    const eyeθGlobal = tangentAt(1.30);
+    const saccadeMag = -this.angularVel * s * 0.04;
+    for (const eyeSign of [-1, +1]) {
+      const eyeYU = morphY(0, eyeSign * 0.22);
+      const eyeBase = mapToSpine(1.30, eyeYU);
+      const eyeRenderX = eyeBase.x - Math.sin(eyeθGlobal) * saccadeMag;
+      const eyeRenderY = eyeBase.y + Math.cos(eyeθGlobal) * saccadeMag;
+      const eg = ctx.createRadialGradient(eyeRenderX, eyeRenderY, 0, eyeRenderX, eyeRenderY, eyeR * 2.4);
+      eg.addColorStop(0, hexA('#ffffff', 0.96));
+      eg.addColorStop(0.40, hexA(this.color.core, 0.78));
+      eg.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(eyeBase.x, eyeBase.y, eyeR * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ─── 5) Aleta dorsal — fade out con m (solo visible en side view) ──
+    // La dorsal triangular es un feature lateral; no tiene sentido en
+    // top view (donde la dorsal se ve como stripe central, ya cubierto
+    // por el spine glow). Fade smooth con (1-m)².
+    const dorsalAlpha = (1 - m) * (1 - m);
+    if (dorsalAlpha > 0.02) {
+      const dorsalWag = Math.sin(this.finPhase * 0.9) * s * 0.04;
+      const dorsalTipXUnit = -0.35 - speedFactor * 0.40;
+      const dorsalTipYUnit = -1.25 + speedFactor * 0.20;
+      const dBaseA = mapToSpine(-0.20, -0.62);
+      const dBaseP = mapToSpine(-0.95, -0.40);
+      const dTip = mapToSpine(dorsalTipXUnit, dorsalTipYUnit);
+      const dTipθ = tangentAt(dorsalTipXUnit);
+      const dTipWagX = dTip.x + Math.cos(dTipθ) * dorsalWag;
+      const dTipWagY = dTip.y + Math.sin(dTipθ) * dorsalWag;
+      ctx.save();
+      ctx.globalAlpha = dorsalAlpha;
+      ctx.beginPath();
+      ctx.moveTo(dBaseA.x, dBaseA.y);
+      ctx.lineTo(dTipWagX, dTipWagY);
+      ctx.lineTo(dBaseP.x, dBaseP.y);
+      ctx.closePath();
+      ctx.fillStyle = hexA(this.color.body, 0.28);
+      ctx.fill();
+      ctx.strokeStyle = hexA(this.color.rim, 0.55);
+      ctx.lineWidth = Math.max(0.35, s * 0.07);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ─── 6) Aletas pectorales morpheadas — DOS, splay con m ────────────
+    // En side (m=0) ambas en posición vientre (overlap = una sola visual).
+    // En top (m=1) en posiciones mirror (±0.36 etc). Paddle stroke
+    // alternado: cada lado opuesto en fase para "rowing".
+    const paddlePhase = this.finPhase * 0.6;
+    const pecPaddle = Math.sin(paddlePhase);
+    for (const pecSign of [-1, +1] as const) {
+      // Top-view tip XUnit oscilla por side: side=+1 atrás cuando paddle>0,
+      // side=-1 adelante (rowing alternado). En side view (m=0) ambas
+      // pectorales convergen al mismo movimiento ventral.
+      const tipXUnit = morphY(0.20 - pecPaddle * 0.15, 0.20 - pecPaddle * pecSign * 0.15);
+      const tipYUnit = morphY(0.78, pecSign * (0.85 + pecPaddle * pecSign * 0.08));
+      const baseAYU = morphY(0.28, pecSign * 0.36);
+      const basePYU = morphY(0.30, pecSign * 0.40);
+      const midYU = morphY(0.55, pecSign * 0.55);
+      const pBA = mapToSpine(0.85, baseAYU);
+      const pTip = mapToSpine(tipXUnit, tipYUnit);
+      const pMid = mapToSpine(0.05, midYU);
+      const pBP = mapToSpine(0.55, basePYU);
+      ctx.beginPath();
+      ctx.moveTo(pBA.x, pBA.y);
+      ctx.quadraticCurveTo(pTip.x, pTip.y, pMid.x, pMid.y);
+      ctx.lineTo(pBP.x, pBP.y);
+      ctx.closePath();
+      ctx.fillStyle = hexA(this.color.body, 0.18);
+      ctx.fill();
+      ctx.strokeStyle = hexA(this.color.rim, 0.40);
+      ctx.lineWidth = Math.max(0.25, s * 0.05);
+      ctx.stroke();
+    }
+
+    // ─── 7) Aleta anal — fade out con m (solo side view) ──────────────
+    const analAlpha = (1 - m) * (1 - m);
+    if (analAlpha > 0.02) {
+      const aBA = mapToSpine(-0.75, 0.30);
+      const aTip = mapToSpine(-1.05, 0.62);
+      const aBP = mapToSpine(-1.30, 0.22);
+      ctx.save();
+      ctx.globalAlpha = analAlpha;
+      ctx.beginPath();
+      ctx.moveTo(aBA.x, aBA.y);
+      ctx.lineTo(aTip.x, aTip.y);
+      ctx.lineTo(aBP.x, aBP.y);
+      ctx.closePath();
+      ctx.fillStyle = hexA(this.color.body, 0.22);
+      ctx.fill();
+      ctx.strokeStyle = hexA(this.color.rim, 0.40);
+      ctx.lineWidth = Math.max(0.25, s * 0.05);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ─── 8) Cola forked morpheada — anchors morph entre side y top ─────
+    const tTopBase = mapToSpine(-1.55, morphY(-0.16, -0.10));
+    const tBotBase = mapToSpine(-1.55, morphY( 0.16,  0.10));
+    const tTopTip  = mapToSpine(-2.30, morphY(-0.55, -0.50));
+    const tBotTip  = mapToSpine(-2.30, morphY( 0.55,  0.50));
+    const tNotch   = mapToSpine(-1.95, 0);
+    ctx.beginPath();
+    ctx.moveTo(tTopBase.x, tTopBase.y);
+    ctx.lineTo(tTopTip.x,  tTopTip.y);
+    ctx.lineTo(tNotch.x,   tNotch.y);
+    ctx.lineTo(tBotTip.x,  tBotTip.y);
+    ctx.lineTo(tBotBase.x, tBotBase.y);
+    ctx.closePath();
+    ctx.fillStyle = hexA(this.color.body, 0.26);
+    ctx.fill();
+    ctx.strokeStyle = hexA(this.color.rim, 0.42);
+    ctx.lineWidth = Math.max(0.30, s * 0.06);
+    ctx.stroke();
+
+      ctx.restore(); // close MORPHED VIEW block
+    }
+
+    ctx.restore();
+  }
+}
+
+// =============================================================================
 // Helpers
 // =============================================================================
 
@@ -612,7 +1397,7 @@ const canvasUVToImgUV = (
  * que ni el feather de la orilla deja escapar al pez.
  */
 const clampSpineToLake = (
-  fish: LakeFish,
+  fish: { spine: Vec[] }, // LakeFish o GlowFish — ambos exponen .spine
   mask: { data: Uint8ClampedArray; width: number; height: number },
   cw: number, ch: number, imgW: number, imgH: number,
   anchor: Vec, // canvas-UV (0..1) del ancla seguro
@@ -838,17 +1623,27 @@ export class WolfLakeCanvas {
     //
     // El pauseTimer se randomiza 0.8-3.5s por transición — cada pez
     // tiene su propio ritmo, así nunca pausan todos a la vez.
-    const applyWander = (f: LakeFish, dtNow: number): void => {
+    const applyWander = (f: LakeFish | GlowFish, dtNow: number): void => {
       if (f.wanderState === 'cruising') {
         const wcuv = imgUVToCanvasUV(f.wanderTarget, cw, ch, IMG_W, IMG_H);
         const wx = wcuv.x * cw;
         const wy = wcuv.y * ch;
         f.setTargetSmooth({ x: wx, y: wy }, 0.04);
         const dToTarget = Math.hypot(f.spine[0].x - wx, f.spine[0].y - wy);
+        f.wanderChaseTime += dtNow;
         // Threshold de llegada — proporcional al tamaño del pez + margen.
-        if (dToTarget < 22 + f.bodyScale * 4) {
+        // (Aumentado ahora con kinematic motion: el pez no se detiene en
+        // el target, lo orbita; el threshold tiene que ser generoso para
+        // que pase a pausing sin necesitar landing exacto.)
+        const arriveTreshold = 30 + f.bodyScale * 5;
+        // Anti-stuck failsafe: si el pez chase 7s sin llegar (target
+        // inalcanzable o stuck en oscilación cinemática), pick nuevo
+        // wanderTarget. Esto rompe el loop de "stuck flipping vertical".
+        const chaseTimeout = 7;
+        if (dToTarget < arriveTreshold || f.wanderChaseTime > chaseTimeout) {
           f.wanderState = 'pausing';
           f.pauseTimer = 0.8 + Math.random() * 2.7;
+          f.wanderChaseTime = 0;
           f.hoverDriftTarget = null; // forzar elección inmediata
           f.hoverDriftTimer = 0;
         }
@@ -914,6 +1709,57 @@ export class WolfLakeCanvas {
     };
     buildFishes();
 
+    // ─── GlowFish (3) — peces silueta-luminosa al estilo de la imagen de
+    // referencia. Coexisten con los LakeFish ambientales para que el
+    // usuario compare ambos estilos en el mismo lago. Spawn en puntos
+    // que no chocan con SPAWN_UV de los LakeFish.
+    // Paleta azul ELÉCTRICO PURO, sin celeste/cyan. Hexes con G < B/2
+    // para forzar el tono "literalmente azul" que el usuario pidió
+    // mirando la referencia. Rim/core ya no son blanco-azul, son
+    // azul saturado bright. El blanco aparece SOLO en los puntos
+    // brillantes internos (vertebrae spots).
+    const GLOW_PALETTE: GlowFishColor[] = [
+      { rim: '#3870ff', body: '#060932', core: '#1858ff', halo: '#0040ff' },
+      { rim: '#3068ee', body: '#070b35', core: '#1450ee', halo: '#0038f0' },
+      { rim: '#4078ff', body: '#080c38', core: '#2060ff', halo: '#0048ff' },
+    ];
+    const GLOW_SPAWN: Vec[] = [
+      { x: 0.22, y: 0.66 },
+      { x: 0.50, y: 0.78 },
+      { x: 0.72, y: 0.88 },
+    ];
+    const glowFishes: GlowFish[] = [];
+    const buildGlowFishes = (): void => {
+      glowFishes.length = 0;
+      for (let i = 0; i < GLOW_SPAWN.length; i++) {
+        const uv = GLOW_SPAWN[i];
+        const cuv = imgUVToCanvasUV(uv, cw, ch, IMG_W, IMG_H);
+        const start = { x: cuv.x * cw, y: cuv.y * ch };
+        // size ~20 en desktop, ~11 en mobile (+~55% vs versión previa).
+        // Los GlowFish extienden ~4.5×size de largo total (con tail),
+        // así que size=20 da ~90px en desktop, ~50px en mobile.
+        const baseSize = Math.max(11, Math.min(20, cw / 72));
+        glowFishes.push(new GlowFish(start, {
+          size: baseSize,
+          // SpeedScale 0.45-0.7 — los GlowFish son más calmos que los
+          // LakeFish (pez dorado-like, no cardumen), así que aún cuando
+          // su pull/maxStep base son menores, terminan moviéndose
+          // notablemente más despacio.
+          speedScale: 0.45 + Math.random() * 0.25,
+          color: GLOW_PALETTE[i % GLOW_PALETTE.length],
+          orbit: {
+            cx: uv.x,
+            cy: uv.y,
+            rx: 0.04,
+            ry: 0.02,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.10,
+          },
+        }));
+      }
+    };
+    buildGlowFishes();
+
     // ─── Cursor fish — color azul eléctrico aún más puro (G mínima):
     //   spine '#b8c8ff' (G=200, B=255) — muy claro, casi lavender
     //   body  '#1648dc' (G=72,  B=220) — azul profundo
@@ -960,6 +1806,7 @@ export class WolfLakeCanvas {
     const ro = new ResizeObserver(() => {
       resize();
       buildFishes();
+      buildGlowFishes();
     });
     ro.observe(host);
 
@@ -1084,6 +1931,33 @@ export class WolfLakeCanvas {
           imgUVToCanvasUV({ x: f.orbit.cx, y: f.orbit.cy }, cw, ch, IMG_W, IMG_H));
       }
 
+      // GlowFish — peces silueta-luminosa nuevos. Misma wander logic
+      // que los LakeFish ambientales, pero con física simple (sin FABRIK)
+      // y render tipo silueta outlined (cuerpo + aletas + núcleo + halo).
+      for (const gf of glowFishes) {
+        applyWander(gf, dt);
+
+        const ghead = gf.spine[0];
+        let gboost = 0;
+        if (pointer.active) {
+          const dPointer = Math.hypot(ghead.x - pointer.x, ghead.y - pointer.y);
+          const radius = 90 + gf.bodyScale * 8;
+          gboost = Math.max(gboost, Math.max(0, 1 - dPointer / radius));
+        }
+        const dCursorFish2 = Math.hypot(ghead.x - cursorFish.spine[0].x, ghead.y - cursorFish.spine[0].y);
+        const cfRadius2 = 70 + gf.bodyScale * 6;
+        gboost = Math.max(gboost, Math.max(0, 1 - dCursorFish2 / cfRadius2));
+        gf.glowBoostTarget = gboost;
+
+        const gHeadV = canvasUVToImgUV(
+          { x: ghead.x / cw, y: ghead.y / ch }, cw, ch, IMG_W, IMG_H,
+        ).y;
+        gf.update(dt, false, depthScaleAt(gHeadV));
+
+        clampSpineToLake(gf, mask, cw, ch, IMG_W, IMG_H,
+          imgUVToCanvasUV({ x: gf.orbit.cx, y: gf.orbit.cy }, cw, ch, IMG_W, IMG_H));
+      }
+
       // El pez-cursor también se queda dentro del lago (clamp idéntico).
       // Ancla de seguridad: el centro horizontal del lago al frente.
       // glowBoostTarget ya fue asignado arriba según el modo (follow
@@ -1101,6 +1975,12 @@ export class WolfLakeCanvas {
       for (const f of fishes) {
         const headV = canvasUVToImgUV({ x: f.spine[0].x / cw, y: f.spine[0].y / ch }, cw, ch, IMG_W, IMG_H).y;
         f.render(ctx, depthScaleAt(headV));
+      }
+      // Render GlowFish (mismo blur sutil para que se sientan sumergidos
+      // junto al resto de peces).
+      for (const gf of glowFishes) {
+        const ghV = canvasUVToImgUV({ x: gf.spine[0].x / cw, y: gf.spine[0].y / ch }, cw, ch, IMG_W, IMG_H).y;
+        gf.render(ctx, depthScaleAt(ghV));
       }
       // El pez del cursor también deriva su size de la Y de su cabeza
       // (igual lógica que ambientales). Como la cabeza se mueve con
