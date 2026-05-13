@@ -44,509 +44,6 @@ import {
 
 type Vec = { x: number; y: number };
 
-// =============================================================================
-// LakeFish — pez articulado top-down con FABRIK chain + onda lateral.
-// =============================================================================
-
-interface FishColor {
-  /** Línea bioluminiscente del centro (espina). */
-  spine: string;
-  /** Cuerpo translúcido, lectura de "carne" oscura. */
-  body: string;
-  /** Halo exterior, glow del pez bajo el agua. */
-  glow: string;
-}
-
-class LakeFish {
-  spine: Vec[];
-  segments: number;
-  segLen: number;
-  /** Escala visual base. Modulada por depth en el render. */
-  bodyScale: number;
-  speedScale: number;
-  phase = Math.random() * Math.PI * 2;
-  velocity: Vec = { x: 0, y: 0 };
-  prevHead: Vec;
-  /** Boost de glow [0..1], suavizado hacia un target externo cada frame. */
-  glowBoost = 0;
-  glowBoostTarget = 0;
-  /** Esfuerzo del nado [0..1] — señal smoothed con tau ~250ms que sigue
-   *  la velocidad real del head. Maneja amplitud Y frecuencia tanto de
-   *  la onda del cuerpo como del wag de la cola. Crítico: el smoothing
-   *  con decay lento previene el "twisting al frenar" — cuando el head
-   *  se detiene, la cola se desinfla gradualmente (~250ms) en lugar de
-   *  seguir wagging mecánicamente a full amplitude. Sin esta señal,
-   *  parecía que el pez chocaba contra una pared al pausar y se
-   *  retorcía. */
-  effort = 0;
-  color: FishColor;
-
-  /** Patrullaje base — órbita pequeña en imagen-UV. Usado como ancla de
-   *  seguridad para `clampSpineToLake`. El wander libre del pez no la usa. */
-  orbit: { cx: number; cy: number; rx: number; ry: number; phase: number; speed: number };
-  /** Target en canvas-px (el head se acerca smooth). */
-  target: Vec;
-
-  // ─── Wander (territorio amplio, no órbita chica) ────────────────────────────
-  /** Waypoint actual del pez en imagen-UV. Cuando llega cerca, elige otro. */
-  wanderTarget: Vec;
-  /** 'cruising' = nadando hacia wanderTarget. 'pausing' = llegó, observa. */
-  wanderState: 'cruising' | 'pausing' = 'cruising';
-  /** Segundos restantes de pausa antes de elegir nuevo waypoint. */
-  pauseTimer = 0;
-  /** Tiempo (s) chasing el current wanderTarget. Si excede ~7s sin
-   *  llegar, applyWander fuerza pick de nuevo target — failsafe contra
-   *  fish stuck oscilando alrededor de un target inalcanzable
-   *  (e.g., target straight above with kinematic motion overshooting). */
-  wanderChaseTime = 0;
-
-  // ─── Física real de pez (sólo modo 'ambient') ──────────────────────────────
-  /** Dirección actual a la que mira la cabeza (radianes). Solo usada en
-   *  modo 'ambient'. Un pez real no pivota instantáneo: rota con turn-rate
-   *  finito, lo que produce arcos bancarios. */
-  heading = 0;
-  /** Micro-target del hover. Solo usado en modo 'ambient' durante pausing. */
-  hoverDriftTarget: Vec | null = null;
-  /** Segundos hasta que se elija nuevo hoverDriftTarget. Solo 'ambient'. */
-  hoverDriftTimer = 0;
-
-  /** Modo de física:
-   *  • 'ambient' — los peces del lago: heading + drag + effort smoothed +
-   *    wander state machine + hover drift. Física naturalista nueva.
-   *  • 'cursor'  — el pez que sigue el cursor: movimiento directo head→target
-   *    sin turn-rate limit ni drag, wave/cola driven by speed bruto, patrol
-   *    orbit-based. Comportamiento legacy explícitamente preferido por el
-   *    usuario para este pez ("ya tiene un montón de lag, ya no sigue el
-   *    cursor", quiere "el mismo comportamiento que tenía ayer"). */
-  physicsMode: 'cursor' | 'ambient' = 'ambient';
-
-  constructor(start: Vec, opts: {
-    segments: number;
-    segLen: number;
-    bodyScale: number;
-    speedScale: number;
-    color: FishColor;
-    orbit: LakeFish['orbit'];
-    physicsMode?: 'cursor' | 'ambient';
-  }) {
-    this.segments = opts.segments;
-    this.segLen = opts.segLen;
-    this.bodyScale = opts.bodyScale;
-    this.speedScale = opts.speedScale;
-    this.color = opts.color;
-    this.orbit = opts.orbit;
-    this.physicsMode = opts.physicsMode ?? 'ambient';
-    this.spine = Array.from({ length: opts.segments }, (_, i) => ({
-      x: start.x - i * opts.segLen,
-      y: start.y,
-    }));
-    this.prevHead = { x: start.x, y: start.y };
-    this.target = { x: start.x, y: start.y };
-    // Primer wanderTarget = spawn (orbit center). En el primer tick el
-    // pez ya está ahí, así que entrará en pausing y elegirá uno nuevo.
-    this.wanderTarget = { x: opts.orbit.cx, y: opts.orbit.cy };
-  }
-
-  /**
-   * Suaviza el target gradualmente — `target += (raw - target) * k`. Sin
-   * esto, cuando el cursor se mueve rápido, el pez se teleporta. Con k bajo
-   * (0.04 en patrullaje, 0.18 cuando sigue al cursor) se siente fluido.
-   */
-  setTargetSmooth(raw: Vec, smoothing: number): void {
-    this.target.x += (raw.x - this.target.x) * smoothing;
-    this.target.y += (raw.y - this.target.y) * smoothing;
-  }
-
-  /**
-   * Step: la cabeza se mueve hacia target, los segmentos siguen vía FABRIK
-   * chain (se preserva segLen entre cada par). Después se aplica una onda
-   * lateral senoidal por segmento que crece hacia la cola — eso da la
-   * curvatura orgánica natural de un pez nadando.
-   *
-   * `depthFactor` (0..1.5+) escala la velocidad de movimiento. Físicas de
-   * perspectiva: un pez al fondo (depthFactor pequeño) debe nadar lento
-   * en píxeles para que VISUALMENTE se mueva al mismo ritmo (relativo a
-   * su tamaño) que un pez al frente. Sin esto, los peces chicos parecen
-   * dardos porque se mueven 9px/frame sobre cuerpos de 7px.
-   */
-  update(dt: number, isFollowing: boolean, depthFactor = 1): void {
-    this.prevHead.x = this.spine[0].x;
-    this.prevHead.y = this.spine[0].y;
-
-    const head = this.spine[0];
-    const dx = this.target.x - head.x;
-    const dy = this.target.y - head.y;
-    const dist = Math.hypot(dx, dy);
-
-    // ─── Movimiento de la cabeza — branchado por physicsMode ───
-    // 'ambient': heading + turn-rate limit + drag al girar (física real
-    //            naturalista).
-    // 'cursor':  movimiento directo head→target sin lag, como ayer
-    //            (el usuario lo prefirió explícitamente: "ya tiene un
-    //            montón de lag, ya no sigue el cursor").
-    const pull = (isFollowing ? 0.20 : 0.08) * depthFactor;
-    const maxStep = (isFollowing ? 14 : 5) * this.speedScale * dt * 60 * depthFactor;
-    if (this.physicsMode === 'cursor') {
-      const step = Math.min(dist * pull, maxStep);
-      if (dist > 0.5) {
-        head.x += (dx / dist) * step;
-        head.y += (dy / dist) * step;
-      }
-    } else {
-      // Heading con turn-rate limit
-      if (dist > 0.5) {
-        const targetAngle = Math.atan2(dy, dx);
-        let angleDiff = targetAngle - this.heading;
-        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-        const currSpeed = Math.hypot(this.velocity.x, this.velocity.y);
-        const turnRate = Math.min(6.0 / (1 + currSpeed * 0.15), 4.5);
-        const turn = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
-        this.heading += turn;
-      }
-      // Drag al girar + movimiento a lo largo del heading
-      let stepMag = Math.min(dist * pull, maxStep);
-      if (dist > 0.5) {
-        const targetAngle = Math.atan2(dy, dx);
-        let alignDiff = targetAngle - this.heading;
-        while (alignDiff > Math.PI) alignDiff -= 2 * Math.PI;
-        while (alignDiff < -Math.PI) alignDiff += 2 * Math.PI;
-        const alignment = Math.cos(alignDiff);
-        const dragFactor = 0.35 + 0.65 * Math.max(0, alignment);
-        stepMag *= dragFactor;
-        head.x += Math.cos(this.heading) * stepMag;
-        head.y += Math.sin(this.heading) * stepMag;
-      }
-    }
-
-    this.velocity.x = head.x - this.prevHead.x;
-    this.velocity.y = head.y - this.prevHead.y;
-    const speed = Math.hypot(this.velocity.x, this.velocity.y);
-
-    // FABRIK chain: cada segmento se reposiciona a segLen del anterior, en
-    // la dirección del actual. Iteración hacia atrás desde la cabeza.
-    for (let i = 1; i < this.spine.length; i++) {
-      const a = this.spine[i - 1];
-      const b = this.spine[i];
-      const ddx = b.x - a.x;
-      const ddy = b.y - a.y;
-      const d = Math.hypot(ddx, ddy) || 1;
-      b.x = a.x + (ddx / d) * this.segLen;
-      b.y = a.y + (ddy / d) * this.segLen;
-    }
-
-    // Onda lateral del cuerpo — branchada por physicsMode:
-    //   'cursor':  fórmula legacy de ayer — phase rate `3.5 + speed*0.6`,
-    //              amplitud `min(speed*0.10, 0.8)`. Comportamiento que el
-    //              usuario quiere preservar para el pez del cursor.
-    //   'ambient': nuevo signal `effort` smoothed (lerp k=4, tau ~250ms)
-    //              que evita el "twisting al frenar" — al detenerse el
-    //              head, la cola se desinfla gradualmente en lugar de
-    //              seguir oscilando.
-    let baseAmp: number;
-    if (this.physicsMode === 'cursor') {
-      this.phase += dt * (3.5 + speed * 0.6);
-      baseAmp = Math.min(speed * 0.10, 0.8);
-    } else {
-      const targetEffort = Math.min(1, speed / 2.0);
-      this.effort += (targetEffort - this.effort) * Math.min(1, dt * 4);
-      this.phase += dt * (1.0 + this.effort * 3.0);
-      baseAmp = 0.20 + 0.80 * this.effort;
-    }
-    for (let i = 2; i < this.spine.length; i++) {
-      const t = i / (this.spine.length - 1);
-      const wave = Math.sin(this.phase - t * 4.2) * baseAmp * t * t;
-      const a = this.spine[i - 1];
-      const b = this.spine[i];
-      const tx = b.x - a.x;
-      const ty = b.y - a.y;
-      const len = Math.hypot(tx, ty) || 1;
-      const nx = -ty / len;
-      const ny = tx / len;
-      b.x += nx * wave;
-      b.y += ny * wave;
-      // Re-clamp a segLen tras la deformación.
-      const ddx = b.x - a.x;
-      const ddy = b.y - a.y;
-      const d = Math.hypot(ddx, ddy) || 1;
-      b.x = a.x + (ddx / d) * this.segLen;
-      b.y = a.y + (ddy / d) * this.segLen;
-    }
-
-    // Suavizado del glow boost — converge al target en ~250ms.
-    this.glowBoost += (this.glowBoostTarget - this.glowBoost) * Math.min(1, dt * 4);
-  }
-
-  /**
-   * Render — calcado del pez de referencia: glow azul saturado (radial),
-   * silueta translúcida del cuerpo, espina segmentada con vértebras
-   * brillantes, aletas dorsales/pectorales/anales, ojo luminoso y cola
-   * triangular que ondea.
-   *
-   * Compositing: 'lighter' (additive) — se suma a las zonas oscuras del
-   * lago y produce el look bioluminiscente sin blur ni post-process.
-   *
-   * Escalado uniforme: el `depthScale` se aplica vía ctx.scale() alrededor
-   * del centroide del pez. Así el pez ENTERO se achica uniformemente
-   * (largo + ancho + aletas + cola + glow) cuando se va al fondo del
-   * lago — no solo se adelgaza. Sin esto el pez parecía un gusano que
-   * se estira al fondo en lugar de un pez que se aleja.
-   */
-  render(ctx: CanvasRenderingContext2D, depthScale: number): void {
-    const scale = this.bodyScale; // SIN multiplicar por depthScale aquí
-    const head = this.spine[0];
-    const tail = this.spine[this.spine.length - 1];
-    const second = this.spine[1];
-    const beforeTail = this.spine[this.spine.length - 2];
-
-    const headDir = norm({ x: head.x - second.x, y: head.y - second.y });
-    const tailDir = norm({ x: tail.x - beforeTail.x, y: tail.y - beforeTail.y });
-
-    // tailWag — branchado por physicsMode:
-    //   'cursor':  fórmula legacy de ayer: `1.4 + min(speed*0.4, 3.5)`,
-    //              rango 1.4 (idle) hasta 4.9 (rápido). Cola viva con
-    //              amplitud completa — comportamiento que el usuario
-    //              quiere preservar explícitamente.
-    //   'ambient': escalado por effort smoothed para evitar twisting
-    //              al frenar. Quieto: 0.41px. Cruisendo: 2.03px.
-    let tailWag: number;
-    if (this.physicsMode === 'cursor') {
-      const speed = Math.hypot(this.velocity.x, this.velocity.y);
-      tailWag = Math.sin(this.phase - 4.0) * (1.4 + Math.min(speed * 0.4, 3.5));
-    } else {
-      const wagFactor = 0.20 + 0.80 * this.effort;
-      tailWag = Math.sin(this.phase - 4.0) * (this.bodyScale * 0.45 * wagFactor);
-    }
-
-    // Centroide para el transform uniforme — punto medio entre cabeza y
-    // cola (centro aproximado del cuerpo).
-    const centroidX = (head.x + tail.x) * 0.5;
-    const centroidY = (head.y + tail.y) * 0.5;
-
-    ctx.save();
-    // Aplicar el depthScale como transform uniforme alrededor del
-    // centroide. Todo lo que dibujemos a partir de acá queda escalado
-    // proporcionalmente — largo, ancho, aletas, cola, halo, todo junto.
-    ctx.translate(centroidX, centroidY);
-    ctx.scale(depthScale, depthScale);
-    ctx.translate(-centroidX, -centroidY);
-    ctx.globalCompositeOperation = 'lighter';
-
-    // ─── Halo amplio exterior — gradient cyan→azul→transparent.
-    // Sigue al cuerpo entero, ovalado en la dirección de la espina.
-    const cx = (head.x + tail.x) * 0.5;
-    const cy = (head.y + tail.y) * 0.5;
-    const bodyAngle = Math.atan2(tail.y - head.y, tail.x - head.x);
-    const haloR = scale * (4.4 + this.glowBoost * 1.4);
-    const haloAlpha = 0.32 + this.glowBoost * 0.35;
-    const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
-    halo.addColorStop(0, hexA(this.color.glow, haloAlpha));
-    halo.addColorStop(0.30, hexA(this.color.glow, haloAlpha * 0.65));
-    halo.addColorStop(0.65, hexA(this.color.glow, haloAlpha * 0.20));
-    halo.addColorStop(1, hexA(this.color.glow, 0));
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, haloR, haloR * 0.62, bodyAngle, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ─── Aletas: dorsal (arriba, mid), pectoral (abajo, frontal), anal
-    // (abajo, posterior). Cada aleta vive perpendicular a la espina en
-    // un punto t determinado. "Arriba" y "abajo" se calculan a partir
-    // de la dirección del segmento ahí. Las aletas son translúcidas
-    // con gradient lineal del cuerpo hacia el borde.
-    //
-    // Helper: dibuja una aleta triangular con base a lo largo de la
-    // espina, tip apuntando perpendicular ± distancia. `side` = +1 (up)
-    // o −1 (down) en convención perpendicular.
-    const drawFin = (
-      tStart: number, tEnd: number, side: number,
-      reach: number, sweepBack: number, alphaScale: number,
-    ): void => {
-      const aIdx = Math.max(0, Math.min(this.spine.length - 1, Math.floor(tStart * (this.spine.length - 1))));
-      const bIdx = Math.max(0, Math.min(this.spine.length - 1, Math.floor(tEnd * (this.spine.length - 1))));
-      const a = this.spine[aIdx];
-      const b = this.spine[bIdx];
-      // Perp del segmento medio entre a y b
-      const segDx = b.x - a.x;
-      const segDy = b.y - a.y;
-      const segLen = Math.hypot(segDx, segDy) || 1;
-      const segDir = { x: segDx / segLen, y: segDy / segLen };
-      const perp = { x: -segDy / segLen * side, y: segDx / segLen * side };
-      // Punta de la aleta: a + reach * perp + sweepBack * segDir (las
-      // aletas se inclinan hacia atrás del pez como en peces reales).
-      const baseMid = { x: (a.x + b.x) * 0.5, y: (a.y + b.y) * 0.5 };
-      const tip = {
-        x: baseMid.x + perp.x * reach + segDir.x * sweepBack,
-        y: baseMid.y + perp.y * reach + segDir.y * sweepBack,
-      };
-      const finGrad = ctx.createLinearGradient(baseMid.x, baseMid.y, tip.x, tip.y);
-      finGrad.addColorStop(0, hexA(this.color.spine, (0.55 + this.glowBoost * 0.15) * alphaScale));
-      finGrad.addColorStop(0.6, hexA(this.color.glow, 0.30 * alphaScale));
-      finGrad.addColorStop(1, hexA(this.color.glow, 0));
-      ctx.fillStyle = finGrad;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.quadraticCurveTo(
-        a.x + perp.x * reach * 0.4,
-        a.y + perp.y * reach * 0.4,
-        tip.x, tip.y,
-      );
-      ctx.quadraticCurveTo(
-        b.x + perp.x * reach * 0.2 + segDir.x * sweepBack * 0.3,
-        b.y + perp.y * reach * 0.2 + segDir.y * sweepBack * 0.3,
-        b.x, b.y,
-      );
-      ctx.closePath();
-      ctx.fill();
-    };
-
-    // Dorsal — arriba del cuerpo, mid-back
-    drawFin(0.28, 0.45, +1, scale * 1.45, scale * 0.6, 1.0);
-    // Pectoral — abajo, justo detrás de la cabeza
-    drawFin(0.10, 0.22, -1, scale * 1.1, scale * 0.4, 0.9);
-    // Anal — abajo, mid-tail
-    drawFin(0.55, 0.70, -1, scale * 1.0, scale * 0.45, 0.85);
-
-    // ─── Cuerpo translúcido — silueta oval oscura ("carne" del pez) que
-    // sigue la espina. Ancho varía con t² para nariz fina + cuerpo medio
-    // ancho + cola que se cierra. El cuerpo es darker que el glow para
-    // que los puntos vertebrales destaquen contra él.
-    const left: Vec[] = [];
-    const right: Vec[] = [];
-    for (let i = 0; i < this.spine.length; i++) {
-      const t = i / (this.spine.length - 1);
-      // Multiplicador subido de 0.85 → 1.0 (~+18% de grosor). Acerca la
-      // proporción largo:ancho al pez de referencia (más fusiforme,
-      // menos "gusano"). Sin cambios en la curva sin/pow, solo el factor
-      // final — la silueta sigue siendo torpedo natural.
-      const w = scale * Math.sin(Math.PI * Math.pow(t, 0.55)) * (1 - 0.32 * t) * 1.0;
-      const cur = this.spine[i];
-      const ahead = i < this.spine.length - 1 ? this.spine[i + 1] : cur;
-      const behind = i > 0 ? this.spine[i - 1] : cur;
-      const tx = ahead.x - behind.x;
-      const ty = ahead.y - behind.y;
-      const len = Math.hypot(tx, ty) || 1;
-      const ux = -ty / len;
-      const uy = tx / len;
-      left.push({ x: cur.x + ux * w, y: cur.y + uy * w });
-      right.push({ x: cur.x - ux * w, y: cur.y - uy * w });
-    }
-    const noseTip = {
-      x: head.x + headDir.x * scale * 0.45,
-      y: head.y + headDir.y * scale * 0.45,
-    };
-    ctx.fillStyle = hexA(this.color.body, 0.55 + this.glowBoost * 0.10);
-    ctx.beginPath();
-    ctx.moveTo(noseTip.x, noseTip.y);
-    for (let i = 0; i < left.length - 1; i++) {
-      const c1 = left[i];
-      const c2 = left[i + 1];
-      ctx.quadraticCurveTo(c1.x, c1.y, (c1.x + c2.x) / 2, (c1.y + c2.y) / 2);
-    }
-    ctx.lineTo(tail.x, tail.y);
-    for (let i = right.length - 1; i > 0; i--) {
-      const c1 = right[i];
-      const c2 = right[i - 1];
-      ctx.quadraticCurveTo(c1.x, c1.y, (c1.x + c2.x) / 2, (c1.y + c2.y) / 2);
-    }
-    ctx.lineTo(noseTip.x, noseTip.y);
-    ctx.closePath();
-    ctx.fill();
-
-    // ─── Vértebras — puntos brillantes individuales sobre la espina.
-    // En la imagen de referencia, la espina no es un trazo continuo;
-    // son destellos discretos por cada articulación, con tamaño que
-    // crece hacia el centro del cuerpo. Cada uno renderiza con un
-    // pequeño halo radial para que se sienta "vivo, no LED".
-    const spineAlpha = 0.92 + this.glowBoost * 0.08;
-    for (let i = 0; i < this.spine.length; i++) {
-      const t = i / (this.spine.length - 1);
-      // Diámetro: pico en t=0.4 (justo después de la cabeza), decae a la cola.
-      const r = Math.max(0.6, scale * (0.42 - Math.abs(t - 0.4) * 0.45));
-      if (r < 0.5) continue;
-      const p = this.spine[i];
-      const dot = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
-      dot.addColorStop(0, hexA(this.color.spine, spineAlpha));
-      dot.addColorStop(0.45, hexA(this.color.spine, spineAlpha * 0.5));
-      dot.addColorStop(1, hexA(this.color.spine, 0));
-      ctx.fillStyle = dot;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // ─── Punto cabeza/nariz — destello más brillante que las vértebras,
-    // imita el "ojo luminoso" del pez de referencia.
-    const noseR = Math.max(0.9, scale * 0.32);
-    const noseGrad = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, noseR * 2.6);
-    noseGrad.addColorStop(0, hexA('#ffffff', 0.85 + this.glowBoost * 0.15));
-    noseGrad.addColorStop(0.40, hexA(this.color.spine, 0.72));
-    noseGrad.addColorStop(1, hexA(this.color.spine, 0));
-    ctx.fillStyle = noseGrad;
-    ctx.beginPath();
-    ctx.arc(head.x, head.y, noseR * 2.6, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ─── Cola — abanico triangular con curva, glow brillante interior
-    // que se desvanece al borde. Wag modulado por velocidad.
-    const tailLen = scale * 1.7;
-    const tailWidth = scale * 0.95;
-    const tailPerp = { x: -tailDir.y, y: tailDir.x };
-    const tailEnd = {
-      x: tail.x + tailDir.x * tailLen + tailPerp.x * tailWag,
-      y: tail.y + tailDir.y * tailLen + tailPerp.y * tailWag,
-    };
-    const tailUp = {
-      x: tail.x + tailDir.x * tailLen * 0.50 + tailPerp.x * (tailWidth + tailWag * 0.4),
-      y: tail.y + tailDir.y * tailLen * 0.50 + tailPerp.y * (tailWidth + tailWag * 0.4),
-    };
-    const tailDown = {
-      x: tail.x + tailDir.x * tailLen * 0.50 - tailPerp.x * (tailWidth - tailWag * 0.4),
-      y: tail.y + tailDir.y * tailLen * 0.50 - tailPerp.y * (tailWidth - tailWag * 0.4),
-    };
-    const tailGrad = ctx.createLinearGradient(tail.x, tail.y, tailEnd.x, tailEnd.y);
-    tailGrad.addColorStop(0, hexA(this.color.spine, 0.78 + this.glowBoost * 0.15));
-    tailGrad.addColorStop(0.55, hexA(this.color.spine, 0.40));
-    tailGrad.addColorStop(1, hexA(this.color.spine, 0.05));
-    ctx.fillStyle = tailGrad;
-    ctx.beginPath();
-    ctx.moveTo(tail.x, tail.y);
-    ctx.quadraticCurveTo(
-      (tail.x + tailUp.x) / 2 + tailDir.x * 2,
-      (tail.y + tailUp.y) / 2 + tailDir.y * 2,
-      tailUp.x, tailUp.y,
-    );
-    ctx.quadraticCurveTo(
-      (tailUp.x + tailEnd.x) / 2 - tailDir.x * 2.5,
-      (tailUp.y + tailEnd.y) / 2 - tailDir.y * 2.5,
-      tailEnd.x, tailEnd.y,
-    );
-    ctx.quadraticCurveTo(
-      (tailEnd.x + tailDown.x) / 2 - tailDir.x * 2.5,
-      (tailEnd.y + tailDown.y) / 2 - tailDir.y * 2.5,
-      tailDown.x, tailDown.y,
-    );
-    ctx.quadraticCurveTo(
-      (tail.x + tailDown.x) / 2 + tailDir.x * 2,
-      (tail.y + tailDown.y) / 2 + tailDir.y * 2,
-      tail.x, tail.y,
-    );
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
-  }
-}
-
-// =============================================================================
-// GlowFish — pez silueta-luminosa al estilo de la imagen de referencia.
-// Cuerpo ovalado outlined con luz azul (no construido por puntos sueltos
-// como LakeFish), aletas pequeñas outlined, núcleo brillante longitudinal,
-// ojo destacado, halo soft. Movimiento simple (lerp + heading smoothing,
-// SIN FABRIK, SIN spine articulado), tipo pez dorado patrullando.
-// Compatible con applyWander y clampSpineToLake porque expone los mismos
-// fields (spine como array de 1 elemento sincronizado a position).
-// =============================================================================
 
 interface GlowFishColor {
   /** Línea brillante del rim (luz que traza la silueta). */
@@ -801,7 +298,7 @@ class GlowFish {
   orbit: { cx: number; cy: number; rx: number; ry: number; phase: number; speed: number };
   target: Vec;
 
-  // Wander state (mismos fields que LakeFish para drop-in con applyWander)
+  // Wander state (state machine: cruising → pausing → cruising; usado por applyWander)
   wanderTarget: Vec;
   wanderState: 'cruising' | 'pausing' = 'cruising';
   pauseTimer = 0;
@@ -1000,10 +497,11 @@ class GlowFish {
       let diff = targetAngle - this.heading;
       while (diff > Math.PI) diff -= 2 * Math.PI;
       while (diff < -Math.PI) diff += 2 * Math.PI;
-      // Max turn rate más moderado — radio mínimo más amplio = arcs
-      // más graciosos, menos overshoot. Para 180° toma ~3.1s con
-      // velocidad típica = U-turn dramatic pero natural.
-      const maxTurnRate = 1.0; // rad/s ≈ 57°/s
+      // Max turn rate ÁGIL — 2.0 rad/s = ~115°/s. 180° en ~1.6s. Más
+      // rápido para que los giros se sientan vivos y la animación de C
+      // no dure tanto en pantalla (user pidió: "ah, voy a girar y
+      // giran rápido y fluido").
+      const maxTurnRate = 2.0; // rad/s ≈ 115°/s
       const turn = Math.sign(diff) * Math.min(Math.abs(diff), maxTurnRate * _dt);
       this.heading += turn;
       alignment = Math.cos(diff); // proyección del heading sobre el target
@@ -1014,8 +512,8 @@ class GlowFish {
     //    cambia velocidad instantánea: acelera y desacelera con inercia.
     //    Resultado: tras un giro brusco, sigue gliding un instante;
     //    al volver a alinearse con el target, acelera gradualmente.
-    const minSpeed = 1.4 * this.speedScale * depthFactor;
-    const maxSpeed = 2.6 * this.speedScale * depthFactor;
+    const minSpeed = 2.0 * this.speedScale * depthFactor;
+    const maxSpeed = 3.6 * this.speedScale * depthFactor;
     const speedFactor01 = 0.5 + 0.5 * alignment; // 0..1
     // TURN SPEED DAMPING moderado — pequeña reducción durante turns
     // (max 25%) para mantener forward motion visible. Sin damping
@@ -1051,10 +549,12 @@ class GlowFish {
     //     ~285ms para reacelerar. Domenici & Blake 1997.
     const rawTurnRate = Math.abs(rawAngVel);
     this.smoothedTurnRate = this.smoothedTurnRate * 0.80 + rawTurnRate * 0.20;
-    // smoothstep(1.5, 4.0): por debajo de 1.5 rad/s wave full; arriba de
-    // 4.0 rad/s wave totalmente suprimido. Entre los dos, ramp suave.
+    // smoothstep(1.5, 2.5): por debajo de 1.5 rad/s wave full; arriba
+    // de 2.5 rad/s wave totalmente suprimido. Re-escalado al nuevo
+    // maxTurnRate=2.0 — los turns "fuertes" llegan a ~2.0 rad/s y
+    // activan el gate. Los turns suaves no.
     const TURN_GATE_LO = 1.5;
-    const TURN_GATE_HI = 4.0;
+    const TURN_GATE_HI = 2.5;
     let swimGate = 1.0;
     if (this.smoothedTurnRate >= TURN_GATE_HI) swimGate = 0;
     else if (this.smoothedTurnRate > TURN_GATE_LO) {
@@ -1772,7 +1272,7 @@ const canvasUVToImgUV = (
  * que ni el feather de la orilla deja escapar al pez.
  */
 const clampSpineToLake = (
-  fish: { spine: Vec[] }, // LakeFish o GlowFish — ambos exponen .spine
+  fish: { spine: Vec[] }, // GlowFish expone .spine como [position]
   mask: { data: Uint8ClampedArray; width: number; height: number },
   cw: number, ch: number, imgW: number, imgH: number,
   anchor: Vec, // canvas-UV (0..1) del ancla seguro
@@ -1917,34 +1417,6 @@ export class WolfLakeCanvas {
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerleave', onLeave, { passive: true });
 
-    // ─── Paleta — azul ELÉCTRICO PURO como en la referencia.
-    // Sin cyan/teal/verdoso. Hex todos con G < B y G ≤ R/2 para forzar
-    // tono claramente azul. Glow es el color dominante visible al sumar.
-    //   spine = vértebras (azul muy claro, casi blanco-azul)
-    //   body  = silueta (azul electric medio)
-    //   glow  = halo exterior (azul saturado eléctrico)
-    const PALETTE: FishColor[] = [
-      { spine: '#a0b8ff', body: '#1850e0', glow: '#1565ff' },
-      { spine: '#aac0ff', body: '#1958e8', glow: '#1f6cff' },
-      { spine: '#9cb4ff', body: '#1448d8', glow: '#0f5ef5' },
-      { spine: '#b4c8ff', body: '#1e60ec', glow: '#2474ff' },
-      { spine: '#a4bcff', body: '#1654e4', glow: '#1768ff' },
-    ];
-
-    // Spawn UV — 6 peces dispersos por el lago seguro. Image-UV (0..1).
-    // Todos verificados contra el polígono v5: cabeza del pez SIEMPRE
-    // dentro del lago al spawn. El polígono se cierra a x=1510 (≈0.90 en
-    // x), así que mantenemos los spawns bajo x=0.85 para tener margen
-    // contra el clamp del lado derecho.
-    const SPAWN_UV: Vec[] = [
-      { x: 0.12, y: 0.72 }, // fondo izq
-      { x: 0.28, y: 0.84 }, // medio izq
-      { x: 0.45, y: 0.70 }, // fondo medio (lejos)
-      { x: 0.40, y: 0.92 }, // cerca medio
-      { x: 0.62, y: 0.93 }, // cerca derecha-medio
-      { x: 0.18, y: 0.96 }, // cerca izq
-    ];
-
     // ─── depthScale: pez Y normalizado al rango del lago → escala visual.
     // Rango ATENUADO (antes era 0.18×→1.25×, ratio 7×). El usuario pidió
     // que el shrink hacia la ciudad se note pero sin volverse "punto":
@@ -1998,7 +1470,7 @@ export class WolfLakeCanvas {
     //
     // El pauseTimer se randomiza 0.8-3.5s por transición — cada pez
     // tiene su propio ritmo, así nunca pausan todos a la vez.
-    const applyWander = (f: LakeFish | GlowFish, dtNow: number): void => {
+    const applyWander = (f: GlowFish, dtNow: number): void => {
       if (f.wanderState === 'cruising') {
         const wcuv = imgUVToCanvasUV(f.wanderTarget, cw, ch, IMG_W, IMG_H);
         const wx = wcuv.x * cw;
@@ -2048,60 +1520,25 @@ export class WolfLakeCanvas {
       }
     };
 
-    // ─── Build ambient fishes — escala pequeña, proporcionada al
-    // tamaño visible del lago en el hero.
-    const fishes: LakeFish[] = [];
-    const buildFishes = (): void => {
-      fishes.length = 0;
-      for (let i = 0; i < SPAWN_UV.length; i++) {
-        const uv = SPAWN_UV[i];
-        const cuv = imgUVToCanvasUV(uv, cw, ch, IMG_W, IMG_H);
-        const start = { x: cuv.x * cw, y: cuv.y * ch };
-        // baseScale: cw=1440 → 4.5. Mobile cw=375 → 2.5. Mantiene peces
-        // entre ~30-65px de largo total — claramente visibles, no
-        // protagonistas. El lago ocupa ~45% del alto del hero, así que
-        // peces más grandes los harían parecer "fuera de escala".
-        // Escala bumped 2.5–5.0 → 2.9–5.7 (~+14%). Peces más grandes
-        // como en la imagen de referencia, sin cambiar la física (sólo
-        // los píxeles que el render dibuja).
-        const baseScale = Math.max(2.9, Math.min(5.7, cw / 280));
-        fishes.push(new LakeFish(start, {
-          segments: 11,
-          segLen: baseScale * 0.95,
-          bodyScale: baseScale,
-          speedScale: 0.55 + Math.random() * 0.35,
-          color: PALETTE[i % PALETTE.length],
-          orbit: {
-            cx: uv.x,
-            cy: uv.y,
-            rx: 0.045 + Math.random() * 0.04,
-            ry: 0.018 + Math.random() * 0.015,
-            phase: Math.random() * Math.PI * 2,
-            speed: 0.16 + Math.random() * 0.12,
-          },
-        }));
-      }
-    };
-    buildFishes();
-
-    // ─── GlowFish (3) — peces silueta-luminosa al estilo de la imagen de
-    // referencia. Coexisten con los LakeFish ambientales para que el
-    // usuario compare ambos estilos en el mismo lago. Spawn en puntos
-    // que no chocan con SPAWN_UV de los LakeFish.
+    // ─── GlowFish (5) ambientales — peces silueta-luminosa estilo argonaut
+    // chain. Distribuidos en los SPAWN_UV originales del lago, todos
+    // verificados dentro del polígono seguro del agua.
     // Paleta azul ELÉCTRICO PURO, sin celeste/cyan. Hexes con G < B/2
-    // para forzar el tono "literalmente azul" que el usuario pidió
-    // mirando la referencia. Rim/core ya no son blanco-azul, son
-    // azul saturado bright. El blanco aparece SOLO en los puntos
-    // brillantes internos (vertebrae spots).
+    // para forzar el tono "literalmente azul" que el usuario pidió.
     const GLOW_PALETTE: GlowFishColor[] = [
       { rim: '#3870ff', body: '#060932', core: '#1858ff', halo: '#0040ff' },
       { rim: '#3068ee', body: '#070b35', core: '#1450ee', halo: '#0038f0' },
       { rim: '#4078ff', body: '#080c38', core: '#2060ff', halo: '#0048ff' },
+      { rim: '#2c5cdc', body: '#050828', core: '#1048d8', halo: '#0030e0' },
+      { rim: '#5088ff', body: '#0a1040', core: '#2868ff', halo: '#0050ff' },
     ];
+    // 4 spawn points para los ambientales (el 5º pez total es el cursorFish,
+    // que patrulla cerca de 0.40,0.88 cuando no hay cursor sobre el agua).
     const GLOW_SPAWN: Vec[] = [
-      { x: 0.22, y: 0.66 },
-      { x: 0.50, y: 0.78 },
-      { x: 0.72, y: 0.88 },
+      { x: 0.12, y: 0.72 }, // fondo izq
+      { x: 0.45, y: 0.70 }, // fondo medio (lejos)
+      { x: 0.62, y: 0.93 }, // cerca derecha-medio
+      { x: 0.18, y: 0.96 }, // cerca izq
     ];
     const glowFishes: GlowFish[] = [];
     const buildGlowFishes = (): void => {
@@ -2110,17 +1547,14 @@ export class WolfLakeCanvas {
         const uv = GLOW_SPAWN[i];
         const cuv = imgUVToCanvasUV(uv, cw, ch, IMG_W, IMG_H);
         const start = { x: cuv.x * cw, y: cuv.y * ch };
-        // size ~20 en desktop, ~11 en mobile (+~55% vs versión previa).
-        // Los GlowFish extienden ~4.5×size de largo total (con tail),
-        // así que size=20 da ~90px en desktop, ~50px en mobile.
+        // size ~20 en desktop, ~11 en mobile.
         const baseSize = Math.max(11, Math.min(20, cw / 72));
         glowFishes.push(new GlowFish(start, {
           size: baseSize,
-          // SpeedScale 0.45-0.7 — los GlowFish son más calmos que los
-          // LakeFish (pez dorado-like, no cardumen), así que aún cuando
-          // su pull/maxStep base son menores, terminan moviéndose
-          // notablemente más despacio.
-          speedScale: 0.45 + Math.random() * 0.25,
+          // SpeedScale 0.85-1.15 — los peces ambientales nadan a
+          // velocidad "bonita y con energía" (per-instance variation
+          // para que no parezcan un cardumen sincronizado).
+          speedScale: 0.85 + Math.random() * 0.30,
           color: GLOW_PALETTE[i % GLOW_PALETTE.length],
           orbit: {
             cx: uv.x,
@@ -2135,33 +1569,16 @@ export class WolfLakeCanvas {
     };
     buildGlowFishes();
 
-    // ─── Cursor fish — color azul eléctrico aún más puro (G mínima):
-    //   spine '#b8c8ff' (G=200, B=255) — muy claro, casi lavender
-    //   body  '#1648dc' (G=72,  B=220) — azul profundo
-    //   glow  '#0d4dff' (G=77,  B=255) — saturado eléctrico
-    // Cursor base bumped 2.8–5.4 → 3.2–6.1 (~+13%). El pez del cursor
-    // sigue siendo el "principal" (1.08× sobre cursorBase), un poco más
-    // grande que los ambientales como antes.
-    const cursorBase = Math.max(3.2, Math.min(6.1, cw / 260));
-    const cursorFish = new LakeFish(
+    // ─── Cursor fish — GlowFish con speedScale alto (1.4) para que sea
+    // ágil al perseguir el cursor. Brigther palette para destacar.
+    const cursorSize = Math.max(13, Math.min(24, cw / 60));
+    const cursorFish = new GlowFish(
       { x: cw * 0.55, y: ch * 0.85 },
       {
-        segments: 12,
-        segLen: cursorBase * 0.95,
-        bodyScale: cursorBase * 1.08,
-        // speedScale 0.85 — el pez del cursor se mueve con energía.
-        speedScale: 0.85,
-        color: { spine: '#b8c8ff', body: '#1648dc', glow: '#0d4dff' },
-        // physicsMode='cursor' — el pez del cursor mantiene la física
-        // legacy (movimiento directo head→target sin turn-rate limit ni
-        // drag, wave/cola driven by speed bruto, patrol orbit-based).
-        // Comportamiento explícitamente preferido por el usuario: "ya
-        // tiene un montón de lag, ya no sigue el cursor", quiere el
-        // comportamiento de ayer.
-        physicsMode: 'cursor',
-        // Orbit no-cero — cuando el cursor sale del agua (o no hay
-        // cursor), el pez patrulla en esta órbita en vez de quedarse
-        // esperando en la orilla o usar el wander state machine.
+        size: cursorSize,
+        speedScale: 1.4,
+        color: { rim: '#80a4ff', body: '#0a1444', core: '#3878ff', halo: '#0b50ff' },
+        // Orbit pequeña para fallback cuando el cursor sale del agua.
         orbit: {
           cx: 0.40,
           cy: 0.88,
@@ -2180,7 +1597,6 @@ export class WolfLakeCanvas {
 
     const ro = new ResizeObserver(() => {
       resize();
-      buildFishes();
       buildGlowFishes();
     });
     ro.observe(host);
@@ -2235,17 +1651,11 @@ export class WolfLakeCanvas {
       }
 
       if (cursorOnWater) {
-        // Modo follow — target = posición del cursor, smoothing 0.10
-        // para respuesta viva. isFollowing=true en update() activa los
-        // pull/maxStep altos (0.20/14) del pez del cursor.
-        cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.10);
+        // Modo follow — target = cursor position con smoothing rápido.
+        cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
         cursorFish.glowBoostTarget = 0.85;
       } else {
-        // Modo patrullaje — orbit-based legacy (NO wander state machine).
-        // El usuario pidió explícitamente que el pez del cursor conserve
-        // el comportamiento de ayer, incluido el patrullaje en la órbita
-        // chica del frente del lago en vez del wander libre que aplica
-        // a los peces ambientales.
+        // Modo patrullaje — orbit chica como fallback.
         cursorFish.orbit.phase += dt * cursorFish.orbit.speed;
         let tx = cursorFish.orbit.cx + Math.cos(cursorFish.orbit.phase) * cursorFish.orbit.rx;
         let ty = cursorFish.orbit.cy + Math.sin(cursorFish.orbit.phase * 1.3) * cursorFish.orbit.ry;
@@ -2254,61 +1664,19 @@ export class WolfLakeCanvas {
           ty = cursorFish.orbit.cy;
         }
         const cuv = imgUVToCanvasUV({ x: tx, y: ty }, cw, ch, IMG_W, IMG_H);
-        cursorFish.setTargetSmooth({ x: cuv.x * cw, y: cuv.y * ch }, 0.04);
+        cursorFish.setTargetSmooth({ x: cuv.x * cw, y: cuv.y * ch }, 0.06);
         cursorFish.glowBoostTarget = 0.4;
       }
 
-      // Velocidad escalada por profundidad: pez al fondo nada lento
-      // (tanto en pixels como visualmente — perspectiva real).
       const cursorHeadVForUpdate = canvasUVToImgUV(
         { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
         cw, ch, IMG_W, IMG_H,
       ).y;
       cursorFish.update(dt, cursorOnWater, depthScaleAt(cursorHeadVForUpdate));
 
-      // Ambient fish — wander libre por todo el lago. Cada pez tiene su
-      // propio waypoint (state machine cruising/pausing) y su propio
-      // reloj de burst-glide (thrust signal en update()). El resultado
-      // es que distintos peces nadan en distintos momentos, pausan en
-      // distintos puntos, dan coletazos en distintos instantes — ningún
-      // movimiento sincronizado, instinto natural.
-      for (const f of fishes) {
-        applyWander(f, dt);
-
-        // Hover glow target — falloff radial desde el cursor (si está
-        // activo) y desde el cursor fish. El boost es máximo cuando el
-        // cursor o el pez-cursor están encima del head del pez ambiental.
-        const head = f.spine[0];
-        let boost = 0;
-        if (pointer.active) {
-          const dPointer = Math.hypot(head.x - pointer.x, head.y - pointer.y);
-          const radius = 90 + f.bodyScale * 8;
-          boost = Math.max(boost, Math.max(0, 1 - dPointer / radius));
-        }
-        const dCursorFish = Math.hypot(head.x - cursorFish.spine[0].x, head.y - cursorFish.spine[0].y);
-        const cfRadius = 70 + f.bodyScale * 6;
-        boost = Math.max(boost, Math.max(0, 1 - dCursorFish / cfRadius));
-        f.glowBoostTarget = boost;
-
-        // Velocidad escalada por profundidad — peces ambientales al fondo
-        // (depthFactor pequeño) se mueven menos px/frame, así no parecen
-        // dardos en la lejanía.
-        const ambientHeadV = canvasUVToImgUV(
-          { x: head.x / cw, y: head.y / ch }, cw, ch, IMG_W, IMG_H,
-        ).y;
-        f.update(dt, false, depthScaleAt(ambientHeadV));
-
-        // Clamp duro de TODO el cuerpo (no solo cabeza) — recorremos cada
-        // segmento de la espina y, si está fuera del agua segura, lo
-        // empujamos hacia el centro de la órbita con fuerza proporcional
-        // a qué tan adentro de la zona prohibida está.
-        clampSpineToLake(f, mask, cw, ch, IMG_W, IMG_H,
-          imgUVToCanvasUV({ x: f.orbit.cx, y: f.orbit.cy }, cw, ch, IMG_W, IMG_H));
-      }
-
-      // GlowFish — peces silueta-luminosa nuevos. Misma wander logic
-      // que los LakeFish ambientales, pero con física simple (sin FABRIK)
-      // y render tipo silueta outlined (cuerpo + aletas + núcleo + halo).
+      // GlowFish ambientales — wander libre por todo el lago. Cada pez
+      // tiene su propio waypoint y reloj de burst-glide. Resultado:
+      // movimiento desincronizado, sensación de instinto natural.
       for (const gf of glowFishes) {
         applyWander(gf, dt);
 
@@ -2333,24 +1701,14 @@ export class WolfLakeCanvas {
           imgUVToCanvasUV({ x: gf.orbit.cx, y: gf.orbit.cy }, cw, ch, IMG_W, IMG_H));
       }
 
-      // El pez-cursor también se queda dentro del lago (clamp idéntico).
-      // Ancla de seguridad: el centro horizontal del lago al frente.
-      // glowBoostTarget ya fue asignado arriba según el modo (follow
-      // = 0.85, patrol = 0.4) — no se vuelve a setear acá.
+      // El pez-cursor también se queda dentro del lago.
       const safeAnchor = imgUVToCanvasUV({ x: 0.40, y: 0.88 }, cw, ch, IMG_W, IMG_H);
       clampSpineToLake(cursorFish, mask, cw, ch, IMG_W, IMG_H, safeAnchor);
 
       // ─── Render
       ctx.clearRect(0, 0, cw, ch);
-      // Filtro blur leve da sensación de "están sumergidos"; el cuerpo y
-      // el glow ya son translúcidos pero el blur termina de soft-fundir
-      // el pez con el agua.
       ctx.save();
       ctx.filter = 'blur(0.5px)';
-      for (const f of fishes) {
-        const headV = canvasUVToImgUV({ x: f.spine[0].x / cw, y: f.spine[0].y / ch }, cw, ch, IMG_W, IMG_H).y;
-        f.render(ctx, depthScaleAt(headV));
-      }
       // Render GlowFish (mismo blur sutil para que se sientan sumergidos
       // junto al resto de peces).
       for (const gf of glowFishes) {
