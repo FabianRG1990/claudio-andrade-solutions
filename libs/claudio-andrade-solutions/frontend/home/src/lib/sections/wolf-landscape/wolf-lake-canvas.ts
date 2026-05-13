@@ -234,6 +234,27 @@ class GlowFish {
    *  Position se integra con currentSpeed, no targetSpeed. */
   currentSpeed = 0;
 
+  /** Modo "suspendido": cuando true, el pez frena gradualmente a casi 0
+   *  (override del minSpeed kinematic). Usado por el cursor fish cuando
+   *  alcanza al cursor: el pez se queda flotando en su posición en
+   *  lugar de seguir orbitando alrededor con Dubins forward-only.
+   *  Si el cursor se mueve, isHovering se desactiva externamente y el
+   *  pez vuelve a perseguir.
+   */
+  isHovering = false;
+
+  /** Energía oscilante per-pez (rad). Cada pez tiene su propio período
+   *  (8-25 segundos) y phase inicial random — sin patrón sincronizado.
+   *  Drives speed: cuando energy es baja (sin valley), el pez nada
+   *  más lento como si "descansara". Cuando energy es alta (peak),
+   *  burst-like. Transición suave (no on/off). Resultado: cada pez
+   *  tiene rachas de actividad y rachas de calma desincronizadas. */
+  energyPhase: number = Math.random() * Math.PI * 2;
+  /** Frecuencia angular de energyPhase (rad/s). 0.25-0.80 → período
+   *  8-25s. Cada pez su propio valor para que las rachas no se
+   *  sincronicen entre peces. */
+  energyFreq: number = 0.25 + Math.random() * 0.55;
+
   /**
    * Spinal chain — N vértebras EN COORDENADAS DE MUNDO. La cabeza es
    * `chainJoints[0]`. Cada frame, después del kinematic update,
@@ -319,6 +340,11 @@ class GlowFish {
     this.bodyScale = opts.size;
     this.speedScale = opts.speedScale;
     this.color = opts.color;
+    // Heading inicial random — sin esto todos los peces arrancarían
+    // apuntando a +x (heading=0 por field default) y harían movimiento
+    // sincronizado los primeros segundos hasta chocar con orillas.
+    this.heading = Math.random() * Math.PI * 2;
+    this.prevHeading = this.heading;
     this.orbit = opts.orbit;
     this.target = { x: start.x, y: start.y };
     this.wanderTarget = { x: opts.orbit.cx, y: opts.orbit.cy };
@@ -512,8 +538,18 @@ class GlowFish {
     //    cambia velocidad instantánea: acelera y desacelera con inercia.
     //    Resultado: tras un giro brusco, sigue gliding un instante;
     //    al volver a alinearse con el target, acelera gradualmente.
-    const minSpeed = 2.0 * this.speedScale * depthFactor;
-    const maxSpeed = 3.6 * this.speedScale * depthFactor;
+    // Energy oscillation per pez — modula speed con período único 8-25s.
+    // En valley (energy bajo), pez nada más lento como "descansando" sin
+    // detenerse. En peak (energy alto), nada con más vigor. Cada pez su
+    // propio ciclo desincronizado → patrones naturales no robóticos.
+    this.energyPhase += _dt * this.energyFreq;
+    const energy = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(this.energyPhase));
+
+    // Si isHovering: speed override a casi 0 → pez frena gradualmente
+    // (lerp con tau ~500ms) y queda suspendido. La chain mantiene su
+    // forma actual, solo el wave de la cola sigue moviéndose sutilmente.
+    const minSpeed = this.isHovering ? 0 : 2.0 * this.speedScale * depthFactor * energy;
+    const maxSpeed = this.isHovering ? 0.15 * this.speedScale * depthFactor : 3.6 * this.speedScale * depthFactor * energy;
     const speedFactor01 = 0.5 + 0.5 * alignment; // 0..1
     // TURN SPEED DAMPING moderado — pequeña reducción durante turns
     // (max 25%) para mantener forward motion visible. Sin damping
@@ -1450,74 +1486,102 @@ export class WolfLakeCanvas {
     // (agua sólida, no feather de orilla). Fallback al centro del lago
     // si después de 40 intentos no encuentra — virtualmente imposible
     // con el área del polígono actual.
+    // Y range = [0.58, 0.85] — el extremo bottom (>0.85) suele recortarse
+    // del viewport en desktop wide (object-fit: cover hace clip top+bottom).
+    // Y distribuido UNIFORME para que los peces aprovechen todo el rango
+    // vertical del lago (no acumularse en una banda).
     const pickWaterPoint = (): Vec => {
       for (let i = 0; i < 40; i++) {
         const u = 0.08 + Math.random() * 0.75;
-        const v = 0.58 + Math.random() * 0.40;
+        const v = 0.58 + Math.random() * 0.27;
         if (sampleMask(mask, u, v) > 0.65) {
           return { x: u, y: v };
         }
       }
-      return { x: 0.45, y: 0.86 };
+      return { x: 0.45, y: 0.72 };
     };
 
-    // Aplica el estado machine de wander a un pez:
-    //   'cruising' = nadando hacia wanderTarget; cuando llega cerca,
-    //                transiciona a 'pausing'.
-    //   'pausing'  = pez detenido observando alrededor (target = posición
-    //                actual). Después de `pauseTimer` segundos elige un
-    //                nuevo waypoint y vuelve a 'cruising'.
-    //
-    // El pauseTimer se randomiza 0.8-3.5s por transición — cada pez
-    // tiene su propio ritmo, así nunca pausan todos a la vez.
-    const applyWander = (f: GlowFish, dtNow: number): void => {
-      if (f.wanderState === 'cruising') {
-        const wcuv = imgUVToCanvasUV(f.wanderTarget, cw, ch, IMG_W, IMG_H);
-        const wx = wcuv.x * cw;
-        const wy = wcuv.y * ch;
-        f.setTargetSmooth({ x: wx, y: wy }, 0.04);
-        const dToTarget = Math.hypot(f.spine[0].x - wx, f.spine[0].y - wy);
-        f.wanderChaseTime += dtNow;
-        // Threshold de llegada — proporcional al tamaño del pez + margen.
-        // (Aumentado ahora con kinematic motion: el pez no se detiene en
-        // el target, lo orbita; el threshold tiene que ser generoso para
-        // que pase a pausing sin necesitar landing exacto.)
-        const arriveTreshold = 30 + f.bodyScale * 5;
-        // Anti-stuck failsafe: si el pez chase 7s sin llegar (target
-        // inalcanzable o stuck en oscilación cinemática), pick nuevo
-        // wanderTarget. Esto rompe el loop de "stuck flipping vertical".
-        const chaseTimeout = 7;
-        if (dToTarget < arriveTreshold || f.wanderChaseTime > chaseTimeout) {
-          f.wanderState = 'pausing';
-          f.pauseTimer = 0.8 + Math.random() * 2.7;
-          f.wanderChaseTime = 0;
-          f.hoverDriftTarget = null; // forzar elección inmediata
-          f.hoverDriftTimer = 0;
-        }
-      } else {
-        // Pausing — micro-drift: target oscila lento entre puntos random
-        // a 6-18px del head. Esto rota el heading suavemente y da la
-        // ilusión de que el pez "mira a su alrededor" como pez real
-        // hovereando con sus pectorales. Cada pez tiene su propio timer
-        // de drift, así nunca giran todos a la vez.
-        f.hoverDriftTimer -= dtNow;
-        if (f.hoverDriftTimer <= 0 || !f.hoverDriftTarget) {
-          const angle = Math.random() * Math.PI * 2;
-          const radius = 6 + Math.random() * 12;
-          f.hoverDriftTarget = {
-            x: f.spine[0].x + Math.cos(angle) * radius,
-            y: f.spine[0].y + Math.sin(angle) * radius,
-          };
-          f.hoverDriftTimer = 0.6 + Math.random() * 1.4;
-        }
-        f.setTargetSmooth(f.hoverDriftTarget, 0.02);
-        f.pauseTimer -= dtNow;
-        if (f.pauseTimer <= 0) {
-          f.wanderTarget = pickWaterPoint();
-          f.wanderState = 'cruising';
-          f.hoverDriftTarget = null;
+    /**
+     * Versión sesgada hacia ADELANTE del pez. Genera waypoints en un
+     * cone ±90° del heading actual (= mitad delantera del pez), a
+     * distancia razonable. Esto evita que el pez tenga que hacer U-turns
+     * de 180° cada vez que cambia de target — el modelo Dubins (forward-
+     * only) lo obliga a hacer arcos enormes en U-turns. Resultado: el
+     * pez nada de waypoint en waypoint en una trayectoria mayormente
+     * forward, con giros suaves cuando el target está al lado.
+     *
+     * Si el cone forward no encuentra agua válida (e.g., el pez está
+     * apuntando hacia tierra), fallback al pickWaterPoint global.
+     */
+    const pickWaterPointAhead = (headUV: Vec, heading: number): Vec => {
+      for (let i = 0; i < 30; i++) {
+        // Cone ±60° del heading — adelante pero con variedad lateral
+        // suficiente para que distintos peces tomen direcciones
+        // distintas. Distancia LARGA 0.30-0.55 UV → en desktop son
+        // 430-790 px, el pez nada varios segundos antes de llegar.
+        // Más distancia = menos waypoints = menos giros.
+        const headingDeviation = (Math.random() - 0.5) * (Math.PI * 2 / 3);
+        const sampleAngle = heading + headingDeviation;
+        const dist = 0.30 + Math.random() * 0.25;
+        const u = headUV.x + Math.cos(sampleAngle) * dist;
+        const v = headUV.y + Math.sin(sampleAngle) * dist;
+        if (u < 0.08 || u > 0.83 || v < 0.58 || v > 0.85) continue;
+        if (sampleMask(mask, u, v) > 0.65) {
+          return { x: u, y: v };
         }
       }
+      // Fallback: global pick (puede caer detrás, pero solo cuando el
+      // cone está bloqueado por orilla = el pez SÍ necesita devolverse).
+      return pickWaterPoint();
+    };
+
+    // Wander simple — el pez nada DERECHO en su heading actual y SOLO
+    // gira cuando va a chocar contra orilla. Sin waypoints random, sin
+    // state machine, sin pausas artificiales. El target siempre es un
+    // punto lejano en la dirección de nado. Cuando el lookahead detecta
+    // orilla adelante, el target se reorienta hacia la dirección lateral
+    // con MÁS agua disponible. Resultado: el pez SOLO gira cuando no
+    // tiene más opción.
+    //
+    // Probamos 7 direcciones (heading + ±π/4, ±π/2, ±3π/4) y elegimos
+    // la que mejor mask devuelve. Preference suave por dev=0 (heading
+    // actual) — si el frente sigue siendo razonable, no gira.
+    const LOOK_DEVIATIONS = [
+      0,
+      -Math.PI / 4, +Math.PI / 4,
+      -Math.PI / 2, +Math.PI / 2,
+      -3 * Math.PI / 4, +3 * Math.PI / 4,
+    ];
+    const applyWander = (f: GlowFish, _dtNow: number): void => {
+      const headX = f.spine[0].x;
+      const headY = f.spine[0].y;
+      const lookaheadDist = 200 + f.bodyScale * 7;
+      let bestAngle = f.heading;
+      let bestScore = -Infinity;
+      for (const dev of LOOK_DEVIATIONS) {
+        const tryAngle = f.heading + dev;
+        const tryX = headX + Math.cos(tryAngle) * lookaheadDist;
+        const tryY = headY + Math.sin(tryAngle) * lookaheadDist;
+        const tryIUV = canvasUVToImgUV(
+          { x: tryX / cw, y: tryY / ch },
+          cw, ch, IMG_W, IMG_H,
+        );
+        // Penaliza si el lookahead cae fuera del hero visible (y > 0.85)
+        const outOfHero = tryIUV.y > 0.85 ? 0.5 : 0;
+        // Preference fuerte por seguir derecho (dev=0) — solo gira si
+        // la deviación tiene MUY mejor agua que el frente actual.
+        const preference = dev === 0 ? 0.25 : 0;
+        const score = sampleMask(mask, tryIUV.x, tryIUV.y) - outOfHero + preference;
+        if (score > bestScore) {
+          bestScore = score;
+          bestAngle = tryAngle;
+        }
+      }
+      // Target = punto lejano en bestAngle. Si bestAngle === heading,
+      // pez sigue derecho. Si no, gira con maxTurnRate del kinematic.
+      const tx = headX + Math.cos(bestAngle) * 600;
+      const ty = headY + Math.sin(bestAngle) * 600;
+      f.setTargetSmooth({ x: tx, y: ty }, 0.10);
     };
 
     // ─── GlowFish (5) ambientales — peces silueta-luminosa estilo argonaut
@@ -1533,12 +1597,13 @@ export class WolfLakeCanvas {
       { rim: '#5088ff', body: '#0a1040', core: '#2868ff', halo: '#0050ff' },
     ];
     // 4 spawn points para los ambientales (el 5º pez total es el cursorFish,
-    // que patrulla cerca de 0.40,0.88 cuando no hay cursor sobre el agua).
+    // que patrulla cerca de 0.40,0.82 cuando no hay cursor sobre el agua).
+    // Todos en y ≤ 0.83 para que estén dentro del área visible del hero.
     const GLOW_SPAWN: Vec[] = [
       { x: 0.12, y: 0.72 }, // fondo izq
       { x: 0.45, y: 0.70 }, // fondo medio (lejos)
-      { x: 0.62, y: 0.93 }, // cerca derecha-medio
-      { x: 0.18, y: 0.96 }, // cerca izq
+      { x: 0.62, y: 0.82 }, // cerca derecha-medio
+      { x: 0.18, y: 0.83 }, // cerca izq
     ];
     const glowFishes: GlowFish[] = [];
     const buildGlowFishes = (): void => {
@@ -1579,9 +1644,11 @@ export class WolfLakeCanvas {
         speedScale: 1.4,
         color: { rim: '#80a4ff', body: '#0a1444', core: '#3878ff', halo: '#0b50ff' },
         // Orbit pequeña para fallback cuando el cursor sale del agua.
+        // cy = 0.80 para mantener el cursor fish dentro del área visible
+        // del hero (no más allá de 0.85 que es donde se recorta en wide).
         orbit: {
           cx: 0.40,
-          cy: 0.88,
+          cy: 0.80,
           rx: 0.10,
           ry: 0.025,
           phase: Math.random() * Math.PI * 2,
@@ -1654,18 +1721,23 @@ export class WolfLakeCanvas {
         // Modo follow — target = cursor position con smoothing rápido.
         cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
         cursorFish.glowBoostTarget = 0.85;
+        // Hover detection — si el cursor fish ya alcanzó al cursor (dist
+        // chica), activar isHovering: pez frena gradualmente y se queda
+        // suspendido. Si el cursor se mueve, dist crece, isHovering se
+        // desactiva, pez retoma forward motion. Threshold proporcional al
+        // tamaño del pez para que peces grandes hovereen un poco antes.
+        const dToCursor = Math.hypot(
+          cursorFish.position.x - pointer.x,
+          cursorFish.position.y - pointer.y,
+        );
+        const hoverRadius = 12 + cursorFish.size * 1.2;
+        cursorFish.isHovering = dToCursor < hoverRadius;
       } else {
-        // Modo patrullaje — orbit chica como fallback.
-        cursorFish.orbit.phase += dt * cursorFish.orbit.speed;
-        let tx = cursorFish.orbit.cx + Math.cos(cursorFish.orbit.phase) * cursorFish.orbit.rx;
-        let ty = cursorFish.orbit.cy + Math.sin(cursorFish.orbit.phase * 1.3) * cursorFish.orbit.ry;
-        if (sampleMask(mask, tx, ty) < 0.4) {
-          tx = cursorFish.orbit.cx;
-          ty = cursorFish.orbit.cy;
-        }
-        const cuv = imgUVToCanvasUV({ x: tx, y: ty }, cw, ch, IMG_W, IMG_H);
-        cursorFish.setTargetSmooth({ x: cuv.x * cw, y: cuv.y * ch }, 0.06);
+        // Modo patrullaje — mismo comportamiento que los ambientales:
+        // nada derecho en heading actual, gira solo al chocar con orilla.
+        applyWander(cursorFish, dt);
         cursorFish.glowBoostTarget = 0.4;
+        cursorFish.isHovering = false;
       }
 
       const cursorHeadVForUpdate = canvasUVToImgUV(
@@ -1702,7 +1774,7 @@ export class WolfLakeCanvas {
       }
 
       // El pez-cursor también se queda dentro del lago.
-      const safeAnchor = imgUVToCanvasUV({ x: 0.40, y: 0.88 }, cw, ch, IMG_W, IMG_H);
+      const safeAnchor = imgUVToCanvasUV({ x: 0.40, y: 0.80 }, cw, ch, IMG_W, IMG_H);
       clampSpineToLake(cursorFish, mask, cw, ch, IMG_W, IMG_H, safeAnchor);
 
       // ─── Render
