@@ -594,8 +594,18 @@ const GLOW_BODY_PROFILE: ReadonlyArray<readonly [number, number, number]> = [
   [-1.55, -0.16,  0.16], // tail base
 ];
 
-/** Wavelength (en unidades de longitud corporal) — carangiform típico. */
-const GLOW_WAVES_PER_BODY = 1.2;
+/** Wavelength (en unidades de longitud corporal). λ/L ≈ 1 = carangiform
+ *  puro (jacks/mackerel/predadores de lago). λ/L < 1 lee como anguilliform
+ *  (anguila/serpiente — dos crestas visibles a la vez). Sfakiotakis 1999,
+ *  Webb 1984. */
+const GLOW_WAVES_PER_BODY = 0.95;
+
+/** Exponente del envelope del wave. u² (current biomimético subcarangiform,
+ *  ~25% amplitud al medio del cuerpo) lee snake/eel-ish. u³ concentra el
+ *  movimiento en el tercio posterior = carangiform real. Di Santo 2021:
+ *  ratio amplitud cabeza:cola en peces típicos ~1:6, lo que requiere
+ *  envelope más agresivo que u². */
+const GLOW_WAVE_ENV_POWER = 3.0;
 
 /**
  * Máximo bend per joint en la spinal chain (argonaut animal-proc-anim:
@@ -751,6 +761,30 @@ class GlowFish {
    * columna entera.
    */
   chainAngles: number[] = [];
+  /**
+   * Ángulo máximo de bend POR JOINT (gradient rostral→caudal). Cabeza
+   * ≈ π/24 (~7.5°, muy rígida — la "cervical region" estabilizada que
+   * documenta Nowroozi & Brainerd 2012 para Morone saxatilis). Cola
+   * ≈ π/7 (~25°, flexible). Smoothstep entre los dos extremos para que
+   * el front 50% del cuerpo se mantenga casi rígido y el bend se
+   * acumule en el back 50%. Resultado: pez nada, no serpiente.
+   */
+  bendLimits: number[] = [];
+  /**
+   * Turn rate (|dHeading/dt|) suavizado. Drives el "swimGate" —
+   * durante turns rápidos (preparatoria del C-start, stage 1 de
+   * Domenici & Blake 1997), el wave de propulsión PARA y el cuerpo
+   * mantiene la C. Después del turn, el wave reacelera con ease-in
+   * (~285ms). Sin esto, la cola sigue ondulando durante el giro fuerte
+   * y se ve "deformada" como reportó el usuario.
+   */
+  smoothedTurnRate = 0;
+  /**
+   * Gate del swim wave [0..1]. 1 = wave a full amplitude. 0 = wave
+   * suprimido (durante C-start stage 1). Versión laggeada con ease-in
+   * post-turn para que la wave no haga "pop" instantáneo al volver.
+   */
+  swimGateLagged = 1;
   /** Phase del traveling wave del cuerpo (radianes). Avanza cada frame por
    *  `dt * omega`, donde omega escala con `bodyEffort`. Drives la
    *  undulación del silhouette — `sin(swimPhase + k·x)` desplaza cada
@@ -795,14 +829,27 @@ class GlowFish {
     // (asumiendo heading inicial = facing right). chainJoints[0] está en
     // `start`, joint[i] una distancia (xUnit_diff * size) detrás. Todos los
     // ángulos look-back inician en 0 (apuntan a +x = hacia la cabeza).
+    //
+    // bendLimits: gradient rostral→caudal con smoothstep biased hacia
+    // mantener anterior 50% rígido. Front quedo a π/24 (~7.5°), tail a
+    // π/7 (~25°). Ratio ~3× matches Nowroozi & Brainerd data on
+    // intervertebral angular stiffness gradient en peces reales.
     {
       const N = GLOW_BODY_PROFILE.length;
       this.chainJoints = new Array(N);
       this.chainAngles = new Array(N).fill(0);
+      this.bendLimits = new Array(N);
       const noseX = GLOW_BODY_PROFILE[0][0];
+      const LIMIT_HEAD = Math.PI / 24; // ~7.5° - cervical region (rigid)
+      const LIMIT_TAIL = Math.PI / 7;  // ~25.7° - caudal peduncle (flexible)
       for (let i = 0; i < N; i++) {
         const offsetUnit = noseX - GLOW_BODY_PROFILE[i][0];
         this.chainJoints[i] = { x: start.x - offsetUnit * opts.size, y: start.y };
+        // Stiffness gradient: front half ~muy rígido, back half acelera
+        const t = i / (N - 1);
+        const sBiased = t < 0.5 ? 0.25 * t : 0.125 + 1.75 * (t - 0.5);
+        const sClamped = Math.min(1, Math.max(0, sBiased));
+        this.bendLimits[i] = LIMIT_HEAD + (LIMIT_TAIL - LIMIT_HEAD) * sClamped;
       }
     }
   }
@@ -847,36 +894,51 @@ class GlowFish {
   }
 
   /**
-   * Single-pass resolve — port directo de `Chain.pde::resolve` de argonaut.
-   * La cabeza salta a `newHeadPos` (sin clampear; el caller debe asegurar
-   * que el step sea pequeño usando `resolveChainToTarget`). Cada vértebra
-   * subsiguiente se reacomoda manteniendo distancia (linkSize) y ángulo
-   * constrained (±GLOW_BEND_LIMIT) respecto a la anterior.
+   * Single-pass resolve — port directo de `Chain.pde::resolve` de argonaut,
+   * con DOS modificaciones biomecánicas críticas:
+   *
+   * 1) Head slew-limit + anchor a joint[1]: el ángulo de la cabeza NO se
+   *    setea instantáneamente al atan2 del movimiento (eso causa el
+   *    "head leads, body lags" — la trompa se gira antes que el cuerpo,
+   *    bug que el usuario reportó). En cambio, derivamos el ángulo
+   *    deseado de la dirección joint[1]→joint[0] (= cuerpo manda, cabeza
+   *    sigue), y rate-limitamos el cambio a HEAD_MAX_TURN_PER_FRAME.
+   *    Biomimético: cabeza es la zona MÁS estabilizada en peces reales.
+   *
+   * 2) bendLimits[i] per-joint en lugar de constante global. Cabeza
+   *    rígida (π/24), cola flexible (π/7). Stiffness gradient real
+   *    según Nowroozi & Brainerd 2012.
    */
   private resolveChainStep(newHeadPos: Vec): void {
     const N = this.chainJoints.length;
-    const oldHead = this.chainJoints[0];
-    const moveDx = newHeadPos.x - oldHead.x;
-    const moveDy = newHeadPos.y - oldHead.y;
-    // Si el head no se movió (movement≈0), preservar el ancla anterior.
-    // Sin esto, atan2(0,0)=0 colapsaría chainAngles[0] a 0 = +x = facing right,
-    // arrastrando toda la columna a recta horizontal. Mata todo el bend.
-    if (Math.hypot(moveDx, moveDy) > 1e-4) {
-      this.chainAngles[0] = Math.atan2(moveDy, moveDx);
-    }
+    // Cabeza salta a la nueva posición (geometría)
     this.chainJoints[0] = { x: newHeadPos.x, y: newHeadPos.y };
 
+    // El "look-back" del head se computa de la dirección desde joint[1]
+    // hacia el NUEVO head. Eso ancla la orientación al cuerpo (cuerpo
+    // manda), no al movimiento puntual del head.
+    const j1 = this.chainJoints[1];
+    const bodyForward = Math.atan2(newHeadPos.y - j1.y, newHeadPos.x - j1.x);
+    // Slew limit: el ángulo de la cabeza no puede cambiar más rápido que
+    // ~60% del LIMIT_HEAD por frame (~4.5° at 60fps). Mata el "trompa
+    // que se gira primero". Bio target: ≤270°/sec en cruise (turns más
+    // rápidos requieren C-start activado, pero igualmente la rotación
+    // del head es la más restringida del cuerpo).
+    const HEAD_MAX_TURN_PER_FRAME = (Math.PI / 24) * 0.6;
+    const desiredDelta = wrapAngleSigned(bodyForward - this.chainAngles[0]);
+    const clampedDelta = Math.max(
+      -HEAD_MAX_TURN_PER_FRAME,
+      Math.min(HEAD_MAX_TURN_PER_FRAME, desiredDelta),
+    );
+    this.chainAngles[0] = wrapAngleSigned(this.chainAngles[0] + clampedDelta);
+
+    // Propagación con bendLimits[i] per-joint
     for (let i = 1; i < N; i++) {
       const prev = this.chainJoints[i - 1];
       const cur = this.chainJoints[i];
-      // look-back: dirección de joint[i] (vieja pos) hacia joint[i-1] (nueva)
       const naturalAngle = Math.atan2(prev.y - cur.y, prev.x - cur.x);
-      // Clamp al ángulo del joint anterior ±BEND_LIMIT
-      const constrained = constrainAngleArg(naturalAngle, this.chainAngles[i - 1], GLOW_BEND_LIMIT);
+      const constrained = constrainAngleArg(naturalAngle, this.chainAngles[i - 1], this.bendLimits[i]);
       this.chainAngles[i] = constrained;
-      // joint[i] = joint[i-1] - linkSize * unit(constrained look-back)
-      // (igual que argonaut: joint[i] queda a distancia exacta linkSize
-      // detrás de joint[i-1] en la dirección OPUESTA al look-back).
       const segLenPx = (GLOW_BODY_PROFILE[i - 1][0] - GLOW_BODY_PROFILE[i][0]) * this.size;
       this.chainJoints[i] = {
         x: prev.x - Math.cos(constrained) * segLenPx,
@@ -979,6 +1041,31 @@ class GlowFish {
     this.angularVel = this.angularVel * 0.85 + rawAngVel * 0.15;
     this.prevHeading = this.heading;
 
+    // 1b) Smoothed turn rate (rad/s, magnitud) → swim gate. Cuando el
+    //     pez gira fuerte (preparatoria del C-start), la wave de
+    //     propulsión PARA y el cuerpo mantiene la C. Después, ease-in
+    //     ~285ms para reacelerar. Domenici & Blake 1997.
+    const rawTurnRate = Math.abs(rawAngVel);
+    this.smoothedTurnRate = this.smoothedTurnRate * 0.80 + rawTurnRate * 0.20;
+    // smoothstep(1.5, 4.0): por debajo de 1.5 rad/s wave full; arriba de
+    // 4.0 rad/s wave totalmente suprimido. Entre los dos, ramp suave.
+    const TURN_GATE_LO = 1.5;
+    const TURN_GATE_HI = 4.0;
+    let swimGate = 1.0;
+    if (this.smoothedTurnRate >= TURN_GATE_HI) swimGate = 0;
+    else if (this.smoothedTurnRate > TURN_GATE_LO) {
+      const t = (this.smoothedTurnRate - TURN_GATE_LO) / (TURN_GATE_HI - TURN_GATE_LO);
+      swimGate = 1 - (t * t * (3 - 2 * t)); // smoothstep
+    }
+    // Lagged version: cae INSTANTÁNEO (acompaña el inicio del turn) pero
+    // sube con ease-in (∼285ms para volver a 1.0). Reproduce stage 3 del
+    // C-start: fase post-snap donde el wave reacelera gradualmente.
+    if (swimGate < this.swimGateLagged) {
+      this.swimGateLagged = swimGate; // instant fall
+    } else {
+      this.swimGateLagged = Math.min(swimGate, this.swimGateLagged + _dt * 3.5);
+    }
+
     // 2) Squash-and-stretch — el cuerpo se alarga al acelerar y comprime
     //    al frenar. Mantiene el "volumen" del silhouette aplicando Y
     //    inverso en render. Disney 12 principles aplicado a peces.
@@ -1046,7 +1133,12 @@ class GlowFish {
     // Resultado: ratos late más fuerte/débil sin patrón mecánico.
     const rhythmVar = 1 + Math.sin(this.swimPhase * 0.13) * 0.08;
     const swimOmega = (1.0 + 5.0 * this.bodyEffort) * rhythmVar;
-    this.swimPhase += _dt * swimOmega;
+    // Solo avanzar swimPhase cuando la wave NO está suprimida. Si está
+    // suprimida (giro fuerte), congelar el phase → cuando vuelve, el
+    // wave reaparece coherente sin frequency-shift visible.
+    if (this.swimGateLagged > 0.3) {
+      this.swimPhase += _dt * swimOmega;
+    }
 
     // Fin idle phase — wiggle suave de aletas (dorsal/pectoral), rate
     //  driven by speed. La cola NO usa este phase; está acoplada al
@@ -1136,8 +1228,12 @@ class GlowFish {
     // Wave amplitude SCALES con viewMorph (1.0× side → 1.7× top). En
     // vertical el body serpentea visiblemente más (motion lateral es
     // la dominante vista desde arriba). Smooth scale → fluidez sin pop.
+    // ADEMÁS escala con swimGateLagged → durante turns fuertes, la wave
+    // de propulsión se atenúa hasta cero (C-start stage 1 — Domenici
+    // & Blake 1997). Reproduce: pez para de mover la cola para hacer
+    // la C cleanly, después reacelera con ease-in.
     const viewAmpBoost = 1 + 0.7 * viewMorph;
-    const ampPx = s * (0.04 + 0.18 * this.bodyEffort) * viewAmpBoost;
+    const ampPx = s * (0.04 + 0.18 * this.bodyEffort) * viewAmpBoost * this.swimGateLagged;
     // C-bend bias con TAIL-LEADS (overlapping action) — el head usa
     // turnBend current; el tail usa delayedTurnBend (lag ~650ms). Cuando
     // el head cambia rumbo, el tail conserva temporariamente el bend
@@ -1151,9 +1247,14 @@ class GlowFish {
     // El bend del giro lo provee la chain espacial (chainJoints curvan
     // físicamente al girar). Acá solo agregamos la onda viajera del nado
     // como pequeño offset perpendicular a cada cross-section.
+    //
+    // Envelope = u^GLOW_WAVE_ENV_POWER (default 3.0) — concentra el
+    // movimiento en el tercio posterior del cuerpo = carangiform real
+    // (no anguilliform/serpiente). Di Santo 2021: head:tail amp ratio
+    // ~1:6 en peces típicos, lo que requiere envelope agresivo.
     const waveAt = (xUnit: number): number => {
       const u = (xNoseUnit - xUnit) / bodyLenUnit; // 0 head → 1 tail
-      const env = u * u;
+      const env = Math.pow(Math.max(0, u), GLOW_WAVE_ENV_POWER);
       return env * ampPx * Math.sin(this.swimPhase + k * xUnit);
     };
 
