@@ -251,6 +251,23 @@ class GlowFish {
    *  off-water. */
   huntingBoost = 1;
 
+  // ── Hover station-keeping state (Drucker & Lauder 1999, Webb 1984,
+  // Bainbridge 1963) ──────────────────────────────────────────────────
+  // Cuando isHovering=true, el pez no usa kinematic bicycle. Usa position
+  // lerp hacia target, yaw sway natural (Bainbridge), vertical bob de
+  // gill rhythm (crítico para no parecer pez muerto flotando), y twitch
+  // ocasional de re-fixación (Webb pike sit-and-wait). Los "*Applied"
+  // son los offsets cumulativos para poder restaurarlos al salir del
+  // hover (sin esto, el residual del sway se quedaría sumado al heading
+  // y el pez volvería ligeramente desviado al cruising).
+  hoverYawPhase = Math.random() * Math.PI * 2;
+  hoverYawApplied = 0;
+  hoverBobPhase = Math.random() * Math.PI * 2;
+  hoverBobApplied = 0;
+  hoverTwitchCooldown = 2 + Math.random() * 3;
+  hoverTwitchRemaining = 0;
+  hoverTwitchApplied = 0;
+
   /** Energía oscilante per-pez (rad). Cada pez tiene su propio período
    *  (8-25 segundos) y phase inicial random — sin patrón sincronizado.
    *  Drives speed: cuando energy es baja (sin valley), el pez nada
@@ -520,65 +537,153 @@ class GlowFish {
     this.prevPos.x = this.position.x;
     this.prevPos.y = this.position.y;
 
-    const dx = this.target.x - this.position.x;
-    const dy = this.target.y - this.position.y;
-    const dist = Math.hypot(dx, dy);
-
-    // 1) Steering — heading bounded turn rate hacia target.
-    let alignment = 1; // -1 (target detrás) a +1 (target adelante)
-    if (dist > 0.5) {
-      const targetAngle = Math.atan2(dy, dx);
-      let diff = targetAngle - this.heading;
-      while (diff > Math.PI) diff -= 2 * Math.PI;
-      while (diff < -Math.PI) diff += 2 * Math.PI;
-      // Max turn rate ÁGIL — 2.0 rad/s normal. Cuando isHovering, baja
-      // a 0.5 rad/s (~29°/s) → el pez "mira" al cursor con rotación
-      // lenta de acecho, sin girar como peonza alrededor.
-      const maxTurnRate = this.isHovering ? 0.5 : 2.0;
-      const turn = Math.sign(diff) * Math.min(Math.abs(diff), maxTurnRate * _dt);
-      this.heading += turn;
-      alignment = Math.cos(diff); // proyección del heading sobre el target
-    }
-
-    // 2) Forward speed con MOMENTUM — targetSpeed por alignment,
-    //    currentSpeed lerps hacia ahí con tau ~500ms. La fish no
-    //    cambia velocidad instantánea: acelera y desacelera con inercia.
-    //    Resultado: tras un giro brusco, sigue gliding un instante;
-    //    al volver a alinearse con el target, acelera gradualmente.
     // Energy oscillation per pez — modula speed con período único 8-25s.
-    // En valley (energy bajo), pez nada más lento como "descansando" sin
-    // detenerse. En peak (energy alto), nada con más vigor. Cada pez su
-    // propio ciclo desincronizado → patrones naturales no robóticos.
+    // Avanzamos el phase en CADA frame (hover o cruising) para que no haya
+    // saltos de energy al entrar/salir del modo cazador.
     this.energyPhase += _dt * this.energyFreq;
     const oscEnergy = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(this.energyPhase));
-    // En modo cazador (huntingBoost > 1), congelamos energy a 1.0 — el
-    // depredador no descansa. En modo ambiente, oscila como cualquier pez.
     const energy = this.huntingBoost > 1 ? 1.0 : oscEnergy;
 
-    // Si isHovering: speed override a 0 → pez frena gradualmente (lerp
-    // con tau ~500ms) y queda totalmente suspendido. Solo el wave de la
-    // cola sigue moviéndose sutilmente → sensación de pez vivo acechando
-    // sin moverse.
-    const minSpeed = this.isHovering ? 0 : 2.0 * this.speedScale * depthFactor * energy * this.huntingBoost;
-    const maxSpeed = this.isHovering ? 0 : 3.6 * this.speedScale * depthFactor * energy * this.huntingBoost;
-    const speedFactor01 = 0.5 + 0.5 * alignment; // 0..1
-    // TURN SPEED DAMPING moderado — pequeña reducción durante turns
-    // (max 25%) para mantener forward motion visible. Sin damping
-    // excesivo, el head sigue avanzando y el chain-based body trail
-    // hace el visible curve, no parece "wagging in place".
-    const turnDamping = Math.min(0.25, Math.abs(this.angularVel) * 0.20);
-    const targetSpeed = (minSpeed + (maxSpeed - minSpeed) * speedFactor01) * (1 - turnDamping);
-    this.currentSpeed += (targetSpeed - this.currentSpeed) * Math.min(1, _dt * 2);
+    if (this.isHovering) {
+      // ─── STATION-KEEPING MODE ─────────────────────────────────────
+      // Drucker & Lauder 1999 (pectoral fin sculling, fish-not-shark
+      // hovering), Webb 1984 (pike sit-and-wait predator — no orbital
+      // motion, body straight pointing at prey), Bainbridge 1963 (yaw
+      // sway de ±2-5° @ 0.5-1.5 Hz que distingue "vivo" de "muerto
+      // flotando"). El pez NO usa kinematic bicycle aquí porque la
+      // bicycle es forward-only y NO puede parar en sitio — overshoot
+      // y orbita inevitable. En su lugar: position lerp hacia target
+      // + heading lerp lento + sway + bob + twitch.
+      const dxh = this.target.x - this.position.x;
+      const dyh = this.target.y - this.position.y;
+      const tdist = Math.hypot(dxh, dyh);
 
-    // 3) Integra currentSpeed (con inercia) en heading direction.
-    const vx = Math.cos(this.heading) * this.currentSpeed;
-    const vy = Math.sin(this.heading) * this.currentSpeed;
-    this.position.x += vx * _dt * 60;
-    this.position.y += vy * _dt * 60;
+      // 1) Heading lerp — pez "gira la cabeza" hacia el target a rate
+      //    PROPORCIONAL a la distancia. Cuando el target está casi
+      //    encima (tdist < 30 px), el rate baja → no spin sobre el eje
+      //    aunque el cursor wobblee un píxel.
+      if (tdist > 0.5) {
+        const targetAngle = Math.atan2(dyh, dxh);
+        let diff = targetAngle - this.heading;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        const rate = 0.4 * Math.min(1, tdist / 30);
+        const turn = Math.sign(diff) * Math.min(Math.abs(diff), rate * _dt);
+        this.heading += turn;
+      }
 
-    this.velocity.x = this.position.x - this.prevPos.x;
-    this.velocity.y = this.position.y - this.prevPos.y;
-    this.speed = Math.hypot(this.velocity.x, this.velocity.y);
+      // 2) Yaw sway ±3° @ 0.8 Hz (Bainbridge 1963). Aplicado como delta
+      //    sobre el heading; trackeamos cumulativo para poder restaurar
+      //    al salir.
+      this.hoverYawPhase += _dt * 0.8 * 2 * Math.PI;
+      const yawTarget = Math.sin(this.hoverYawPhase) * 0.052; // ±3° en rad
+      this.heading += (yawTarget - this.hoverYawApplied);
+      this.hoverYawApplied = yawTarget;
+
+      // 3) Twitch ocasional de re-fixación (Webb 1984). Cada 2-5s un
+      //    flick de ±10° por 150ms, luego vuelve. Esto rompe la
+      //    estaticidad y lee como "el pez está mirando otra cosa por
+      //    un segundo, vuelve a fijar".
+      if (this.hoverTwitchRemaining > 0) {
+        this.hoverTwitchRemaining -= _dt;
+        if (this.hoverTwitchRemaining <= 0) {
+          this.heading -= this.hoverTwitchApplied;
+          this.hoverTwitchApplied = 0;
+          this.hoverTwitchCooldown = 2 + Math.random() * 3;
+        }
+      } else if (this.hoverTwitchCooldown > 0) {
+        this.hoverTwitchCooldown -= _dt;
+      } else {
+        this.hoverTwitchApplied = (Math.random() < 0.5 ? -1 : 1) * 0.175;
+        this.heading += this.hoverTwitchApplied;
+        this.hoverTwitchRemaining = 0.15;
+      }
+
+      // 4) Position lerp hacia target — tau ~0.4s. El pez "flota" hacia
+      //    su posición de espera, no teleport, no overshoot.
+      const posLerp = Math.min(1, _dt * 2.5);
+      this.position.x += dxh * posLerp;
+      this.position.y += dyh * posLerp;
+
+      // 5) Vertical micro-bob ±1.5px @ 0.5 Hz (gill rhythm). CRÍTICO
+      //    para que no parezca pez muerto flotando.
+      this.hoverBobPhase += _dt * 0.5 * 2 * Math.PI;
+      const bobTarget = Math.sin(this.hoverBobPhase) * 1.5;
+      this.position.y += (bobTarget - this.hoverBobApplied);
+      this.hoverBobApplied = bobTarget;
+
+      // 6) currentSpeed bajo (no cero) → tail wave sigue sutilmente
+      //    activo, no congelado. Drucker & Lauder hover regime: tail
+      //    flicks a ~0.4 Hz.
+      this.currentSpeed = 0.3;
+
+      this.velocity.x = this.position.x - this.prevPos.x;
+      this.velocity.y = this.position.y - this.prevPos.y;
+      this.speed = Math.hypot(this.velocity.x, this.velocity.y);
+    } else {
+      // ─── CRUISING MODE (kinematic bicycle / Dubins forward-only) ──
+      // Si veníamos de hover, deshacer los offsets cumulativos para
+      // que no quede drift residual de sway/twitch/bob al volver a
+      // cruising.
+      if (this.hoverYawApplied !== 0 || this.hoverTwitchApplied !== 0 || this.hoverBobApplied !== 0) {
+        this.heading -= this.hoverYawApplied;
+        this.heading -= this.hoverTwitchApplied;
+        this.position.y -= this.hoverBobApplied;
+        this.hoverYawApplied = 0;
+        this.hoverTwitchApplied = 0;
+        this.hoverBobApplied = 0;
+        this.hoverTwitchRemaining = 0;
+        this.hoverTwitchCooldown = 2 + Math.random() * 3;
+      }
+
+      const dx = this.target.x - this.position.x;
+      const dy = this.target.y - this.position.y;
+      const dist = Math.hypot(dx, dy);
+
+      // 1) Steering — heading bounded turn rate hacia target.
+      let alignment = 1;
+      if (dist > 0.5) {
+        const targetAngle = Math.atan2(dy, dx);
+        let diff = targetAngle - this.heading;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        const turn = Math.sign(diff) * Math.min(Math.abs(diff), 2.0 * _dt);
+        this.heading += turn;
+        alignment = Math.cos(diff);
+      }
+
+      // 2) Forward speed con MOMENTUM.
+      const minSpeed = 2.0 * this.speedScale * depthFactor * energy * this.huntingBoost;
+      const maxSpeed = 3.6 * this.speedScale * depthFactor * energy * this.huntingBoost;
+      const speedFactor01 = 0.5 + 0.5 * alignment;
+      const turnDamping = Math.min(0.25, Math.abs(this.angularVel) * 0.20);
+      let targetSpeed = (minSpeed + (maxSpeed - minSpeed) * speedFactor01) * (1 - turnDamping);
+
+      // 2b) Proximity brake (Webb 1991 two-phase deceleration). Cuando
+      //     el target está cerca (< 80 px) y estamos casi alineados
+      //     con él, frenamos exponencialmente. Sin esto, el momentum
+      //     hacía overshoot al cursor y el pez orbita "como tiburón"
+      //     antes de poder volver a alinearse. Solo aplica cuando
+      //     alignment > 0.5 (target adelante) — no queremos frenar
+      //     si vamos rebasando con intención de hacer U-turn.
+      if (dist < 80 && alignment > 0.5) {
+        const brakeT = dist / 80; // 0 cerca, 1 lejos
+        const brakeFactor = 0.35 + 0.65 * brakeT; // 35% del speed @ dist=0
+        targetSpeed *= brakeFactor;
+      }
+
+      this.currentSpeed += (targetSpeed - this.currentSpeed) * Math.min(1, _dt * 2);
+
+      // 3) Integra currentSpeed (con inercia) en heading direction.
+      const vx = Math.cos(this.heading) * this.currentSpeed;
+      const vy = Math.sin(this.heading) * this.currentSpeed;
+      this.position.x += vx * _dt * 60;
+      this.position.y += vy * _dt * 60;
+
+      this.velocity.x = this.position.x - this.prevPos.x;
+      this.velocity.y = this.position.y - this.prevPos.y;
+      this.speed = Math.hypot(this.velocity.x, this.velocity.y);
+    }
 
     // ─── Física natural ──────────────────────────────────────────────
     // 1) Velocidad angular smoothed (para eye saccade). Diff de heading
@@ -1815,11 +1920,15 @@ export class WolfLakeCanvas {
         }
       }
 
-      // Wall avoidance SIEMPRE corre primero (incluso en modo cazador):
-      // si hay pared adelante, override target y skip de follow/wander.
-      // Sin esto, el follow del cursor podía empujar al pez del cursor
-      // contra el borde superior del lago cuando el cursor estaba ahí.
-      const cursorFishEscaping = applyWallAvoidance(cursorFish, dt);
+      // Wall avoidance corre primero, EXCEPTO si ya estamos en hover —
+      // el hover no se mueve hacia adelante, así que los feelers ya no
+      // son necesarios. Sin este bypass, applyWallAvoidance setea
+      // isHovering=false al detectar paredes cercanas (e.g. el cursor
+      // está cerca del borde) → hover y wall-avoidance oscilan frame
+      // tras frame → "contortion" reportada por el usuario.
+      const cursorFishEscaping = cursorFish.isHovering
+        ? false
+        : applyWallAvoidance(cursorFish, dt);
 
       if (cursorOnWater) {
         cursorFish.glowBoostTarget = 0.85;
@@ -1829,17 +1938,20 @@ export class WolfLakeCanvas {
           // huntingBoost=1.9 → energy constante 1.0 y speed multiplicado
           // para perseguir como depredador.
           cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
-          // Hover detection — si el cursor fish ya alcanzó al cursor (dist
-          // chica), activar isHovering: pez frena gradualmente y se queda
-          // suspendido. Si el cursor se mueve, dist crece, isHovering se
-          // desactiva, pez retoma forward motion. Threshold proporcional al
-          // tamaño del pez para que peces grandes hovereen un poco antes.
+          // Hover detection con HYSTERESIS — el pez entra al hover a 14 +
+          // size*1.4 (≈45 px), pero solo sale cuando el cursor se aleja
+          // a 1.6× ese radio (≈72 px). Sin la hysteresis, microvibraciones
+          // del cursor hacían parpadear isHovering entre frames y el pez
+          // entraba/salía del station-keeping varias veces por segundo.
           const dToCursor = Math.hypot(
             cursorFish.position.x - pointer.x,
             cursorFish.position.y - pointer.y,
           );
-          const hoverRadius = 12 + cursorFish.size * 1.2;
-          cursorFish.isHovering = dToCursor < hoverRadius;
+          const hoverRadiusEnter = 14 + cursorFish.size * 1.4;
+          const hoverRadiusExit = hoverRadiusEnter * 1.6;
+          cursorFish.isHovering = cursorFish.isHovering
+            ? dToCursor < hoverRadiusExit
+            : dToCursor < hoverRadiusEnter;
         }
       } else {
         cursorFish.glowBoostTarget = 0.4;
