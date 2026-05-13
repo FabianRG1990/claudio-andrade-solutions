@@ -243,6 +243,14 @@ class GlowFish {
    */
   isHovering = false;
 
+  /** Modo cazador transitorio: 1 = ambiente normal (oscilación de energy
+   *  y speedScale propio). > 1 = depredador: energy=1.0 constante y
+   *  speed final multiplicado por este factor. Se setea externo cada
+   *  frame (NO bake en speedScale) para que el mismo pez pueda pasar
+   *  de patrullaje ambiente a hunt y volver, sin afectar su comportamiento
+   *  off-water. */
+  huntingBoost = 1;
+
   /** Energía oscilante per-pez (rad). Cada pez tiene su propio período
    *  (8-25 segundos) y phase inicial random — sin patrón sincronizado.
    *  Drives speed: cuando energy es baja (sin valley), el pez nada
@@ -523,11 +531,10 @@ class GlowFish {
       let diff = targetAngle - this.heading;
       while (diff > Math.PI) diff -= 2 * Math.PI;
       while (diff < -Math.PI) diff += 2 * Math.PI;
-      // Max turn rate ÁGIL — 2.0 rad/s = ~115°/s. 180° en ~1.6s. Más
-      // rápido para que los giros se sientan vivos y la animación de C
-      // no dure tanto en pantalla (user pidió: "ah, voy a girar y
-      // giran rápido y fluido").
-      const maxTurnRate = 2.0; // rad/s ≈ 115°/s
+      // Max turn rate ÁGIL — 2.0 rad/s normal. Cuando isHovering, baja
+      // a 0.5 rad/s (~29°/s) → el pez "mira" al cursor con rotación
+      // lenta de acecho, sin girar como peonza alrededor.
+      const maxTurnRate = this.isHovering ? 0.5 : 2.0;
       const turn = Math.sign(diff) * Math.min(Math.abs(diff), maxTurnRate * _dt);
       this.heading += turn;
       alignment = Math.cos(diff); // proyección del heading sobre el target
@@ -543,13 +550,17 @@ class GlowFish {
     // detenerse. En peak (energy alto), nada con más vigor. Cada pez su
     // propio ciclo desincronizado → patrones naturales no robóticos.
     this.energyPhase += _dt * this.energyFreq;
-    const energy = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(this.energyPhase));
+    const oscEnergy = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(this.energyPhase));
+    // En modo cazador (huntingBoost > 1), congelamos energy a 1.0 — el
+    // depredador no descansa. En modo ambiente, oscila como cualquier pez.
+    const energy = this.huntingBoost > 1 ? 1.0 : oscEnergy;
 
-    // Si isHovering: speed override a casi 0 → pez frena gradualmente
-    // (lerp con tau ~500ms) y queda suspendido. La chain mantiene su
-    // forma actual, solo el wave de la cola sigue moviéndose sutilmente.
-    const minSpeed = this.isHovering ? 0 : 2.0 * this.speedScale * depthFactor * energy;
-    const maxSpeed = this.isHovering ? 0.15 * this.speedScale * depthFactor : 3.6 * this.speedScale * depthFactor * energy;
+    // Si isHovering: speed override a 0 → pez frena gradualmente (lerp
+    // con tau ~500ms) y queda totalmente suspendido. Solo el wave de la
+    // cola sigue moviéndose sutilmente → sensación de pez vivo acechando
+    // sin moverse.
+    const minSpeed = this.isHovering ? 0 : 2.0 * this.speedScale * depthFactor * energy * this.huntingBoost;
+    const maxSpeed = this.isHovering ? 0 : 3.6 * this.speedScale * depthFactor * energy * this.huntingBoost;
     const speedFactor01 = 0.5 + 0.5 * alignment; // 0..1
     // TURN SPEED DAMPING moderado — pequeña reducción durante turns
     // (max 25%) para mantener forward motion visible. Sin damping
@@ -1634,18 +1645,19 @@ export class WolfLakeCanvas {
     };
     buildGlowFishes();
 
-    // ─── Cursor fish — GlowFish con speedScale alto (1.4) para que sea
-    // ágil al perseguir el cursor. Brigther palette para destacar.
+    // ─── Cursor fish — GlowFish con speedScale ambiente (1.0). Cuando
+    // el cursor está sobre el agua, le aplicamos huntingBoost dinámico
+    // en el tick loop (modo depredador). Cuando el cursor sale del agua,
+    // huntingBoost vuelve a 1 y el pez se comporta como cualquier
+    // ambiental: oscilación de energy, speedScale normal, applyWander.
+    // Brighter palette para destacar como protagonista.
     const cursorSize = Math.max(13, Math.min(24, cw / 60));
     const cursorFish = new GlowFish(
-      { x: cw * 0.55, y: ch * 0.85 },
+      { x: cw * 0.55, y: ch * 0.80 },
       {
         size: cursorSize,
-        speedScale: 1.4,
+        speedScale: 1.0,
         color: { rim: '#80a4ff', body: '#0a1444', core: '#3878ff', halo: '#0b50ff' },
-        // Orbit pequeña para fallback cuando el cursor sale del agua.
-        // cy = 0.80 para mantener el cursor fish dentro del área visible
-        // del hero (no más allá de 0.85 que es donde se recorta en wide).
         orbit: {
           cx: 0.40,
           cy: 0.80,
@@ -1718,9 +1730,12 @@ export class WolfLakeCanvas {
       }
 
       if (cursorOnWater) {
-        // Modo follow — target = cursor position con smoothing rápido.
+        // Modo cazador — target = cursor position con smoothing rápido,
+        // huntingBoost=1.9 → energy constante 1.0 y speed multiplicado
+        // para perseguir como depredador.
         cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
         cursorFish.glowBoostTarget = 0.85;
+        cursorFish.huntingBoost = 1.9;
         // Hover detection — si el cursor fish ya alcanzó al cursor (dist
         // chica), activar isHovering: pez frena gradualmente y se queda
         // suspendido. Si el cursor se mueve, dist crece, isHovering se
@@ -1734,10 +1749,12 @@ export class WolfLakeCanvas {
         cursorFish.isHovering = dToCursor < hoverRadius;
       } else {
         // Modo patrullaje — mismo comportamiento que los ambientales:
-        // nada derecho en heading actual, gira solo al chocar con orilla.
+        // wander libre, huntingBoost=1 (sin boost), energy oscila normal,
+        // speedScale ambiente. El pez no recuerda que era cazador.
         applyWander(cursorFish, dt);
         cursorFish.glowBoostTarget = 0.4;
         cursorFish.isHovering = false;
+        cursorFish.huntingBoost = 1;
       }
 
       const cursorHeadVForUpdate = canvasUVToImgUV(
