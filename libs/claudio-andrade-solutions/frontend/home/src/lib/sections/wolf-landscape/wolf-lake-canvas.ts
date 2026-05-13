@@ -598,6 +598,33 @@ const GLOW_BODY_PROFILE: ReadonlyArray<readonly [number, number, number]> = [
 const GLOW_WAVES_PER_BODY = 1.2;
 
 /**
+ * Máximo bend per joint en la spinal chain (argonaut animal-proc-anim:
+ * `Chain.pde`, `angleConstraint = PI/8`). Si dos vértebras consecutivas
+ * intentan estar a más de este ángulo, la posterior se clampea al borde
+ * — produce curvatura suave, sin kinks. Valor sacado del repo oficial
+ * que el usuario referenció (qlfh_rv6khY).
+ */
+const GLOW_BEND_LIMIT = Math.PI / 8;
+
+/** Normaliza ángulo a (-π, π]. */
+const wrapAngleSigned = (a: number): number => {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a <= -Math.PI) a += Math.PI * 2;
+  return a;
+};
+
+/**
+ * Clamp `angle` a ±`limit` rad de `anchor`. Versión port directo de
+ * `Util.pde::constrainAngle` de argonaut, usando convención (-π, π]
+ * en lugar de [0, 2π) para evitar wrap issues con TypeScript.
+ */
+const constrainAngleArg = (angle: number, anchor: number, limit: number): number => {
+  const diff = wrapAngleSigned(angle - anchor);
+  if (Math.abs(diff) <= limit) return wrapAngleSigned(angle);
+  return wrapAngleSigned(anchor + Math.sign(diff) * limit);
+};
+
+/**
  * Perfil corporal del GlowFish — TOP view (vista de arriba/dorsal).
  * Simétrico left/right (la silueta del pez vista desde arriba es igual
  * de ambos lados). `[xUnit, halfWidth]` — `halfWidth` aplica
@@ -699,6 +726,31 @@ class GlowFish {
    *  hacia ahí — sensación de momentum, no de cambios discretos.
    *  Position se integra con currentSpeed, no targetSpeed. */
   currentSpeed = 0;
+
+  /**
+   * Spinal chain — N vértebras EN COORDENADAS DE MUNDO. La cabeza es
+   * `chainJoints[0]`. Cada frame, después del kinematic update,
+   * `resolveChainToTarget(this.position)` hace que la cabeza salte
+   * (con sub-pasos chicos) hacia la nueva posición y la columna se
+   * acomoda manteniendo distancias (linkSize por segmento) y ángulos
+   * (max ±GLOW_BEND_LIMIT entre vértebras consecutivas).
+   *
+   * Técnica de argonaut/animal-proc-anim. El cuerpo PHYSICALLY traza
+   * el camino que la cabeza pintó. NO es un buffer temporal — es
+   * geometría persistente con constraints. Render directo en world
+   * coords (sin ctx.rotate/translate del cuerpo) — único modo de evitar
+   * el bug "amarrados de un mecate" del intento anterior.
+   */
+  chainJoints: Vec[] = [];
+  /**
+   * Look-back angle de cada vértebra (de joint i hacia joint i-1, en
+   * coordenadas de MUNDO). chainAngles[0] = dirección en la que la
+   * cabeza acaba de moverse. Se mantiene explícito (no derivado de
+   * joints) para usar el ángulo del frame anterior como ancla del
+   * constraint propagation, así un movimiento puntual no flippea la
+   * columna entera.
+   */
+  chainAngles: number[] = [];
   /** Phase del traveling wave del cuerpo (radianes). Avanza cada frame por
    *  `dt * omega`, donde omega escala con `bodyEffort`. Drives la
    *  undulación del silhouette — `sin(swimPhase + k·x)` desplaza cada
@@ -739,6 +791,98 @@ class GlowFish {
     this.orbit = opts.orbit;
     this.target = { x: start.x, y: start.y };
     this.wanderTarget = { x: opts.orbit.cx, y: opts.orbit.cy };
+    // Init chain — N vértebras alineadas en línea recta detrás de la cabeza
+    // (asumiendo heading inicial = facing right). chainJoints[0] está en
+    // `start`, joint[i] una distancia (xUnit_diff * size) detrás. Todos los
+    // ángulos look-back inician en 0 (apuntan a +x = hacia la cabeza).
+    {
+      const N = GLOW_BODY_PROFILE.length;
+      this.chainJoints = new Array(N);
+      this.chainAngles = new Array(N).fill(0);
+      const noseX = GLOW_BODY_PROFILE[0][0];
+      for (let i = 0; i < N; i++) {
+        const offsetUnit = noseX - GLOW_BODY_PROFILE[i][0];
+        this.chainJoints[i] = { x: start.x - offsetUnit * opts.size, y: start.y };
+      }
+    }
+  }
+
+  /**
+   * Sub-stepped resolve — la cabeza camina hacia `target` en pasos
+   * cortos (≤ minSegLen × sin(GLOW_BEND_LIMIT) × 0.6) para que cada
+   * sub-paso satisfaga la regla "step distance < linkSize × sin(angle
+   * constraint)" del paper de argonaut. Sin esto, en frames con velocity
+   * alta el constraint se satura en todos los joints simultáneamente y
+   * la chain queda con un kink visible justo detrás de la cabeza
+   * ("spike de pez espada" del intento anterior).
+   */
+  private resolveChainToTarget(target: Vec): void {
+    // Min segment determina el sub-step máximo seguro.
+    let minSegUnit = Number.POSITIVE_INFINITY;
+    for (let i = 1; i < GLOW_BODY_PROFILE.length; i++) {
+      const seg = GLOW_BODY_PROFILE[i - 1][0] - GLOW_BODY_PROFILE[i][0];
+      if (seg < minSegUnit) minSegUnit = seg;
+    }
+    const minSegPx = minSegUnit * this.size;
+    const safeStep = Math.max(0.5, minSegPx * Math.sin(GLOW_BEND_LIMIT) * 0.6);
+
+    // Sub-stepping: si el head se mueve mucho, hacer varios pasos
+    let head = this.chainJoints[0];
+    let dx = target.x - head.x;
+    let dy = target.y - head.y;
+    let dist = Math.hypot(dx, dy);
+
+    // Hard cap para evitar runaway (e.g., teletransporte por edge case)
+    let safety = 32;
+    while (dist > safeStep && safety-- > 0) {
+      const nx = head.x + (dx / dist) * safeStep;
+      const ny = head.y + (dy / dist) * safeStep;
+      this.resolveChainStep({ x: nx, y: ny });
+      head = this.chainJoints[0];
+      dx = target.x - head.x;
+      dy = target.y - head.y;
+      dist = Math.hypot(dx, dy);
+    }
+    this.resolveChainStep(target);
+  }
+
+  /**
+   * Single-pass resolve — port directo de `Chain.pde::resolve` de argonaut.
+   * La cabeza salta a `newHeadPos` (sin clampear; el caller debe asegurar
+   * que el step sea pequeño usando `resolveChainToTarget`). Cada vértebra
+   * subsiguiente se reacomoda manteniendo distancia (linkSize) y ángulo
+   * constrained (±GLOW_BEND_LIMIT) respecto a la anterior.
+   */
+  private resolveChainStep(newHeadPos: Vec): void {
+    const N = this.chainJoints.length;
+    const oldHead = this.chainJoints[0];
+    const moveDx = newHeadPos.x - oldHead.x;
+    const moveDy = newHeadPos.y - oldHead.y;
+    // Si el head no se movió (movement≈0), preservar el ancla anterior.
+    // Sin esto, atan2(0,0)=0 colapsaría chainAngles[0] a 0 = +x = facing right,
+    // arrastrando toda la columna a recta horizontal. Mata todo el bend.
+    if (Math.hypot(moveDx, moveDy) > 1e-4) {
+      this.chainAngles[0] = Math.atan2(moveDy, moveDx);
+    }
+    this.chainJoints[0] = { x: newHeadPos.x, y: newHeadPos.y };
+
+    for (let i = 1; i < N; i++) {
+      const prev = this.chainJoints[i - 1];
+      const cur = this.chainJoints[i];
+      // look-back: dirección de joint[i] (vieja pos) hacia joint[i-1] (nueva)
+      const naturalAngle = Math.atan2(prev.y - cur.y, prev.x - cur.x);
+      // Clamp al ángulo del joint anterior ±BEND_LIMIT
+      const constrained = constrainAngleArg(naturalAngle, this.chainAngles[i - 1], GLOW_BEND_LIMIT);
+      this.chainAngles[i] = constrained;
+      // joint[i] = joint[i-1] - linkSize * unit(constrained look-back)
+      // (igual que argonaut: joint[i] queda a distancia exacta linkSize
+      // detrás de joint[i-1] en la dirección OPUESTA al look-back).
+      const segLenPx = (GLOW_BODY_PROFILE[i - 1][0] - GLOW_BODY_PROFILE[i][0]) * this.size;
+      this.chainJoints[i] = {
+        x: prev.x - Math.cos(constrained) * segLenPx,
+        y: prev.y - Math.sin(constrained) * segLenPx,
+      };
+    }
   }
 
   setTargetSmooth(raw: Vec, smoothing: number): void {
@@ -911,6 +1055,10 @@ class GlowFish {
 
     // Glow boost smoothing.
     this.glowBoost += (this.glowBoostTarget - this.glowBoost) * Math.min(1, _dt * 4);
+
+    // Spinal chain resolve — la cabeza camina hacia this.position en
+    // sub-pasos chicos; las vértebras se acomodan con constraints.
+    this.resolveChainToTarget(this.position);
   }
 
   /**
@@ -929,12 +1077,12 @@ class GlowFish {
     ctx.save();
     ctx.translate(this.position.x, this.position.y);
     ctx.scale(depthScale, depthScale);
-    ctx.rotate(this.heading);
-    // Banking — X-skew lateral según angularVel (lean into turn).
-    // Aplicado en el frame outer; ambas vistas heredan el lean.
-    if (Math.abs(this.bankSkew) > 0.001) {
-      ctx.transform(1, 0, this.bankSkew, 1, 0, 0);
-    }
+    // NOTA: NO rotamos el contexto. El cuerpo se renderiza directamente
+    // en world coords (relativos al head). Cada vértebra de la chain
+    // tiene su propio world look-back angle — el perpendicular del
+    // cross-section usa ESE angle, no un rotate global. Esto evita el
+    // bug "amarrados de un mecate" del intento anterior, donde combinar
+    // ctx.rotate + chain world-coords causaba doble rotación visual.
     ctx.globalCompositeOperation = 'lighter';
 
     const s = this.size;
@@ -997,50 +1145,114 @@ class GlowFish {
     // que hace que el giro NO se sienta como bloque rígido — la energía
     // del giro propaga del head al tail con delay biomecánico real.
     //
-    // Asymmetric tail stroke: durante turns, la onda late MÁS FUERTE
-    // del lado contrario al giro (el lado que empuja agua para girar).
-    // Es el mecanismo de propulsión real del C-start. Magnitude
-    // proporcional al turnBend.
     const N = GLOW_BODY_PROFILE.length;
 
-    // waveAt — wave + C-bend bias. La C-bend usa tail-leads (overlapping
-    // action / Disney 12): turnBend para el head, delayedTurnBend para
-    // la cola. Cuando el head cambia rumbo, la cola conserva el bend
-    // antiguo → S transient.
+    // ─── waveAt — solo undulación de nado, SIN cBend ─────────────────
+    // El bend del giro lo provee la chain espacial (chainJoints curvan
+    // físicamente al girar). Acá solo agregamos la onda viajera del nado
+    // como pequeño offset perpendicular a cada cross-section.
     const waveAt = (xUnit: number): number => {
       const u = (xNoseUnit - xUnit) / bodyLenUnit; // 0 head → 1 tail
       const env = u * u;
-      const sinVal = Math.sin(this.swimPhase + k * xUnit);
-      // Bend interpolado head→tail (tail-leads / overlapping action).
-      const cBendLocal = this.turnBend * (1 - u) + this.delayedTurnBend * u;
-      // C-bend bias del envelope — sesga la onda hacia el lado del giro.
-      const cBendPx = cBendLocal * env * ampPx * 1.5;
-      // Asymmetric tail stroke — la onda late más fuerte del lado contrario.
-      const asymmetry = 1 - Math.sign(sinVal) * cBendLocal * 0.40;
-      return cBendPx + env * ampPx * sinVal * asymmetry;
+      return env * ampPx * Math.sin(this.swimPhase + k * xUnit);
     };
 
-    // tangentAt — pendiente local de la espina (finite difference de waveAt).
-    const dxTan = 0.05;
-    const tangentAt = (xUnit: number): number => Math.atan2(
-      waveAt(xUnit + dxTan) - waveAt(xUnit - dxTan),
-      2 * dxTan * s,
-    );
+    // ─── chainAt — interpola posición + ángulo entre vértebras ────────
+    // Para cada xUnit del BODY_PROFILE (no uniforme), encuentra el chain
+    // segment que lo contiene y devuelve la posición LOCAL (relativa al
+    // head, en world axes — no rotada) y el world look-back angle. Para
+    // xUnit fuera del rango (eye 1.30 OK, tail tip -2.30 fuera), extrapola
+    // usando el ángulo del joint extremo.
+    const headW = this.chainJoints[0];
+    const chainAt = (xUnit: number): { lx: number; ly: number; ang: number } => {
+      const noseX = GLOW_BODY_PROFILE[0][0];
+      const tailX = GLOW_BODY_PROFILE[N - 1][0];
+      // Beyond head (xUnit > nose) — extrapolate forward
+      if (xUnit >= noseX) {
+        const j = this.chainJoints[0];
+        const a = this.chainAngles[0];
+        const offsetPx = (xUnit - noseX) * this.size;
+        // forward direction = look-back angle (from joint 0 toward where
+        // joint -1 would be = AWAY from joint 1 = INTO direction of motion)
+        // joint[0] is the head, look-back angle points FROM head BACK to
+        // body (toward joint 1)... wait no. chainAngles[0] is set to
+        // direction of head movement. So it points "forward". Extrapolating
+        // beyond nose = going further in chainAngles[0] direction.
+        return {
+          lx: (j.x - headW.x) + Math.cos(a) * offsetPx,
+          ly: (j.y - headW.y) + Math.sin(a) * offsetPx,
+          ang: a,
+        };
+      }
+      // Beyond tail (xUnit < tail) — extrapolate backward
+      if (xUnit <= tailX) {
+        const j = this.chainJoints[N - 1];
+        const a = this.chainAngles[N - 1];
+        const offsetPx = (tailX - xUnit) * this.size;
+        // chainAngles[i] is from joint[i] toward joint[i-1] = toward head
+        // To go backward (toward tail extension), opposite direction
+        return {
+          lx: (j.x - headW.x) - Math.cos(a) * offsetPx,
+          ly: (j.y - headW.y) - Math.sin(a) * offsetPx,
+          ang: a,
+        };
+      }
+      // Find the segment [i, i+1] containing this xUnit
+      for (let i = 0; i < N - 1; i++) {
+        const x0 = GLOW_BODY_PROFILE[i][0];
+        const x1 = GLOW_BODY_PROFILE[i + 1][0];
+        if (xUnit <= x0 && xUnit >= x1) {
+          const t = (x0 - xUnit) / (x0 - x1);
+          const j0 = this.chainJoints[i];
+          const j1 = this.chainJoints[i + 1];
+          // Wrap-aware angle interpolation
+          let da = this.chainAngles[i + 1] - this.chainAngles[i];
+          if (da > Math.PI) da -= Math.PI * 2;
+          if (da < -Math.PI) da += Math.PI * 2;
+          const ang = this.chainAngles[i] + da * t;
+          return {
+            lx: (j0.x - headW.x) + ((j1.x - j0.x)) * t,
+            ly: (j0.y - headW.y) + ((j1.y - j0.y)) * t,
+            ang,
+          };
+        }
+      }
+      // Fallback (shouldn't reach)
+      const j = this.chainJoints[N - 1];
+      return { lx: j.x - headW.x, ly: j.y - headW.y, ang: this.chainAngles[N - 1] };
+    };
 
-    // mapToSpine — cada cross-section perpendicular al tangente local de
-    // la espina. Single source of truth para silueta, vértebras, ojo,
-    // aletas, cola.
+    // ─── mapToSpine — pos + cross-section + wave en world frame ─────
+    // Devuelve coords LOCAL al head pero en EJES MUNDO (no hay rotate del
+    // ctx). yUnit signed: NEG = back/joroba, POS = belly. Wave es lateral
+    // (perp al spine), no se invierte con dorsalSide para que oscile en
+    // body-frame consistente. La perpendicular del cross-section SÍ se
+    // invierte con dorsalSide (mantiene joroba arriba visualmente cuando
+    // el pez gira pasado vertical).
     const mapToSpine = (xUnit: number, yUnitSigned: number): Vec => {
-      const sx = xUnit * s;
-      const sy = waveAt(xUnit);
-      const θ = tangentAt(xUnit);
-      const perpX = Math.sin(θ);
-      const perpY = -Math.cos(θ);
+      const c = chainAt(xUnit);
+      const sinA = Math.sin(c.ang);
+      const cosA = Math.cos(c.ang);
+      // Perpendicular para back-side: (sin(a), -cos(a)) cuando dorsalSide=+1
+      // (rotar forward 90° CW visual en Y-down). Flip con dorsalSide.
+      // Cross-section offset = -yUnit * dorsalSide * (sin(a), -cos(a))
+      // = (-yUnit*dorsalSide*sin(a), yUnit*dorsalSide*cos(a))
+      // Wave offset (sin dorsalSide flip) = wave * (sin(a), -cos(a))
+      // Total perpendicular en pixels:
+      const yUnitPx = yUnitSigned * s * this.dorsalSide;
+      const wavePx = waveAt(xUnit);
+      // Combinado: lateral_offset = (wave - yUnit*dorsalSide*s)
+      // Para que back side (yUnit<0) quede en dirección perp positiva:
+      const lateral = wavePx - yUnitPx;
       return {
-        x: sx - perpX * yUnitSigned * s,
-        y: sy - perpY * yUnitSigned * s,
+        x: c.lx + lateral * sinA,
+        y: c.ly - lateral * cosA,
       };
     };
+
+    // tangentAt — para backward-compat con el resto del render (dorsal wag,
+    // saccade del ojo). Devuelve el world look-back angle del joint en xUnit.
+    const tangentAt = (xUnit: number): number => chainAt(xUnit).ang;
 
     // ─── 1) Halo exterior soft ───
     const haloR = s * 4.6;
@@ -1083,10 +1295,10 @@ class GlowFish {
     // (cosH≈0, m≈1) la silueta es simétrica → flip invisible.
     {
       ctx.save();
-      // Sin yaw X-squash — la silueta morpheada YA representa el cambio
-      // de view angle por su forma, no por compresión X.
-      ctx.scale(this.stretchX, this.dorsalSide * sy);
-      ctx.translate(-2.20 * s, 0); // anchor en HEAD post-scale
+      // Sin scale ni translate aquí: chainAt ya devuelve coords LOCALES
+      // al head (joint[0] en (0,0)), y el dorsalSide flip se aplica dentro
+      // de mapToSpine vía signo de la perpendicular. La silueta morpheada
+      // YA representa el cambio de view angle por su forma.
       ctx.globalAlpha = 1;
 
       // Morph factor — alias del viewMorph computado al inicio
@@ -1131,11 +1343,15 @@ class GlowFish {
     const spinePts: Vec[] = [];
     for (let i = 0; i < N; i++) {
       const xUnit = GLOW_BODY_PROFILE[i][0];
-      spinePts.push({ x: xUnit * s, y: waveAt(xUnit) });
+      // mapToSpine con yUnit=0 = sobre el centerline articulado del chain
+      spinePts.push(mapToSpine(xUnit, 0));
     }
     // Render espina como path stroked con gradiente longitudinal tenue.
-    const spineLen = s * 3.40;
-    const spineGrad = ctx.createLinearGradient(-spineLen * 0.5, 0, spineLen * 0.5, 0);
+    // El gradient lo orientamos del head al tail vía los endpoints reales.
+    const spineGrad = ctx.createLinearGradient(
+      spinePts[0].x, spinePts[0].y,
+      spinePts[N - 1].x, spinePts[N - 1].y,
+    );
     spineGrad.addColorStop(0, hexA(this.color.core, 0));
     spineGrad.addColorStop(0.12, hexA(this.color.core, 0.55));
     spineGrad.addColorStop(0.85, hexA(this.color.core, 0.55));
@@ -1292,20 +1508,51 @@ class GlowFish {
       ctx.restore();
     }
 
-    // ─── 8) Cola forked morpheada — anchors morph entre side y top ─────
-    const tTopBase = mapToSpine(-1.55, morphY(-0.16, -0.10));
-    const tBotBase = mapToSpine(-1.55, morphY( 0.16,  0.10));
-    const tTopTip  = mapToSpine(-2.30, morphY(-0.55, -0.50));
-    const tBotTip  = mapToSpine(-2.30, morphY( 0.55,  0.50));
-    const tNotch   = mapToSpine(-1.95, 0);
+    // ─── 8) Caudal fin abanicada estilo argonaut ─────────────────────
+    // El ancho de la cola crece con la diferencia angular acumulada
+    // head→tail (más bend = cola más abierta). Es la firma visual del
+    // turn de argonaut: cuando el pez se curva en C, la cola se abanica.
+    //
+    // headToTail aprox = wrap(chainAngles[0] - chainAngles[N-1]). Cuando
+    // el body está recto, ≈0 → cola plana. En giro fuerte, hasta ~PI.
+    const headToTail = wrapAngleSigned(this.chainAngles[0] - this.chainAngles[N - 1]);
+    const fanMag = Math.abs(headToTail);
+    // Bottom-side de la cola crece quadratically con el offset del joint
+    // base (joint del tail base = N-1, xUnits desde -1.55 hasta -2.30).
+    // Argonaut: tailWidth = 1.5 * headToTail * (i-8)^2. En nuestro perfil,
+    // el tail spans 4 sub-positions (-1.55, -1.80, -2.05, -2.30).
+    const tailXUnits = [-1.55, -1.80, -2.05, -2.30];
+    const tailBotPts: Vec[] = [];
+    const tailTopPts: Vec[] = [];
+    for (let i = 0; i < tailXUnits.length; i++) {
+      const xU = tailXUnits[i];
+      // Outer edge (lado contrario al bend) crece quadratically con headToTail
+      const fanOut = 1.5 * fanMag * (i / (tailXUnits.length - 1)) * (i / (tailXUnits.length - 1));
+      // Inner edge crece linealmente con un cap más bajo
+      const fanIn = Math.max(-0.85, Math.min(0.85, fanMag * 0.40));
+      // Si headToTail es positivo, el bottom se abre (el lado outer)
+      const sgn = Math.sign(headToTail) || 1;
+      // yUnit del top y bottom de la cola, modulado por el fan
+      const baseTopY = -0.10 - fanOut * 0.6;
+      const baseBotY = +0.10 + fanOut * 0.6;
+      // Lado opuesto al bend (sgn) recibe el fan grande
+      const topY = sgn > 0 ? baseTopY : -fanIn - 0.10;
+      const botY = sgn > 0 ? +fanIn + 0.10 : baseBotY;
+      tailTopPts.push(mapToSpine(xU, topY));
+      tailBotPts.push(mapToSpine(xU, botY));
+    }
+    // Render: closed shape from base-top through tail-top, around tip,
+    // back through tail-bot to base-bot.
     ctx.beginPath();
-    ctx.moveTo(tTopBase.x, tTopBase.y);
-    ctx.lineTo(tTopTip.x,  tTopTip.y);
-    ctx.lineTo(tNotch.x,   tNotch.y);
-    ctx.lineTo(tBotTip.x,  tBotTip.y);
-    ctx.lineTo(tBotBase.x, tBotBase.y);
+    ctx.moveTo(tailTopPts[0].x, tailTopPts[0].y);
+    for (let i = 1; i < tailTopPts.length; i++) {
+      ctx.lineTo(tailTopPts[i].x, tailTopPts[i].y);
+    }
+    for (let i = tailBotPts.length - 1; i >= 0; i--) {
+      ctx.lineTo(tailBotPts[i].x, tailBotPts[i].y);
+    }
     ctx.closePath();
-    ctx.fillStyle = hexA(this.color.body, 0.26);
+    ctx.fillStyle = hexA(this.color.body, 0.26 + fanMag * 0.10);
     ctx.fill();
     ctx.strokeStyle = hexA(this.color.rim, 0.42);
     ctx.lineWidth = Math.max(0.30, s * 0.06);
