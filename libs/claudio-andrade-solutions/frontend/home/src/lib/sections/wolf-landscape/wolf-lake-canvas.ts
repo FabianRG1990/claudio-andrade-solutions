@@ -652,27 +652,57 @@ class GlowFish {
         alignment = Math.cos(diff);
       }
 
-      // 2) Forward speed con MOMENTUM.
-      const minSpeed = 2.0 * this.speedScale * depthFactor * energy * this.huntingBoost;
+      // 2) Forward speed FUERTEMENTE GATEADO por alignment.
+      //
+      // Principio: la velocidad solo se construye cuando el pez está
+      // orientado hacia el target. Si el target está en el hemisferio
+      // trasero (alignment < 0), targetSpeed → 0 y el pez pivota tranquilo
+      // en su sitio mientras el heading rota hacia el cursor. Una vez
+      // alineado, acelera.
+      //
+      // Sin este gate, alignment=-0.5 daba speedFactor01=0.25 y el pez
+      // se arrastraba hacia atrás "en C como camarón" cuando el cursor
+      // se movía detrás suyo. También causaba colisiones con bordes a
+      // alta velocidad porque mantenía momentum durante el U-turn → se
+      // estampaba contra orillas. Real biomechanics de pez en yaw turn:
+      // primero brake, luego pivot con pectorales (Drucker & Lauder),
+      // luego accelerate cuando aligned.
+      //
+      // minSpeed = 0 (no floor) → el pez efectivamente puede pararse.
+      // speedFactor01 = max(0, alignment) → no aporta speed con target
+      // detrás. Combinado con lerp rápido (k=5) cuando alignment<0, la
+      // velocidad se disipa en ~200ms al cambiar de alineado a desalineado.
+      const minSpeed = 0;
       const maxSpeed = 3.6 * this.speedScale * depthFactor * energy * this.huntingBoost;
-      const speedFactor01 = 0.5 + 0.5 * alignment;
+      const speedFactor01 = Math.max(0, alignment);
       const turnDamping = Math.min(0.25, Math.abs(this.angularVel) * 0.20);
       let targetSpeed = (minSpeed + (maxSpeed - minSpeed) * speedFactor01) * (1 - turnDamping);
 
-      // 2b) Proximity brake (Webb 1991 two-phase deceleration). Cuando
-      //     el target está cerca (< 80 px) y estamos casi alineados
-      //     con él, frenamos exponencialmente. Sin esto, el momentum
-      //     hacía overshoot al cursor y el pez orbita "como tiburón"
-      //     antes de poder volver a alinearse. Solo aplica cuando
-      //     alignment > 0.5 (target adelante) — no queremos frenar
-      //     si vamos rebasando con intención de hacer U-turn.
-      if (dist < 80 && alignment > 0.5) {
-        const brakeT = dist / 80; // 0 cerca, 1 lejos
-        const brakeFactor = 0.35 + 0.65 * brakeT; // 35% del speed @ dist=0
+      // 2b) Proximity brake adaptativo. El radio escala con currentSpeed
+      //     porque un pez yendo a 20 px/frame necesita más runway para
+      //     decelerar naturalmente que uno yendo a 4 px/frame — fix del
+      //     bug "frena en seco" cuando llegaba rápido al cursor. Curva
+      //     pow 0.7: gradual al inicio del brake zone, más fuerte cerca
+      //     del target.
+      //
+      //     Solo aplica con alignment > 0.5 — el gating de speed ya se
+      //     encarga del caso target-detrás (targetSpeed=0).
+      const brakeRadius = Math.max(80, this.currentSpeed * 20);
+      const brakeActive = dist < brakeRadius && alignment > 0.5;
+      if (brakeActive) {
+        const brakeT = dist / brakeRadius;
+        const brakeFactor = 0.05 + 0.95 * Math.pow(brakeT, 0.7);
         targetSpeed *= brakeFactor;
       }
 
-      this.currentSpeed += (targetSpeed - this.currentSpeed) * Math.min(1, _dt * 2);
+      // lerpRate: 6 dentro del brake (tau ~170ms para decelerar a tiempo).
+      //   5 cuando alignment < 0 (target detrás) → tau ~200ms para que
+      //     el pez DISIPE la velocidad rápido y pivote en sitio en lugar
+      //     de arrastrarse curvado. Esto fix el "camarón" y también las
+      //     colisiones con bordes a alta velocidad.
+      //   2 default (tau ~500ms) para la aceleración natural en chase.
+      const lerpRate = brakeActive ? 6 : (alignment < 0 ? 5 : 2);
+      this.currentSpeed += (targetSpeed - this.currentSpeed) * Math.min(1, _dt * lerpRate);
 
       // 3) Integra currentSpeed (con inercia) en heading direction.
       const vx = Math.cos(this.heading) * this.currentSpeed;
@@ -1972,13 +2002,31 @@ export class WolfLakeCanvas {
           );
           const hoverRadiusEnter = 14 + cursorFish.size * 1.4;
           const hoverRadiusExit = hoverRadiusEnter * 1.6;
+          // ¿El cursor está claramente DETRÁS del pez? Si pasa al
+          // hemisferio trasero (|ang| > ~99° del heading), rompemos el
+          // hover. Sin este check, cuando el usuario movía el cursor
+          // LENTO hacia atrás del pez en hover, el position-lerp arrastraba
+          // al pez hacia atrás mientras la cabeza rotaba despacio → look
+          // "camarón en C arrastrado". Al romper hover, kinematic toma
+          // over y con el gating de speed (max(0, alignment)) el pez
+          // decelera a 0, pivota tranquilo, y solo reanuda chase cuando
+          // está alineado.
+          const angToCursor = Math.atan2(
+            pointer.y - cursorFish.position.y,
+            pointer.x - cursorFish.position.x,
+          );
+          let headingDiffToCursor = angToCursor - cursorFish.heading;
+          while (headingDiffToCursor > Math.PI) headingDiffToCursor -= 2 * Math.PI;
+          while (headingDiffToCursor < -Math.PI) headingDiffToCursor += 2 * Math.PI;
+          const cursorBehindFish = Math.abs(headingDiffToCursor) > Math.PI * 0.55;
+
           // Hover detection con HYSTERESIS — el pez entra al hover a ≈45 px,
           // pero solo sale cuando el cursor se aleja a 1.6× ese radio (≈72 px).
           // Sin la hysteresis, microvibraciones del cursor hacían parpadear
           // isHovering entre frames y el pez entraba/salía del station-keeping
           // varias veces por segundo.
           cursorFish.isHovering = cursorFish.isHovering
-            ? dToCursor < hoverRadiusExit
+            ? (dToCursor < hoverRadiusExit && !cursorBehindFish)
             : dToCursor < hoverRadiusEnter;
 
           // huntingBoost adaptativo: interpolación entre
