@@ -1313,10 +1313,13 @@ const canvasUVToImgUV = (
 };
 
 /**
- * Empuja TODA la espina del pez hacia el ancla si algún segmento sale
- * del lago seguro (mask < 0.85). Fuerza proporcional a qué tan adentro
- * de la zona prohibida está cada segmento. Threshold 0.85 garantiza
- * que ni el feather de la orilla deja escapar al pez.
+ * Empuja la cabeza del pez hacia el ancla si sale del lago seguro
+ * (mask < 0.85). ÚLTIMO RECURSO — la primera línea de defensa es
+ * applyWallAvoidance (orienta el heading hacia agua libre antes de
+ * que el pez llegue a la pared). Este clamp SOLO corrige posicional-
+ * mente leaks pequeños. Push capped a ~3 px/frame para evitar el
+ * "brinco" visible que reportaba el usuario (el push de 14 px del
+ * intento anterior teleportaba la cabeza cada frame).
  */
 const clampSpineToLake = (
   fish: { spine: Vec[] }, // GlowFish expone .spine como [position]
@@ -1330,10 +1333,11 @@ const clampSpineToLake = (
     const iuv = canvasUVToImgUV({ x: p.x / cw, y: p.y / ch }, cw, ch, imgW, imgH);
     const m = sampleMask(mask, iuv.x, iuv.y);
     if (m < 0.85) {
-      // Empuje proporcional: 4 px en el borde (m=0.85) → 14 px en zona
-      // totalmente prohibida (m=0). Garantiza que aún en el caso más
-      // extremo el pez vuelve al lago en pocos frames.
-      const push = 4 + (1 - m / 0.85) * 10;
+      // Push capped a 3 px/frame — corrige leaks sin teleportar.
+      // applyWallAvoidance debería evitar que el pez llegue a este
+      // punto; si lo hace, este clamp lo regresa al lago en ~5-10
+      // frames sin "brinco" visible.
+      const push = Math.min(3, 0.8 + (1 - m / 0.85) * 2.2);
       const dx = ax - p.x;
       const dy = ay - p.y;
       const d = Math.hypot(dx, dy) || 1;
@@ -1595,6 +1599,88 @@ export class WolfLakeCanvas {
       f.setTargetSmooth({ x: tx, y: ty }, 0.10);
     };
 
+    // ── Wall avoidance reactivo ─────────────────────────────────────
+    // applyWander decide rutas a largo plazo (200+ px lookahead). Pero
+    // cuando el pez ya está PEGADO a la orilla, el lookahead largo cae
+    // dentro de roca en TODAS las direcciones y el preference bias del
+    // dev=0 termina mandando al pez derecho a la pared, frame tras frame.
+    // El clampSpineToLake lo empujaba con 14 px → "brinco" visible que el
+    // usuario reportó (peces atorados saltando contra el borde).
+    //
+    // Solución: feelers cortos (25 / 50 px) que detectan paredes inminentes.
+    // Cuando una pared está a < 25 px del head (estamos a punto de chocar)
+    // o el frontal a 50 px ya es roca, override directo de f.target hacia
+    // el lado libre (o U-turn si ambos lados están bloqueados también).
+    // Brake currentSpeed proporcional a la profundidad de la pared → el
+    // pez frena ANTES de embestir. Retorna true si disparó, para que el
+    // tick loop pueda skippear wander/follow ese frame.
+    const applyWallAvoidance = (f: GlowFish, _dtNow: number): boolean => {
+      const headX = f.spine[0].x;
+      const headY = f.spine[0].y;
+      const probe = (angle: number, dist: number): number => {
+        const px = headX + Math.cos(angle) * dist;
+        const py = headY + Math.sin(angle) * dist;
+        const iuv = canvasUVToImgUV(
+          { x: px / cw, y: py / ch },
+          cw, ch, IMG_W, IMG_H,
+        );
+        return sampleMask(mask, iuv.x, iuv.y);
+      };
+      // Forward: emergencia (25 px) y advance warning (50 px). Tomamos
+      // el MIN — si la ruta corta toca pared, no importa que más lejos
+      // haya agua otra vez: ya vamos a chocar.
+      const mFnear = probe(f.heading, 25);
+      const mFfar = probe(f.heading, 50);
+      const mF = Math.min(mFnear, mFfar);
+      // También probamos justo en el head — si la cabeza YA está en zona
+      // de roca, hay que escapar de inmediato sin importar lo demás.
+      const mHead = probe(f.heading, 0);
+      // Umbral 0.85 alineado con clampSpineToLake. Si frente está bien,
+      // no interferir con wander/follow.
+      if (mF >= 0.85 && mHead >= 0.85) return false;
+
+      // Lados a 50 px (60° fuera del heading) — qué tan libre está cada
+      // costado para decidir hacia dónde girar.
+      const mL = probe(f.heading - Math.PI / 3, 50);
+      const mR = probe(f.heading + Math.PI / 3, 50);
+
+      // Decide escape direction.
+      let escapeAngle: number;
+      if (mL > 0.85 && mR < 0.85) {
+        escapeAngle = f.heading - Math.PI / 2.2; // izquierda libre, gira fuerte
+      } else if (mR > 0.85 && mL < 0.85) {
+        escapeAngle = f.heading + Math.PI / 2.2; // derecha libre, gira fuerte
+      } else if (mL > mR + 0.05) {
+        escapeAngle = f.heading - Math.PI / 3;
+      } else if (mR > mL + 0.05) {
+        escapeAngle = f.heading + Math.PI / 3;
+      } else {
+        // Corner trap — ambos lados igual de bloqueados. U-turn forzado.
+        // Mantenemos el signo del angularVel actual para que el pez no
+        // oscile entre izquierda/derecha cuando ambas lecturas empatan.
+        const sign = f.angularVel >= 0 ? 1 : -1;
+        escapeAngle = f.heading + sign * Math.PI * 0.85;
+      }
+
+      // Override target — punto a 250 px en escapeAngle. Lo escribimos
+      // directo (sin lerp) porque es emergencia: necesitamos que el
+      // kinematic empiece a girar ya mismo en el próximo update().
+      const reach = 250;
+      f.target.x = headX + Math.cos(escapeAngle) * reach;
+      f.target.y = headY + Math.sin(escapeAngle) * reach;
+
+      // Brake — más profundo en pared = más freno. Sin esto, el momentum
+      // sigue empujando al pez contra la roca mientras el heading gira.
+      const wallDepth = 1 - Math.min(mF, mHead) / 0.85; // 0..1
+      f.currentSpeed *= 1 - 0.55 * wallDepth;
+
+      // Si estaba hovering (pez del cursor), salir del hover — la pared
+      // tiene prioridad sobre la suspensión.
+      f.isHovering = false;
+
+      return true;
+    };
+
     // ─── GlowFish (5) ambientales — peces silueta-luminosa estilo argonaut
     // chain. Distribuidos en los SPAWN_UV originales del lago, todos
     // verificados dentro del polígono seguro del agua.
@@ -1729,32 +1815,42 @@ export class WolfLakeCanvas {
         }
       }
 
+      // Wall avoidance SIEMPRE corre primero (incluso en modo cazador):
+      // si hay pared adelante, override target y skip de follow/wander.
+      // Sin esto, el follow del cursor podía empujar al pez del cursor
+      // contra el borde superior del lago cuando el cursor estaba ahí.
+      const cursorFishEscaping = applyWallAvoidance(cursorFish, dt);
+
       if (cursorOnWater) {
-        // Modo cazador — target = cursor position con smoothing rápido,
-        // huntingBoost=1.9 → energy constante 1.0 y speed multiplicado
-        // para perseguir como depredador.
-        cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
         cursorFish.glowBoostTarget = 0.85;
         cursorFish.huntingBoost = 1.9;
-        // Hover detection — si el cursor fish ya alcanzó al cursor (dist
-        // chica), activar isHovering: pez frena gradualmente y se queda
-        // suspendido. Si el cursor se mueve, dist crece, isHovering se
-        // desactiva, pez retoma forward motion. Threshold proporcional al
-        // tamaño del pez para que peces grandes hovereen un poco antes.
-        const dToCursor = Math.hypot(
-          cursorFish.position.x - pointer.x,
-          cursorFish.position.y - pointer.y,
-        );
-        const hoverRadius = 12 + cursorFish.size * 1.2;
-        cursorFish.isHovering = dToCursor < hoverRadius;
+        if (!cursorFishEscaping) {
+          // Modo cazador — target = cursor position con smoothing rápido,
+          // huntingBoost=1.9 → energy constante 1.0 y speed multiplicado
+          // para perseguir como depredador.
+          cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
+          // Hover detection — si el cursor fish ya alcanzó al cursor (dist
+          // chica), activar isHovering: pez frena gradualmente y se queda
+          // suspendido. Si el cursor se mueve, dist crece, isHovering se
+          // desactiva, pez retoma forward motion. Threshold proporcional al
+          // tamaño del pez para que peces grandes hovereen un poco antes.
+          const dToCursor = Math.hypot(
+            cursorFish.position.x - pointer.x,
+            cursorFish.position.y - pointer.y,
+          );
+          const hoverRadius = 12 + cursorFish.size * 1.2;
+          cursorFish.isHovering = dToCursor < hoverRadius;
+        }
       } else {
-        // Modo patrullaje — mismo comportamiento que los ambientales:
-        // wander libre, huntingBoost=1 (sin boost), energy oscila normal,
-        // speedScale ambiente. El pez no recuerda que era cazador.
-        applyWander(cursorFish, dt);
         cursorFish.glowBoostTarget = 0.4;
-        cursorFish.isHovering = false;
         cursorFish.huntingBoost = 1;
+        if (!cursorFishEscaping) {
+          // Modo patrullaje — mismo comportamiento que los ambientales:
+          // wander libre, huntingBoost=1 (sin boost), energy oscila normal,
+          // speedScale ambiente. El pez no recuerda que era cazador.
+          applyWander(cursorFish, dt);
+          cursorFish.isHovering = false;
+        }
       }
 
       const cursorHeadVForUpdate = canvasUVToImgUV(
@@ -1767,7 +1863,13 @@ export class WolfLakeCanvas {
       // tiene su propio waypoint y reloj de burst-glide. Resultado:
       // movimiento desincronizado, sensación de instinto natural.
       for (const gf of glowFishes) {
-        applyWander(gf, dt);
+        // Wall avoidance reactivo PRIMERO. Si hay pared a < 50 px, override
+        // target hacia el lado libre y skip wander. Esto evita el bug del
+        // pez atorado contra la orilla brincando frame tras frame.
+        const escaping = applyWallAvoidance(gf, dt);
+        if (!escaping) {
+          applyWander(gf, dt);
+        }
 
         const ghead = gf.spine[0];
         let gboost = 0;
