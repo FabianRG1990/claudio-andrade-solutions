@@ -2210,12 +2210,16 @@ export class WolfLakeCanvas {
 
     // ─── Resize handler — mantiene canvas sincronizado al host
     let cw = 0, ch = 0;
-    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // DPR clamp 2.0 (era 1.5). En displays retina (2×) ahora renderizamos
+    // a resolución nativa en vez de a 1.5× y dejar que el browser haga
+    // upscale 1.33× — fuente directa de blur perceptual. En 3× phones
+    // seguimos clampeando a 2.0 para no triplicar el pixel count.
+    let dpr = Math.min(window.devicePixelRatio || 1, 2.0);
     const resize = (): void => {
       const rect = host.getBoundingClientRect();
       cw = Math.max(1, rect.width);
       ch = Math.max(1, rect.height);
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      dpr = Math.min(window.devicePixelRatio || 1, 2.0);
       canvas.width = Math.floor(cw * dpr);
       canvas.height = Math.floor(ch * dpr);
       canvas.style.width = `${cw}px`;
@@ -2834,10 +2838,13 @@ export class WolfLakeCanvas {
 
       // ─── Render
       ctx.clearRect(0, 0, cw, ch);
+      // Filtro "underwater color cast" — saturate + brightness reducidos.
+      // Sin blur (el usuario priorizó claridad y detalle anatómico sobre
+      // sensación submerged via edge softening). Estos dos LUTs por pixel
+      // son baratos y desaturan/oscurecen ligeramente para que el pez
+      // no compita cromáticamente con el lake.
       ctx.save();
-      ctx.filter = 'blur(0.5px)';
-      // Render GlowFish (mismo blur sutil para que se sientan sumergidos
-      // junto al resto de peces).
+      ctx.filter = 'saturate(0.78) brightness(0.92)';
       for (const gf of glowFishes) {
         const ghV = canvasUVToImgUV({ x: gf.spine[0].x / cw, y: gf.spine[0].y / ch }, cw, ch, IMG_W, IMG_H).y;
         gf.render(ctx, depthScaleAt(ghV));
@@ -2852,6 +2859,25 @@ export class WolfLakeCanvas {
         cw, ch, IMG_W, IMG_H,
       ).y;
       cursorFish.render(ctx, depthScaleAt(cursorHeadV));
+      ctx.restore();
+
+      // ─── Underwater water-column tint pass ─────────────────────────
+      // Velo translúcido azul aplicado SOLO sobre los píxeles renderizados
+      // (source-atop: el source pinta donde el destination ya tiene alpha).
+      // Físicamente reproduce: cuando ves un pez bajo el agua desde arriba,
+      // la columna de agua entre el ojo y el pez agrega un cast cyan/azul
+      // a lo que vés (los rojos se absorben primero, queda el azul). Esto
+      // es lo que hace que algo lea como "sumergido" sin necesidad de
+      // difuminar el detalle anatómico — el detalle se preserva 100%, solo
+      // se pinta encima un velo.
+      //
+      // Color: rgba(35, 75, 145, 0.16) — azul medio del lake, 16% opacity.
+      // No afecta zonas transparentes del canvas (lake image abajo queda
+      // intacta).
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(35, 75, 145, 0.16)';
+      ctx.fillRect(0, 0, cw, ch);
       ctx.restore();
 
       raf = requestAnimationFrame(tick);
