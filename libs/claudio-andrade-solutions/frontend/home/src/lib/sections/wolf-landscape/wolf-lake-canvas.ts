@@ -401,16 +401,42 @@ class GlowFish {
       this.chainAngles = new Array(N).fill(0);
       this.bendLimits = new Array(N);
       const noseX = GLOW_BODY_PROFILE[0][0];
-      const LIMIT_HEAD = Math.PI / 24; // ~7.5° - cervical region (rigid)
-      const LIMIT_TAIL = Math.PI / 7;  // ~25.7° - caudal peduncle (flexible)
+      // ── Stiffness gradient (Spine industry-standard 2D fish rig) ────
+      // Hallazgos del research: cabeza rígida = primer 28-33% del cuerpo
+      // (un solo "hueso"), bend empieza DETRÁS del opérculo, trunk 12-18°
+      // por joint, peduncle 25-35° (donde vive el carangiform whip).
+      //
+      // GLOW_BODY_PROFILE 13 joints — total xUnit 2.20→-1.55 (3.75 units).
+      // El opérculo cae a ~30% desde nariz = xUnit 1.075 ≈ joint 4.
+      //   joints 0-3 (xUnit 2.20→1.35, primer 23%): RÍGIDOS — bendLimits=0,
+      //     joints[1..3] forzados al ángulo de chainAngles[0]=heading.
+      //     Segmento de cabeza unitario que rota como bloque.
+      //   joints 4-8 (trunk, 25-50% del cuerpo): 12→18° ramp.
+      //   joints 9-12 (peduncle, 50%→tail): 22→35° ramp — donde el wave
+      //     carangiform amplifica.
+      //
+      // Sin esto, joints 1-3 con ~7-8° cada uno sumaban ~25° de bend en
+      // la región de cabeza → la nariz se "corría" lateralmente al girar
+      // (bug reportado: "la cabeza no es un solo segmento").
+      const TRUNK_LIMITS: ReadonlyArray<number> = [
+        0,            // i=0: head (no se usa, joint 0 traksea heading)
+        0,            // i=1: head — rígido relativo a head
+        0,            // i=2: head — rígido
+        0,            // i=3: head — rígido (final del bloque cabeza)
+        Math.PI / 15, // i=4: ~12° — operculum, trunk start
+        Math.PI / 14, // i=5: ~12.9°
+        Math.PI / 13, // i=6: ~13.8°
+        Math.PI / 12, // i=7: ~15°
+        Math.PI / 11, // i=8: ~16.4° — trunk end
+        Math.PI / 9,  // i=9: ~20° — peduncle transition
+        Math.PI / 7,  // i=10: ~25.7° — peduncle
+        Math.PI / 6,  // i=11: ~30°
+        Math.PI / 5,  // i=12: ~36° — tail base, max carangiform whip
+      ];
       for (let i = 0; i < N; i++) {
         const offsetUnit = noseX - GLOW_BODY_PROFILE[i][0];
         this.chainJoints[i] = { x: start.x - offsetUnit * opts.size, y: start.y };
-        // Stiffness gradient: front half ~muy rígido, back half acelera
-        const t = i / (N - 1);
-        const sBiased = t < 0.5 ? 0.25 * t : 0.125 + 1.75 * (t - 0.5);
-        const sClamped = Math.min(1, Math.max(0, sBiased));
-        this.bendLimits[i] = LIMIT_HEAD + (LIMIT_TAIL - LIMIT_HEAD) * sClamped;
+        this.bendLimits[i] = TRUNK_LIMITS[i] ?? Math.PI / 7;
       }
     }
   }
@@ -1157,6 +1183,7 @@ class GlowFish {
         botPts[i] = mapToSpine(xUnit, morphY(sideBotY, +topHalfW));
       }
 
+    // ─── 2) Body silhouette path (compartido por fill + 3-pass edge) ──
     ctx.beginPath();
     ctx.moveTo(topPts[0].x, topPts[0].y); // nariz
     smoothPath(topPts);
@@ -1165,101 +1192,250 @@ class GlowFish {
     for (let i = N - 1; i >= 0; i--) botReversed.push(botPts[i]);
     smoothPath(botReversed);
     ctx.closePath();
-    ctx.fillStyle = hexA(this.color.body, 0.42 + boost * 0.15);
-    ctx.fill();
-    ctx.strokeStyle = hexA(this.color.rim, 0.88 + boost * 0.12);
-    ctx.lineWidth = Math.max(0.7, s * 0.13);
-    ctx.stroke();
 
-    // ─── 3) Espina central + vertebrae spots (siguen la onda) ─────────
-    // La espina conectora también ondula — la construyo como polyline
-    // de N samples con waveY aplicado a cada uno. Cada vertebra se
-    // posiciona en su xUnit con su propio waveAt(xUnit) → quedan
-    // exactamente sobre la espina curvada.
-    const spinePts: Vec[] = [];
-    for (let i = 0; i < N; i++) {
-      const xUnit = GLOW_BODY_PROFILE[i][0];
-      // mapToSpine con yUnit=0 = sobre el centerline articulado del chain
-      spinePts.push(mapToSpine(xUnit, 0));
+    // ─── 2a) Counter-shading body fill (Pixar Finding Dory pattern) ───
+    // Two-pass fill para que el counter-shading siga al ventral REAL
+    // del pez (no al screen-bottom) y la transición durante el dorsalSide
+    // flip sea SUAVE en vez de brincar:
+    //
+    //   Pass 1: cuerpo opaco con color sólido del palette. Siempre.
+    //   Pass 2: gradient dorsal→ventral on top con globalAlpha = (1-m).
+    //     m = sin²(heading), 0 en lateral, 1 en vertical.
+    //
+    // El dorsalSide flipea EXACTAMENTE cuando heading cruza la vertical
+    // (cosH=0 → m=1). En ese momento el gradient está al alpha=0 →
+    // invisible → el flip es geométricamente invisible. Cuando el pez
+    // sale de vertical (m baja), el gradient fade-in en el lado correcto
+    // (ventral REAL del pez, ya en su nueva orientación).
+    //
+    // Esto garantiza:
+    //   • Vientre blanco siempre del lado del ventral biológico ✓
+    //   • Transición continua al girar (no brinco) ✓
+    //   • En vista vertical el cuerpo se ve flat (sin pseudo-counter-
+    //     shading screen-vertical que daba "pez de cabeza blanca" o
+    //     "pez de cola blanca" según hacia dónde apuntaba)
+    let dx0 = 0, dy0 = 0, vx0 = 0, vy0 = 0;
+    for (let i = 4; i <= 7; i++) {
+      dx0 += topPts[i].x; dy0 += topPts[i].y;
+      vx0 += botPts[i].x; vy0 += botPts[i].y;
     }
-    // Render espina como path stroked con gradiente longitudinal tenue.
-    // El gradient lo orientamos del head al tail vía los endpoints reales.
-    const spineGrad = ctx.createLinearGradient(
-      spinePts[0].x, spinePts[0].y,
-      spinePts[N - 1].x, spinePts[N - 1].y,
-    );
-    spineGrad.addColorStop(0, hexA(this.color.core, 0));
-    spineGrad.addColorStop(0.12, hexA(this.color.core, 0.55));
-    spineGrad.addColorStop(0.85, hexA(this.color.core, 0.55));
-    spineGrad.addColorStop(1, hexA(this.color.core, 0));
-    ctx.strokeStyle = spineGrad;
-    ctx.lineWidth = Math.max(0.6, s * 0.14);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(spinePts[0].x, spinePts[0].y);
-    smoothPath(spinePts);
-    ctx.stroke();
+    dx0 /= 4; dy0 /= 4; vx0 /= 4; vy0 /= 4;
 
-    // Vertebrae spots — sobre la espina articulada + bio-pulse synced
-    // al wave. Cada vertebra brilla extra cuando el peak de la onda
-    // pasa por su xUnit — efecto de "muscle activation visible".
-    // [xUnit, brightnessFactor]. brightness 0..1.
-    const vertebrae: Array<[number, number]> = [
-      [-1.10, 0.45],
-      [-0.40, 0.70],
-      [ 0.30, 1.00],   // el más bright (heart)
-      [ 0.95, 0.65],
-      [ 1.55, 0.40],
-    ];
-    for (const [vxUnit, vAlpha] of vertebrae) {
-      const v = mapToSpine(vxUnit, 0); // sobre el centerline articulado
-      // Bio-pulse AMPLIFICADA — el peak local de la onda aumenta brillo
-      // (max +60%). Visible muscle activation que viaja head→tail
-      // con la onda corporal. Más dramático que la versión anterior
-      // (0.18 → 0.55) para que las "vértebras se vean activarse".
-      const wavePhaseLocal = Math.sin(this.swimPhase + k * vxUnit);
-      const pulse = 1 + 0.55 * Math.max(0, wavePhaseLocal) * (0.4 + 0.6 * this.bodyEffort);
-      // Per-vertebra Y-jitter — pequeña oscilación independiente
-      // perpendicular a la espina (muscle fiber twitches). Phase
-      // distinta por vértebra para que no se vean sincronizadas.
-      const jitterMag = Math.sin(this.swimPhase * 2.7 + vxUnit * 8.3) * s * 0.025;
-      const θj = tangentAt(vxUnit);
-      const jitterX = Math.sin(θj) * jitterMag;
-      const jitterY = -Math.cos(θj) * jitterMag;
-      const cx = v.x + jitterX;
-      const cy = v.y + jitterY;
-      const r = s * (0.18 + vAlpha * 0.10);
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.4);
-      g.addColorStop(0, hexA('#dde6ff', 0.85 * vAlpha * pulse + boost * 0.10));
-      g.addColorStop(0.35, hexA(this.color.core, 0.78 * vAlpha * pulse));
-      g.addColorStop(1, hexA(this.color.core, 0));
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r * 2.4, 0, Math.PI * 2);
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Pass 1: solid body color base (siempre opaco)
+    ctx.fillStyle = this.color.body;
+    ctx.fill();
+
+    // Pass 2: counter-shading gradient on top, fadea con viewMorph
+    const csAlpha = (1 - m);
+    if (csAlpha > 0.02) {
+      const csGrad = ctx.createLinearGradient(dx0, dy0, vx0, vy0);
+      csGrad.addColorStop(0, hexA('#020610', csAlpha));
+      csGrad.addColorStop(0.45, hexA(this.color.body, 0)); // mid transparente para blend con base
+      csGrad.addColorStop(1, hexA('#dde6ff', csAlpha));
+      ctx.fillStyle = csGrad;
       ctx.fill();
     }
 
-    // ─── 4) Ojos morpheados — DOS, posición se separa con m ────────────
-    // En side view (m=0) ambos ojos están en yUnit=0 (overlapping =
-    // single visual eye). En top view (m=1) están en ±0.22 (mirror).
-    // En entre, se separan suavemente — sin "aparecer" segundo ojo
-    // discreto, simplemente la silueta única se separa en dos.
-    const eyeR = s * 0.22;
+    // ─── 2b) 3-pass edge treatment (Phosphor "engraved" look) ────────
+    // Tres strokes layered sobre el mismo path para obtener depth en el
+    // borde sin hard cartoon outline:
+    //   Pass 1: halo exterior — stroke ancho con rim color en additive
+    //           (lighter), 30% alpha. Crea el "glow envelope".
+    //   Pass 2: línea principal — stroke fino oscuro source-over, 95%
+    //           alpha. La "línea negra" que da definición a la silueta.
+    //   Pass 3: highlight interior — stroke muy fino blanco source-over,
+    //           22% alpha. Sugiere "reflejo del agua" sobre el dorsal.
+    // Pass 1 va antes en additive; pass 2 y 3 en source-over para que
+    // los colores oscuros y claros se vean reales (no se aditivan).
+
+    // Pass 1 — outer halo (additive). TIGHTENED de 0.18 → 0.08 para
+    // que el halo no bleed lejos del silhouette. Antes el halo wide
+    // hacía que el pez se viera "borroso, sin definición" (reportado
+    // por el usuario). Con halo angosto el silhouette queda crisp y
+    // el glow envelope sigue presente pero contenido.
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = hexA(this.color.rim, 0.35 + boost * 0.15);
+    ctx.lineWidth = Math.max(1.0, s * 0.08);
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Pass 2 — main edge (dark, source-over). Línea dura de definición.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = hexA('#020610', 0.95);
+    ctx.lineWidth = Math.max(0.5, s * 0.06);
+    ctx.stroke();
+
+    // Pass 3 — inner highlight (white, source-over). Refleja "luz del
+    // agua" sobre el dorsal.
+    ctx.strokeStyle = hexA('#ffffff', 0.22);
+    ctx.lineWidth = Math.max(0.3, s * 0.03);
+    ctx.stroke();
+
+    ctx.restore(); // restaura globalCompositeOperation a 'lighter' del padre
+
+    // ─── 2c) Lateral line (anatomical detail tipo Audubon ichthyology) ──
+    // Single 0.5-1px stroke a lo largo del flanco del pez, en yU 0.05
+    // (~55% de altura corporal medida desde dorsal = línea lateral
+    // anatómica). Color = rim del palette pero alpha bajísimo (0.18-0.22)
+    // para que sea sutil — se nota como detalle pero no compite con el
+    // counter-shading. Solo side view (m bajo) — en top view la línea
+    // lateral no es visible.
+    const lateralLineAlpha = (1 - m) * 0.22;
+    if (lateralLineAlpha > 0.02) {
+      const llStart = mapToSpine(1.40, 0.05);
+      const llXs = [1.40, 0.80, 0.20, -0.40, -0.95, -1.30];
+      const llPts = llXs.map(x => mapToSpine(x, 0.05));
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = lateralLineAlpha;
+      ctx.strokeStyle = this.color.rim;
+      ctx.lineWidth = Math.max(0.4, s * 0.04);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(llStart.x, llStart.y);
+      smoothPath(llPts);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+
+    // ─── 3.5) Línea del opérculo (branquia) — solo side view ─────────
+    // Curva única que separa cabeza de tronco a xUnit ≈ 0.95 (limite del
+    // bloque de cabeza rígida en TRUNK_LIMITS). Es el detalle anatómico
+    // más universal para que algo lea como "pez vivo" — todos los teleos
+    // tienen este arco visible. Stroked tenue (alpha 0.45) para no
+    // competir con el rim. Fade con (1-m)² porque en top view la cabeza
+    // se ve desde arriba y el opérculo ya no aplica.
+    const operculumAlpha = (1 - m) * (1 - m);
+    if (operculumAlpha > 0.02) {
+      const opXU = 1.00; // anatomical operculum boundary
+      const opTop = mapToSpine(opXU, -0.55); // dorsal side
+      const opMid = mapToSpine(opXU - 0.10, 0); // bulge inward (curva característica)
+      const opBot = mapToSpine(opXU, 0.30);  // ventral side
+      ctx.save();
+      ctx.globalAlpha = operculumAlpha;
+      // Alpha bumpeado a 0.95 y stroke más grueso — bajo additive blending
+      // ('lighter' composite del ctx padre), el rim color a 0.50 alpha
+      // se difumina con el body underneath y la línea no se notaba.
+      // 0.95 + stroke 0.07s la hace claramente visible como gill cover.
+      ctx.strokeStyle = hexA(this.color.rim, 0.95);
+      ctx.lineWidth = Math.max(0.55, s * 0.07);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(opTop.x, opTop.y);
+      ctx.quadraticCurveTo(opMid.x, opMid.y, opBot.x, opBot.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ─── 3.6) Operculum lure organ (punto biolum más brillante) ───────
+    // Single radial glow detrás del opérculo — lectura inmediata de
+    // "criatura bioluminiscente" en stylized illustration (lanternfish/
+    // anglerfish reference). Es el "lighthouse" del pez: brillo más
+    // intenso del cuerpo, pequeño, anatómicamente colocado.
+    //
+    // Posición xU ~0.85 (justo detrás del opérculo en xU 1.00) y yU
+    // -0.30 (upper-mid de la cabeza, donde lanternfish tienen su organ).
+    // Solo side view; en top view el organ queda oculto por la cabeza.
+    if (operculumAlpha > 0.02) {
+      const lureBase = mapToSpine(0.85, -0.30);
+      const lureR = Math.max(1.5, s * 0.16);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = operculumAlpha;
+      const lureGrad = ctx.createRadialGradient(
+        lureBase.x, lureBase.y, 0,
+        lureBase.x, lureBase.y, lureR * 2.5,
+      );
+      lureGrad.addColorStop(0, hexA('#ffffff', 0.95));
+      lureGrad.addColorStop(0.30, hexA(this.color.rim, 0.75));
+      lureGrad.addColorStop(0.70, hexA(this.color.halo, 0.30));
+      lureGrad.addColorStop(1, hexA(this.color.halo, 0));
+      ctx.fillStyle = lureGrad;
+      ctx.beginPath();
+      ctx.arc(lureBase.x, lureBase.y, lureR * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ─── 4) Ojos morpheados — anatomía clara (iris + pupila + reflejo) ──
+    // Posición xUnit 1.30 ≈ 24% desde la nariz → cae en upper-third de
+    // la cabeza (regla iconográfica: 18-22% desde snout). En side view
+    // (m=0) ambos ojos overlap en yUnit=-0.30 (upper third de la cabeza,
+    // antes era yUnit=0 = centerline ⇒ ojo "centrado" se veía menos pez);
+    // en top view (m=1) se separan a ±0.22 mirror. Anatomía real: iris
+    // (color rim, 60% del eye), pupila oscura (body color, 35%), reflejo
+    // chico (highlight). Quitamos el blob blanco-azul radial enorme
+    // que el usuario reportó como "ojo claro irreal".
+    const eyeR = s * 0.16;             // diámetro ~32% body unit (era 0.44)
     const eyeθGlobal = tangentAt(1.30);
     const saccadeMag = -this.angularVel * s * 0.04;
     for (const eyeSign of [-1, +1]) {
-      const eyeYU = morphY(0, eyeSign * 0.22);
+      // Side view: eye en upper-third. Top view: separados horizontalmente.
+      const eyeYU = morphY(-0.30, eyeSign * 0.22);
       const eyeBase = mapToSpine(1.30, eyeYU);
-      const eyeRenderX = eyeBase.x - Math.sin(eyeθGlobal) * saccadeMag;
-      const eyeRenderY = eyeBase.y + Math.cos(eyeθGlobal) * saccadeMag;
-      const eg = ctx.createRadialGradient(eyeRenderX, eyeRenderY, 0, eyeRenderX, eyeRenderY, eyeR * 2.4);
-      eg.addColorStop(0, hexA('#ffffff', 0.96));
-      eg.addColorStop(0.40, hexA(this.color.core, 0.78));
-      eg.addColorStop(1, hexA(this.color.core, 0));
-      ctx.fillStyle = eg;
+      const ex = eyeBase.x - Math.sin(eyeθGlobal) * saccadeMag;
+      const ey = eyeBase.y + Math.cos(eyeθGlobal) * saccadeMag;
+
+      // Eye stack 5 capas (Pixar dual-highlight pattern):
+      //   1) Socket shadow ring → marca el "hueco" del ojo en el cráneo
+      //   2) Iris radial gradient
+      //   3) Pupila vertical-oval (no round) — peces tienen pupila ligeramente
+      //      vertical-elíptica, no circular perfecta
+      //   4) Catchlight 11 o'clock (reflejo principal)
+      //   5) Cornea sheen — crescent arc en el back-bottom del ojo (segunda
+      //      luz de la córnea curva, vende la "esfera mojada")
+
+      // Capa 1 — Socket shadow ring (anillo oscuro 1px afuera del iris)
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = hexA('#020610', 0.55);
       ctx.beginPath();
-      ctx.arc(eyeBase.x, eyeBase.y, eyeR * 2.4, 0, Math.PI * 2);
+      ctx.arc(ex, ey, eyeR * 1.20, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+
+      // Capa 2 — Iris (color rim, suave glow CONTENIDO).
+      const iris = ctx.createRadialGradient(ex, ey, 0, ex, ey, eyeR * 1.05);
+      iris.addColorStop(0, hexA(this.color.rim, 0.55));
+      iris.addColorStop(0.65, hexA(this.color.core, 0.45));
+      iris.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = iris;
+      ctx.beginPath();
+      ctx.arc(ex, ey, eyeR * 1.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Capa 3 — Pupila vertical-oval. Real fish pupils son ligeramente
+      // verticales, no circulares perfectas. ry = 1.15 * rx → oval sutil.
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = hexA('#020610', 0.92);
+      ctx.beginPath();
+      ctx.ellipse(ex, ey, eyeR * 0.45, eyeR * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Capa 4 — Catchlight (11 o'clock). Off-center reflejo principal.
+      ctx.fillStyle = hexA('#ffffff', 0.92);
+      ctx.beginPath();
+      ctx.arc(ex - eyeR * 0.20, ey - eyeR * 0.22, eyeR * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Capa 5 — Cornea sheen (crescent arc en el lower-back del ojo).
+      // Stroke arc parcial que sugiere la curvatura mojada de la córnea.
+      // Posición: cuadrante back-bottom (5 o'clock approximate). Alpha bajo.
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = hexA('#ffffff', 0.30);
+      ctx.lineWidth = Math.max(0.3, eyeR * 0.10);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(ex, ey, eyeR * 0.85, Math.PI * 0.15, Math.PI * 0.55);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // ─── 5) Aleta dorsal — fade out con m (solo visible en side view) ──
@@ -1284,10 +1460,53 @@ class GlowFish {
       ctx.lineTo(dTipWagX, dTipWagY);
       ctx.lineTo(dBaseP.x, dBaseP.y);
       ctx.closePath();
-      ctx.fillStyle = hexA(this.color.body, 0.28);
+      // Membrane translucency — radial gradient desde la base (más
+      // opaco, donde se ancla al cuerpo) hacia el tip (translúcido,
+      // membrana fina). Audubon dry-brush style. Sin esto los fins
+      // se veían como solid panels, ahora respiran.
+      const dBaseMid = {
+        x: (dBaseA.x + dBaseP.x) * 0.5,
+        y: (dBaseA.y + dBaseP.y) * 0.5,
+      };
+      const finRadius = Math.hypot(dTipWagX - dBaseMid.x, dTipWagY - dBaseMid.y);
+      const dorsalGrad = ctx.createRadialGradient(
+        dBaseMid.x, dBaseMid.y, 0,
+        dBaseMid.x, dBaseMid.y, finRadius,
+      );
+      dorsalGrad.addColorStop(0, hexA(this.color.body, 0.55));
+      dorsalGrad.addColorStop(0.75, hexA(this.color.body, 0.20));
+      dorsalGrad.addColorStop(1, hexA(this.color.body, 0.05));
+      ctx.fillStyle = dorsalGrad;
       ctx.fill();
       ctx.strokeStyle = hexA(this.color.rim, 0.55);
       ctx.lineWidth = Math.max(0.35, s * 0.07);
+      ctx.stroke();
+      // Rays internos — 2 líneas tenues desde la base hacia el tip,
+      // sugieren la membrana radiada típica del fin dorsal sin
+      // saturar de detalle al tamaño chico del pez.
+      const dRay1Base = mapToSpine(-0.40, -0.55);
+      const dRay2Base = mapToSpine(-0.65, -0.48);
+      ctx.strokeStyle = hexA(this.color.rim, 0.32);
+      ctx.lineWidth = Math.max(0.18, s * 0.025);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(dRay1Base.x, dRay1Base.y);
+      ctx.lineTo(dTipWagX, dTipWagY);
+      ctx.moveTo(dRay2Base.x, dRay2Base.y);
+      ctx.lineTo(dTipWagX, dTipWagY);
+      ctx.stroke();
+
+      // Trailing edge bioluminescence — banda fina additive solo en el
+      // borde posterior (de tip a base posterior). Reference: Avatar
+      // Way of Water reef fish — los bordes traseros de las aletas
+      // glow en cyan/teal sin que el resto del fin sea luminoso.
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexA(this.color.rim, 0.65);
+      ctx.lineWidth = Math.max(0.4, s * 0.05);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(dTipWagX, dTipWagY);
+      ctx.lineTo(dBaseP.x, dBaseP.y);
       ctx.stroke();
       ctx.restore();
     }
@@ -1316,10 +1535,33 @@ class GlowFish {
       ctx.quadraticCurveTo(pTip.x, pTip.y, pMid.x, pMid.y);
       ctx.lineTo(pBP.x, pBP.y);
       ctx.closePath();
-      ctx.fillStyle = hexA(this.color.body, 0.18);
+      // Membrane gradient base→tip (Audubon dry-brush translucency).
+      const pBaseMid = {
+        x: (pBA.x + pBP.x) * 0.5,
+        y: (pBA.y + pBP.y) * 0.5,
+      };
+      const pecRadius = Math.hypot(pTip.x - pBaseMid.x, pTip.y - pBaseMid.y);
+      const pecGrad = ctx.createRadialGradient(
+        pBaseMid.x, pBaseMid.y, 0,
+        pBaseMid.x, pBaseMid.y, pecRadius,
+      );
+      pecGrad.addColorStop(0, hexA(this.color.body, 0.40));
+      pecGrad.addColorStop(0.75, hexA(this.color.body, 0.15));
+      pecGrad.addColorStop(1, hexA(this.color.body, 0.04));
+      ctx.fillStyle = pecGrad;
       ctx.fill();
       ctx.strokeStyle = hexA(this.color.rim, 0.40);
       ctx.lineWidth = Math.max(0.25, s * 0.05);
+      ctx.stroke();
+      // Ray central — una sola línea tenue de la base al tip, sugiere
+      // la membrana radiada del pectoral. Una sola línea (no dos como
+      // dorsal) porque el pectoral es más chico — más detalle satura.
+      ctx.strokeStyle = hexA(this.color.rim, 0.30);
+      ctx.lineWidth = Math.max(0.18, s * 0.022);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pBA.x, pBA.y);
+      ctx.lineTo(pTip.x, pTip.y);
       ctx.stroke();
     }
 
@@ -1392,11 +1634,36 @@ class GlowFish {
       tailTopPts.push(mapToSpine(xU, topY));
       tailBotPts.push(mapToSpine(xU, botY));
     }
+    // FORKED tail polygon — V notch en la centerline crea la indentación
+    // entre los dos lóbulos (feature más diagnóstico de "pez" según
+    // research). La PROFUNDIDAD del notch escala con dos factores:
+    //
+    //   forkOpenness = flareGate * (1 - m)
+    //
+    //   • flareGate=1, m=0  (lateral, swimming relajado): notch a xU
+    //     -1.70 = profundidad máxima, V claramente visible.
+    //   • flareGate→0       (C-bend de un giro fuerte): notch migra
+    //     hacia el tip (xU -2.25) → fork se "cierra" suavemente como
+    //     en los peces reales durante caudal aducción (Domenici & Blake
+    //     1997). Sin esto, el notch fijo + lóbulos contraídos por
+    //     narrowFactor producía polígonos deformes durante turns.
+    //   • m→1               (top view, pez nadando vertical): notch
+    //     migra hacia el tip → cola lee como single blade (un pez
+    //     visto desde arriba no muestra V notch). Antes con notch
+    //     fijo en top view, los lóbulos finos parecían "dos palitos".
+    //
+    // notchXU rangea [-2.25 (no fork) .. -1.70 (full V deep)] linear
+    // sobre forkOpenness.
+    const forkOpenness = flareGate * (1 - m);
+    const notchXU = -2.25 + forkOpenness * 0.55;
+    const forkNotch = mapToSpine(notchXU, 0);
     ctx.beginPath();
     ctx.moveTo(tailTopPts[0].x, tailTopPts[0].y);
     for (let i = 1; i < tailTopPts.length; i++) {
       ctx.lineTo(tailTopPts[i].x, tailTopPts[i].y);
     }
+    // Indent into V notch antes de cruzar al lóbulo inferior.
+    ctx.lineTo(forkNotch.x, forkNotch.y);
     for (let i = tailBotPts.length - 1; i >= 0; i--) {
       ctx.lineTo(tailBotPts[i].x, tailBotPts[i].y);
     }
@@ -1406,6 +1673,59 @@ class GlowFish {
     ctx.strokeStyle = hexA(this.color.rim, 0.42);
     ctx.lineWidth = Math.max(0.30, s * 0.06);
     ctx.stroke();
+
+    // Caudal fin RAYS — 2 líneas tenues desde la base de la cola hacia
+    // los tips de cada lóbulo, sugieren la membrana radiada del fin
+    // sin volverse noise. Solo cuando flareGate > 0.5 (no durante C
+    // cerrada — ahí la cola está aducida y los rays no leen).
+    if (flareGate > 0.5) {
+      const rayBase = mapToSpine(-1.55, 0);
+      const rayUpperTip = tailTopPts[tailTopPts.length - 1];
+      const rayLowerTip = tailBotPts[tailBotPts.length - 1];
+      ctx.save();
+      ctx.globalAlpha = (flareGate - 0.5) * 2;
+      ctx.strokeStyle = hexA(this.color.rim, 0.30);
+      ctx.lineWidth = Math.max(0.20, s * 0.03);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(rayBase.x, rayBase.y);
+      ctx.lineTo(rayUpperTip.x, rayUpperTip.y);
+      ctx.moveTo(rayBase.x, rayBase.y);
+      ctx.lineTo(rayLowerTip.x, rayLowerTip.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ─── Caudal trailing-edge bioluminescence (Avatar reef fish) ──────
+    // Banda fina additive solo en los bordes EXTERIORES de cada lóbulo
+    // (de base a tip). El interior del fin queda con el fill dark; solo
+    // los bordes glow. Da el "neón en el filo" característico de
+    // criaturas bioluminiscentes de reef. Fade con flareGate para que
+    // durante C-bend (caudal aducción) no se sobre-marque.
+    {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.4 + flareGate * 0.5;
+      ctx.strokeStyle = hexA(this.color.rim, 0.70);
+      ctx.lineWidth = Math.max(0.4, s * 0.05);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      // Upper lobe outer edge
+      ctx.beginPath();
+      ctx.moveTo(tailTopPts[0].x, tailTopPts[0].y);
+      for (let i = 1; i < tailTopPts.length; i++) {
+        ctx.lineTo(tailTopPts[i].x, tailTopPts[i].y);
+      }
+      ctx.stroke();
+      // Lower lobe outer edge
+      ctx.beginPath();
+      ctx.moveTo(tailBotPts[0].x, tailBotPts[0].y);
+      for (let i = 1; i < tailBotPts.length; i++) {
+        ctx.lineTo(tailBotPts[i].x, tailBotPts[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
 
       ctx.restore(); // close MORPHED VIEW block
     }
