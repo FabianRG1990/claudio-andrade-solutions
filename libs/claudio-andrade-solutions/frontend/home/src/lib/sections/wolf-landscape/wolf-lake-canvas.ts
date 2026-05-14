@@ -933,6 +933,26 @@ class GlowFish {
     // Speed factor 0..1 para drives de aletas dinámicas
     const speedFactor = Math.min(1, this.speed / 3.0);
 
+    // ─── Master params para behavior coupling de aletas ──────────────
+    // Computados una sola vez por frame, drivean todas las aletas:
+    //   • speed01:   0 idle → 1 cruise. Erect/depress de dorsal+pélvica.
+    //   • idle01:    inverso. Max area cuando casi parado.
+    //   • turning:   signed [-1,+1] yaw rate. Asimetría pectoral.
+    //   • braking:   0 normal → 1 decel/aducting. Cup-forward pectoral.
+    //   • hovering:  1 si isHovering. X-pattern scull (Fase 3).
+    //
+    // Refs research: Drucker & Lauder 2003 (pectoral inside/outside
+    // asymmetry en turns), Lauder bluegill JEB 2001 (spinous dorsal
+    // collapses a >0.5 BL/s), Standen 2005 (pelvic fan en braking).
+    const speed01 = speedFactor;
+    const idle01 = 1 - speed01;
+    const turning = Math.max(-1, Math.min(1, this.angularVel * 2.5));
+    const braking = Math.min(1,
+      (this.isHovering ? 0.7 : 0) +
+      Math.max(0, 1 - this.swimGateLagged) * 0.6,
+    );
+    const hovering = this.isHovering ? 1 : 0;
+
     // ─── Multi-view billboard (side ↔ top crossfade) ──────────────────
     // Premium 2.5D: dos views procedurales mezclando alpha según heading.
     //   • Side view: full cuando heading horizontal (|cos|=1)
@@ -1331,32 +1351,34 @@ class GlowFish {
       ctx.restore();
     }
 
-    // ─── 3.6) Operculum lure organ (punto biolum más brillante) ───────
-    // Single radial glow detrás del opérculo — lectura inmediata de
-    // "criatura bioluminiscente" en stylized illustration (lanternfish/
-    // anglerfish reference). Es el "lighthouse" del pez: brillo más
-    // intenso del cuerpo, pequeño, anatómicamente colocado.
+    // ─── 3.6) Head bioluminescence — broad distributed warmth ────────
+    // Reemplaza el "lure organ" puntual (xU=0.85) que el usuario
+    // reportó como "carros con luces prendidas" por una warmth amplia
+    // y distribuida sobre toda la masa craneal. El glow se centra en
+    // el cráneo (xU=1.00, yU=0) y se extiende casi al doble del
+    // ancho corporal en cada eje, repartiendo la luz en vez de
+    // concentrarla. Alphas mínimos (0.06 / 0.035) — la criatura lee
+    // como bioluminiscente por la mancha entera de la cabeza, no
+    // como un faro ni dos. Quedan sin brillar puntos identificables.
     //
-    // Posición xU ~0.85 (justo detrás del opérculo en xU 1.00) y yU
-    // -0.30 (upper-mid de la cabeza, donde lanternfish tienen su organ).
-    // Solo side view; en top view el organ queda oculto por la cabeza.
+    // Ref: ilustraciones de lanternfish/myctophidae premium donde la
+    // luz es niebla distribuida bajo la piel translúcida.
     if (operculumAlpha > 0.02) {
-      const lureBase = mapToSpine(0.85, -0.30);
-      const lureR = Math.max(1.5, s * 0.16);
+      const headCenter = mapToSpine(1.00, 0);
+      const headR = Math.max(4, s * 0.85);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = operculumAlpha;
-      const lureGrad = ctx.createRadialGradient(
-        lureBase.x, lureBase.y, 0,
-        lureBase.x, lureBase.y, lureR * 2.5,
+      const headGlow = ctx.createRadialGradient(
+        headCenter.x, headCenter.y, 0,
+        headCenter.x, headCenter.y, headR,
       );
-      lureGrad.addColorStop(0, hexA('#ffffff', 0.95));
-      lureGrad.addColorStop(0.30, hexA(this.color.rim, 0.75));
-      lureGrad.addColorStop(0.70, hexA(this.color.halo, 0.30));
-      lureGrad.addColorStop(1, hexA(this.color.halo, 0));
-      ctx.fillStyle = lureGrad;
+      headGlow.addColorStop(0,    hexA(this.color.halo, 0.06));
+      headGlow.addColorStop(0.45, hexA(this.color.halo, 0.035));
+      headGlow.addColorStop(1,    hexA(this.color.halo, 0));
+      ctx.fillStyle = headGlow;
       ctx.beginPath();
-      ctx.arc(lureBase.x, lureBase.y, lureR * 2.5, 0, Math.PI * 2);
+      ctx.arc(headCenter.x, headCenter.y, headR, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -1398,15 +1420,25 @@ class GlowFish {
       ctx.fill();
       ctx.restore();
 
-      // Capa 2 — Iris (color rim, suave glow CONTENIDO).
-      const iris = ctx.createRadialGradient(ex, ey, 0, ex, ey, eyeR * 1.05);
-      iris.addColorStop(0, hexA(this.color.rim, 0.55));
-      iris.addColorStop(0.65, hexA(this.color.core, 0.45));
-      iris.addColorStop(1, hexA(this.color.core, 0));
+      // Capa 2 — Iris ANATÓMICO (source-over, no additive). Antes era
+      // radial gradient bajo el composite 'lighter' del padre →
+      // creaba un disco glowing que se leía como "faro". Ahora es un
+      // disco de color iris (cyan/teal del rim) con sutil radial
+      // darker-toward-pupil → ojo realista con iris pigmentado, no luz.
+      // Patrón opuesto al glow: oscuro al centro (cerca de la pupila)
+      // y rim del iris más claro — exactamente como un iris real bajo
+      // luz frontal.
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      const iris = ctx.createRadialGradient(ex, ey, 0, ex, ey, eyeR * 0.95);
+      iris.addColorStop(0,    hexA(this.color.core, 0.85)); // darker hacia pupila
+      iris.addColorStop(0.55, hexA(this.color.rim, 0.75));  // mid: color del iris
+      iris.addColorStop(1,    hexA(this.color.rim, 0.55));  // edge: ligero fade al socket
       ctx.fillStyle = iris;
       ctx.beginPath();
-      ctx.arc(ex, ey, eyeR * 1.05, 0, Math.PI * 2);
+      ctx.arc(ex, ey, eyeR * 0.95, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
 
       // Capa 3 — Pupila vertical-oval. Real fish pupils son ligeramente
       // verticales, no circulares perfectas. ry = 1.15 * rx → oval sutil.
@@ -1418,18 +1450,20 @@ class GlowFish {
       ctx.fill();
       ctx.restore();
 
-      // Capa 4 — Catchlight (11 o'clock). Off-center reflejo principal.
-      ctx.fillStyle = hexA('#ffffff', 0.92);
+      // Capa 4 — Catchlight (11 o'clock). Alpha reducido (0.92→0.60) y
+      // tamaño chico para que sea un destello sutil de "ojo vivo", no
+      // un reflejo de faro.
+      ctx.fillStyle = hexA('#ffffff', 0.60);
       ctx.beginPath();
-      ctx.arc(ex - eyeR * 0.20, ey - eyeR * 0.22, eyeR * 0.16, 0, Math.PI * 2);
+      ctx.arc(ex - eyeR * 0.20, ey - eyeR * 0.22, eyeR * 0.13, 0, Math.PI * 2);
       ctx.fill();
 
       // Capa 5 — Cornea sheen (crescent arc en el lower-back del ojo).
-      // Stroke arc parcial que sugiere la curvatura mojada de la córnea.
-      // Posición: cuadrante back-bottom (5 o'clock approximate). Alpha bajo.
+      // Alpha reducido (0.30→0.18) — sigue presente como sutileza pero
+      // no agrega al ruido lumínico de la cabeza.
       ctx.save();
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = hexA('#ffffff', 0.30);
+      ctx.strokeStyle = hexA('#ffffff', 0.18);
       ctx.lineWidth = Math.max(0.3, eyeR * 0.10);
       ctx.lineCap = 'round';
       ctx.beginPath();
@@ -1438,76 +1472,178 @@ class GlowFish {
       ctx.restore();
     }
 
-    // ─── 5) Aleta dorsal — fade out con m (solo visible en side view) ──
-    // La dorsal triangular es un feature lateral; no tiene sentido en
-    // top view (donde la dorsal se ve como stripe central, ya cubierto
-    // por el spine glow). Fade smooth con (1-m)².
+    // ─── 5) Dorsal fins — bipartite (spinous + soft) acantomorfo ─────
+    // Reemplaza el dorsal-triángulo-único anterior (que research flag
+    // como "dibujo infantil de tiburón"). Los acantomorfos perciformes
+    // tienen dorsal BIPARTITA:
+    //   • 5a) Spinous dorsal (anterior, xU +0.55 → -0.05): vela rígida,
+    //         rayos no segmentados hard, leading edge convex hacia
+    //         arriba. Apex sail-like en xU +0.20.
+    //   • 5b) Soft dorsal (posterior, xU -0.05 → -0.85): trapezoidal/
+    //         redondeada, rayos segmentados flexibles, peak en xU -0.40.
+    // Fade con (1-m)² porque ambas son features dorsal-midline (en top
+    // view se ven como stripe central, ya cubierto por el spine glow).
+    //
+    // Fase 1: posiciones anatómicas + membranas + rays + biolum trailing.
+    // Fase 2 añadirá erect/depress dinámico con speed.
+    // Fase 3 añadirá body-wave coupling para wag más anatómico.
     const dorsalAlpha = (1 - m) * (1 - m);
     if (dorsalAlpha > 0.02) {
-      const dorsalWag = Math.sin(this.finPhase * 0.9) * s * 0.04;
-      const dorsalTipXUnit = -0.35 - speedFactor * 0.40;
-      const dorsalTipYUnit = -1.25 + speedFactor * 0.20;
-      const dBaseA = mapToSpine(-0.20, -0.62);
-      const dBaseP = mapToSpine(-0.95, -0.40);
-      const dTip = mapToSpine(dorsalTipXUnit, dorsalTipYUnit);
-      const dTipθ = tangentAt(dorsalTipXUnit);
-      const dTipWagX = dTip.x + Math.cos(dTipθ) * dorsalWag;
-      const dTipWagY = dTip.y + Math.sin(dTipθ) * dorsalWag;
       ctx.save();
       ctx.globalAlpha = dorsalAlpha;
+
+      // ── 5a) SPINOUS DORSAL (vela rígida, leading-convex) ──────────
+      // Sail-like outline: leading-base, apex (alto), trailing-tip,
+      // trailing-base. Wag mínimo (rayos espinosos = rígidos, casi sin
+      // movimiento — solo trim sutil con el body wave).
+      //
+      // ERECT/DEPRESS dinámico (Lauder bluegill JEB 2001): a velocidad
+      // cruise (>0.5 BL/s) el spinous dorsal se PLIEGA contra el lomo
+      // por hidrodinámica. spErect lerpa la altura de apex de full
+      // sail (1.0 idle) a colapsada (~0.30 cruise). Las deviations
+      // de los rayos también escalan → toda la vela colapsa coherente.
+      const spErect = 1 - speed01 * 0.70;
+      const spBaseY = -0.62;
+      const spWag = Math.sin(this.finPhase * 0.7) * s * 0.020 * spErect;
+      const spLeadBase = mapToSpine(0.55, spBaseY);
+      const spApex = mapToSpine(0.20, spBaseY - 0.46 * spErect);
+      const spTrailTip = mapToSpine(-0.05, spBaseY - 0.16 * spErect);
+      const spTrailBase = mapToSpine(-0.05, -0.55);
+      const spθ = tangentAt(0.20);
+      const spApexX = spApex.x + Math.cos(spθ) * spWag;
+      const spApexY = spApex.y + Math.sin(spθ) * spWag;
+
       ctx.beginPath();
-      ctx.moveTo(dBaseA.x, dBaseA.y);
-      ctx.lineTo(dTipWagX, dTipWagY);
-      ctx.lineTo(dBaseP.x, dBaseP.y);
+      ctx.moveTo(spLeadBase.x, spLeadBase.y);
+      // Leading edge: convex up arc desde leading-base al apex
+      const spLeadMid = mapToSpine(0.40, spBaseY - 0.33 * spErect);
+      ctx.quadraticCurveTo(spLeadMid.x, spLeadMid.y, spApexX, spApexY);
+      // Trailing edge: línea recta del apex al trailing-tip
+      ctx.lineTo(spTrailTip.x, spTrailTip.y);
+      ctx.lineTo(spTrailBase.x, spTrailBase.y);
       ctx.closePath();
-      // Membrane translucency — radial gradient desde la base (más
-      // opaco, donde se ancla al cuerpo) hacia el tip (translúcido,
-      // membrana fina). Audubon dry-brush style. Sin esto los fins
-      // se veían como solid panels, ahora respiran.
-      const dBaseMid = {
-        x: (dBaseA.x + dBaseP.x) * 0.5,
-        y: (dBaseA.y + dBaseP.y) * 0.5,
+
+      const spBaseMid = {
+        x: (spLeadBase.x + spTrailBase.x) * 0.5,
+        y: (spLeadBase.y + spTrailBase.y) * 0.5,
       };
-      const finRadius = Math.hypot(dTipWagX - dBaseMid.x, dTipWagY - dBaseMid.y);
-      const dorsalGrad = ctx.createRadialGradient(
-        dBaseMid.x, dBaseMid.y, 0,
-        dBaseMid.x, dBaseMid.y, finRadius,
+      const spRadius = Math.hypot(spApexX - spBaseMid.x, spApexY - spBaseMid.y);
+      const spGrad = ctx.createRadialGradient(
+        spBaseMid.x, spBaseMid.y, 0,
+        spBaseMid.x, spBaseMid.y, spRadius,
       );
-      dorsalGrad.addColorStop(0, hexA(this.color.body, 0.55));
-      dorsalGrad.addColorStop(0.75, hexA(this.color.body, 0.20));
-      dorsalGrad.addColorStop(1, hexA(this.color.body, 0.05));
-      ctx.fillStyle = dorsalGrad;
+      // AO base shadow (stop 0) → main fill → fade. La aleta lee como
+      // "saliendo de un crease oscuro" en su attachment al body, no
+      // flotando encima.
+      spGrad.addColorStop(0,    hexA('#020610', 0.30));
+      spGrad.addColorStop(0.15, hexA(this.color.body, 0.50));
+      spGrad.addColorStop(0.70, hexA(this.color.body, 0.20));
+      spGrad.addColorStop(1,    hexA(this.color.body, 0.05));
+      ctx.fillStyle = spGrad;
       ctx.fill();
-      ctx.strokeStyle = hexA(this.color.rim, 0.55);
-      ctx.lineWidth = Math.max(0.35, s * 0.07);
-      ctx.stroke();
-      // Rays internos — 2 líneas tenues desde la base hacia el tip,
-      // sugieren la membrana radiada típica del fin dorsal sin
-      // saturar de detalle al tamaño chico del pez.
-      const dRay1Base = mapToSpine(-0.40, -0.55);
-      const dRay2Base = mapToSpine(-0.65, -0.48);
-      ctx.strokeStyle = hexA(this.color.rim, 0.32);
-      ctx.lineWidth = Math.max(0.18, s * 0.025);
+
+      // Spinous rays (3) — líneas RECTAS de base a apex, suggesting
+      // las espinas óseas no segmentadas. Bunching toward leading edge
+      // (real spinous rays no van uniformemente espaciados).
+      // Rays escalan con spErect (cuando la vela colapsa, los spines
+      // se pliegan contra el lomo y las líneas se acortan coherente).
+      ctx.strokeStyle = hexA(this.color.rim, 0.40);
+      ctx.lineWidth = Math.max(0.18, s * 0.024);
+      ctx.lineCap = 'round';
+      const spRayDefs: Array<[number, number]> = [
+        [0.45, -0.33],
+        [0.30, -0.40],
+        [0.10, -0.33],
+      ];
+      for (const [rxU, rDevYU] of spRayDefs) {
+        const rb = mapToSpine(rxU, -0.60);
+        const rt = mapToSpine(rxU, -0.60 + rDevYU * spErect);
+        ctx.beginPath();
+        ctx.moveTo(rb.x, rb.y);
+        ctx.lineTo(rt.x, rt.y);
+        ctx.stroke();
+      }
+
+      // Leading-edge sharp outline (espinoso = borde óseo duro)
+      ctx.strokeStyle = hexA(this.color.rim, 0.65);
+      ctx.lineWidth = Math.max(0.35, s * 0.06);
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(dRay1Base.x, dRay1Base.y);
-      ctx.lineTo(dTipWagX, dTipWagY);
-      ctx.moveTo(dRay2Base.x, dRay2Base.y);
-      ctx.lineTo(dTipWagX, dTipWagY);
+      ctx.moveTo(spLeadBase.x, spLeadBase.y);
+      ctx.quadraticCurveTo(spLeadMid.x, spLeadMid.y, spApexX, spApexY);
       ctx.stroke();
 
-      // Trailing edge bioluminescence — banda fina additive solo en el
-      // borde posterior (de tip a base posterior). Reference: Avatar
-      // Way of Water reef fish — los bordes traseros de las aletas
-      // glow en cyan/teal sin que el resto del fin sea luminoso.
+      // ── 5b) SOFT DORSAL (trapezoidal flexible, rayos segmentados) ──
+      // Wag mayor que la espinosa (rayos soft = flexibles). Phase
+      // shifteado +π/2 vs espinosa para que las dos no se muevan en
+      // fase (real fish: spinous mostly static, soft undulates).
+      const sdWag = Math.sin(this.finPhase * 0.9 + Math.PI * 0.5) * s * 0.045;
+      const sdLeadBase = mapToSpine(-0.05, -0.55);
+      const sdApex = mapToSpine(-0.40, -0.92);
+      const sdTrailBase = mapToSpine(-0.85, -0.42);
+      const sdθ = tangentAt(-0.40);
+      const sdApexX = sdApex.x + Math.cos(sdθ) * sdWag;
+      const sdApexY = sdApex.y + Math.sin(sdθ) * sdWag;
+
+      ctx.beginPath();
+      ctx.moveTo(sdLeadBase.x, sdLeadBase.y);
+      // Smooth quadratic arc del leading-base al apex (membrane curve)
+      const sdLeadCtrl = mapToSpine(-0.20, -0.78);
+      ctx.quadraticCurveTo(sdLeadCtrl.x, sdLeadCtrl.y, sdApexX, sdApexY);
+      // Trailing arc del apex al trailing-base (membrane fade)
+      const sdTrailCtrl = mapToSpine(-0.65, -0.65);
+      ctx.quadraticCurveTo(sdTrailCtrl.x, sdTrailCtrl.y, sdTrailBase.x, sdTrailBase.y);
+      ctx.closePath();
+
+      const sdBaseMid = {
+        x: (sdLeadBase.x + sdTrailBase.x) * 0.5,
+        y: (sdLeadBase.y + sdTrailBase.y) * 0.5,
+      };
+      const sdRadius = Math.hypot(sdApexX - sdBaseMid.x, sdApexY - sdBaseMid.y);
+      const sdGrad = ctx.createRadialGradient(
+        sdBaseMid.x, sdBaseMid.y, 0,
+        sdBaseMid.x, sdBaseMid.y, sdRadius,
+      );
+      sdGrad.addColorStop(0,    hexA('#020610', 0.28));
+      sdGrad.addColorStop(0.15, hexA(this.color.body, 0.45));
+      sdGrad.addColorStop(0.70, hexA(this.color.body, 0.18));
+      sdGrad.addColorStop(1,    hexA(this.color.body, 0.04));
+      ctx.fillStyle = sdGrad;
+      ctx.fill();
+
+      // Soft rays (4) — líneas tenues, ligeramente convergentes hacia
+      // el apex. Real soft rays son segmentados → en 2D solo sugerimos
+      // como separadores radiales finos.
+      ctx.strokeStyle = hexA(this.color.rim, 0.30);
+      ctx.lineWidth = Math.max(0.16, s * 0.020);
+      const sdRayDefs: Array<[number, number, number]> = [
+        [-0.10, -0.50, -0.78],
+        [-0.30, -0.55, -0.88],
+        [-0.50, -0.55, -0.82],
+        [-0.70, -0.50, -0.62],
+      ];
+      for (const [rxU, rBaseYU, rTipYU] of sdRayDefs) {
+        const rb = mapToSpine(rxU, rBaseYU);
+        const rt = mapToSpine(rxU, rTipYU);
+        ctx.beginPath();
+        ctx.moveTo(rb.x, rb.y);
+        ctx.lineTo(rt.x, rt.y);
+        ctx.stroke();
+      }
+
+      // Trailing-edge bioluminescence (Avatar reef fish style) — solo
+      // en el soft dorsal porque su trailing edge es la parte más
+      // translúcida del fin. La spinous tiene leading-edge brillante
+      // (hueso) en lugar de trailing-edge biolum.
       ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = hexA(this.color.rim, 0.65);
-      ctx.lineWidth = Math.max(0.4, s * 0.05);
+      ctx.strokeStyle = hexA(this.color.rim, 0.55);
+      ctx.lineWidth = Math.max(0.32, s * 0.04);
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(dTipWagX, dTipWagY);
-      ctx.lineTo(dBaseP.x, dBaseP.y);
+      ctx.moveTo(sdApexX, sdApexY);
+      ctx.quadraticCurveTo(sdTrailCtrl.x, sdTrailCtrl.y, sdTrailBase.x, sdTrailBase.y);
       ctx.stroke();
+
       ctx.restore();
     }
 
@@ -1515,13 +1651,30 @@ class GlowFish {
     // En side (m=0) ambas en posición vientre (overlap = una sola visual).
     // En top (m=1) en posiciones mirror (±0.36 etc). Paddle stroke
     // alternado: cada lado opuesto en fase para "rowing".
+    //
+    // ASIMETRÍA EN TURNS (Drucker & Lauder 2003): la pectoral del lado
+    // INTERNO al giro extiende hacia adelante (acta como freno + drag
+    // en ese lado), la EXTERNA se mete contra el cuerpo (reduce drag).
+    // Sin esto los giros lucían fake — both pecs symmetric era el #1
+    // tell de "el pez no está girando, está flotando de lado".
+    //
+    // CUP-FORWARD EN BRAKE: ambas pectorales sweep hacia adelante
+    // (positive xU offset) durante hover/brake. Patrón "manos parando
+    // agua" característico de fish station-keeping.
+    const pecAsymSweep = -turning * 0.30;
+    const pecCupForward = braking * 0.25;
     const paddlePhase = this.finPhase * 0.6;
-    const pecPaddle = Math.sin(paddlePhase);
+    const pecPaddle = Math.sin(paddlePhase) * (1 - hovering * 0.6); // hover → paddle quiet
     for (const pecSign of [-1, +1] as const) {
-      // Top-view tip XUnit oscilla por side: side=+1 atrás cuando paddle>0,
-      // side=-1 adelante (rowing alternado). En side view (m=0) ambas
-      // pectorales convergen al mismo movimiento ventral.
-      const tipXUnit = morphY(0.20 - pecPaddle * 0.15, 0.20 - pecPaddle * pecSign * 0.15);
+      // pecAsymSweep * pecSign: pec interna del giro extiende hacia
+      // adelante (sweep+), externa hacia atrás (sweep-). En signo
+      // que matchea la convención del fish: pecSign=+1 derecha del
+      // body, turning>0 yaw hacia derecha → interna=derecha.
+      const sweepOffset = pecAsymSweep * pecSign + pecCupForward;
+      const tipXUnit = morphY(
+        0.20 - pecPaddle * 0.15 + sweepOffset,
+        0.20 - pecPaddle * pecSign * 0.15 + sweepOffset,
+      );
       const tipYUnit = morphY(0.78, pecSign * (0.85 + pecPaddle * pecSign * 0.08));
       const baseAYU = morphY(0.28, pecSign * 0.36);
       const basePYU = morphY(0.30, pecSign * 0.40);
@@ -1545,9 +1698,10 @@ class GlowFish {
         pBaseMid.x, pBaseMid.y, 0,
         pBaseMid.x, pBaseMid.y, pecRadius,
       );
-      pecGrad.addColorStop(0, hexA(this.color.body, 0.40));
+      pecGrad.addColorStop(0,    hexA('#020610', 0.25));
+      pecGrad.addColorStop(0.15, hexA(this.color.body, 0.40));
       pecGrad.addColorStop(0.75, hexA(this.color.body, 0.15));
-      pecGrad.addColorStop(1, hexA(this.color.body, 0.04));
+      pecGrad.addColorStop(1,    hexA(this.color.body, 0.04));
       ctx.fillStyle = pecGrad;
       ctx.fill();
       ctx.strokeStyle = hexA(this.color.rim, 0.40);
@@ -1565,167 +1719,293 @@ class GlowFish {
       ctx.stroke();
     }
 
-    // ─── 7) Aleta anal — fade out con m (solo side view) ──────────────
+    // ─── 6.5) Pelvic fins — paired thoracic position ─────────────────
+    // Acanthomorph perciformes (lobina/sunfish/perca — predador lacustre)
+    // tienen pélvicas TORÁCICAS: justo debajo/detrás de pectorales,
+    // NO abdominales. Anchor xU +0.85 con offset lateral ±0.30 (top
+    // view splay). Pequeñas (~50% pectoral area), con 1 spine + 4
+    // soft rays típicos. Función: trim, fine-pitch control, braking.
+    //
+    // FAN-OUT EN HOVER/BRAKE (Standen 2005): durante station-keeping
+    // las pélvicas se ABREN lateral (drag plate ventral). pvFanOut
+    // multiplica la deviation del tip → en brake/hover extienden
+    // hasta 1.4× su tucked length. En cruise quedan pegadas (tucked
+    // default 1.0×).
+    //
+    // Fase 1: posiciones anatómicas + tucked default. Fase 2 fan-out.
+    // Fase 3 añadirá X-pattern antifase sculling con pectorales.
+    {
+      const pvFanOut = 1 + (hovering + braking * 0.5) * 0.40;
+      const pvBaseXU = 0.95;
+      const pvTipBaseXU = 0.55;
+      // X-PATTERN ANTIFASE SCULL (Drucker & Lauder 2003 trout station-
+      // holding): durante hover, las pélvicas scull antifase con la
+      // PECTORAL contralateral. Pélvica izq ⇄ Pectoral der, pélvica
+      // der ⇄ Pectoral izq. Resultado: standing-wobble característico
+      // del pez sosteniendo posición. Sin esto el hover lee como
+      // "pez congelado en vez de activo trim-correcting".
+      // Frecuencia = paddlePhase (lower than tail beat). Amplitud
+      // gateada por hovering → en cruise queda 0.
+      const pvScullAmp = 0.10 * hovering;
+      for (const pvSign of [-1, +1] as const) {
+        // Antifase entre pélvicas L/R; la del lado +1 va con paddlePhase,
+        // la del lado -1 va con paddlePhase+π. Esto matchea la convención
+        // de la pectoral (que ya usa paddlePhase con asimetría per pecSign).
+        const pvScullPhase = paddlePhase + (pvSign > 0 ? 0 : Math.PI);
+        const pvScull = Math.sin(pvScullPhase) * pvScullAmp;
+
+        // Side view (m=0): ambas overlap en posición ventral. Fase 1
+        // las dejamos casi tucked: tip baja sutil bajo el vientre.
+        // Top view (m=1): mirrored a ±0.55 (splay lateral).
+        const pvBaseYU = morphY(0.42, pvSign * 0.30);
+        const pvTipYU = morphY(0.78 * pvFanOut, pvSign * 0.62 * pvFanOut);
+        const pvTipXU = pvTipBaseXU + pvScull;
+        const pvBA = mapToSpine(pvBaseXU, pvBaseYU - 0.04);
+        const pvBP = mapToSpine(pvBaseXU - 0.10, pvBaseYU + 0.04);
+        const pvTip = mapToSpine(pvTipXU, pvTipYU);
+
+        // Triangular paddle pequeño (~50% del pectoral)
+        ctx.beginPath();
+        ctx.moveTo(pvBA.x, pvBA.y);
+        const pvLeadCtrl = {
+          x: (pvBA.x + pvTip.x) * 0.5,
+          y: (pvBA.y + pvTip.y) * 0.5,
+        };
+        ctx.quadraticCurveTo(pvLeadCtrl.x, pvLeadCtrl.y, pvTip.x, pvTip.y);
+        ctx.lineTo(pvBP.x, pvBP.y);
+        ctx.closePath();
+
+        const pvBaseMid = {
+          x: (pvBA.x + pvBP.x) * 0.5,
+          y: (pvBA.y + pvBP.y) * 0.5,
+        };
+        const pvRadius = Math.hypot(pvTip.x - pvBaseMid.x, pvTip.y - pvBaseMid.y);
+        const pvGrad = ctx.createRadialGradient(
+          pvBaseMid.x, pvBaseMid.y, 0,
+          pvBaseMid.x, pvBaseMid.y, pvRadius,
+        );
+        pvGrad.addColorStop(0,    hexA('#020610', 0.22));
+        pvGrad.addColorStop(0.15, hexA(this.color.body, 0.35));
+        pvGrad.addColorStop(0.70, hexA(this.color.body, 0.12));
+        pvGrad.addColorStop(1,    hexA(this.color.body, 0.03));
+        ctx.fillStyle = pvGrad;
+        ctx.fill();
+
+        // Leading edge stroke (1 spine bony) sutil
+        ctx.strokeStyle = hexA(this.color.rim, 0.32);
+        ctx.lineWidth = Math.max(0.18, s * 0.035);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(pvBA.x, pvBA.y);
+        ctx.quadraticCurveTo(pvLeadCtrl.x, pvLeadCtrl.y, pvTip.x, pvTip.y);
+        ctx.stroke();
+
+        // 1 ray central (fin chico, no satura con más detalle)
+        ctx.strokeStyle = hexA(this.color.rim, 0.22);
+        ctx.lineWidth = Math.max(0.13, s * 0.016);
+        ctx.beginPath();
+        ctx.moveTo(pvBP.x, pvBP.y);
+        ctx.lineTo(pvTip.x, pvTip.y);
+        ctx.stroke();
+      }
+    }
+
+    // ─── 7) Aleta anal — antifase del soft dorsal (ventral mirror) ────
+    // Espejo ventral del soft dorsal: trapezoidal flexible con rayos
+    // segmentados. Counter-shading INVERTIDO: tinte ventral claro
+    // (#dde6ff) en lugar del body color del dorsal — hereda la lógica
+    // de counter-shading del cuerpo (dorsal oscuro / ventral claro).
+    // Wave phase + π/2 vs soft dorsal: cuando el dorsal flexa una vía,
+    // el anal flexa la opuesta — produce jets laterales OPUESTOS que
+    // anulan el yaw torque del body wave (Standen & Lauder 2005).
     const analAlpha = (1 - m) * (1 - m);
     if (analAlpha > 0.02) {
-      const aBA = mapToSpine(-0.75, 0.30);
-      const aTip = mapToSpine(-1.05, 0.62);
-      const aBP = mapToSpine(-1.30, 0.22);
       ctx.save();
       ctx.globalAlpha = analAlpha;
+
+      const anWag = Math.sin(this.finPhase * 0.9 + Math.PI) * s * 0.040;
+      const anLeadBase = mapToSpine(-0.55, 0.32);
+      const anApex = mapToSpine(-0.90, 0.78);
+      const anTrailBase = mapToSpine(-1.30, 0.22);
+      const anθ = tangentAt(-0.90);
+      const anApexX = anApex.x + Math.cos(anθ) * anWag;
+      const anApexY = anApex.y + Math.sin(anθ) * anWag;
+
       ctx.beginPath();
-      ctx.moveTo(aBA.x, aBA.y);
-      ctx.lineTo(aTip.x, aTip.y);
-      ctx.lineTo(aBP.x, aBP.y);
+      ctx.moveTo(anLeadBase.x, anLeadBase.y);
+      const anLeadCtrl = mapToSpine(-0.70, 0.62);
+      ctx.quadraticCurveTo(anLeadCtrl.x, anLeadCtrl.y, anApexX, anApexY);
+      const anTrailCtrl = mapToSpine(-1.10, 0.55);
+      ctx.quadraticCurveTo(anTrailCtrl.x, anTrailCtrl.y, anTrailBase.x, anTrailBase.y);
       ctx.closePath();
-      ctx.fillStyle = hexA(this.color.body, 0.22);
+
+      // Counter-shading ventral: tinte pale en lugar del body dark
+      const anBaseMid = {
+        x: (anLeadBase.x + anTrailBase.x) * 0.5,
+        y: (anLeadBase.y + anTrailBase.y) * 0.5,
+      };
+      const anRadius = Math.hypot(anApexX - anBaseMid.x, anApexY - anBaseMid.y);
+      const anGrad = ctx.createRadialGradient(
+        anBaseMid.x, anBaseMid.y, 0,
+        anBaseMid.x, anBaseMid.y, anRadius,
+      );
+      // AO base shadow → ventral pale → fade
+      anGrad.addColorStop(0,    hexA('#020610', 0.25));
+      anGrad.addColorStop(0.15, hexA('#dde6ff', 0.35));
+      anGrad.addColorStop(0.70, hexA('#dde6ff', 0.15));
+      anGrad.addColorStop(1,    hexA('#dde6ff', 0.03));
+      ctx.fillStyle = anGrad;
       ctx.fill();
-      ctx.strokeStyle = hexA(this.color.rim, 0.40);
-      ctx.lineWidth = Math.max(0.25, s * 0.05);
+
+      // Soft rays (3, menos que el dorsal porque anal es más chico)
+      ctx.strokeStyle = hexA(this.color.rim, 0.28);
+      ctx.lineWidth = Math.max(0.14, s * 0.018);
+      ctx.lineCap = 'round';
+      const anRayDefs: Array<[number, number, number]> = [
+        [-0.65, 0.40, 0.68],
+        [-0.90, 0.42, 0.75],
+        [-1.15, 0.35, 0.55],
+      ];
+      for (const [rxU, rBaseYU, rTipYU] of anRayDefs) {
+        const rb = mapToSpine(rxU, rBaseYU);
+        const rt = mapToSpine(rxU, rTipYU);
+        ctx.beginPath();
+        ctx.moveTo(rb.x, rb.y);
+        ctx.lineTo(rt.x, rt.y);
+        ctx.stroke();
+      }
+
+      // Trailing-edge biolum (mirror del soft dorsal)
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexA(this.color.rim, 0.50);
+      ctx.lineWidth = Math.max(0.30, s * 0.04);
+      ctx.beginPath();
+      ctx.moveTo(anApexX, anApexY);
+      ctx.quadraticCurveTo(anTrailCtrl.x, anTrailCtrl.y, anTrailBase.x, anTrailBase.y);
       ctx.stroke();
+
       ctx.restore();
     }
 
-    // ─── 8) Caudal fin biomimética — NARROW en C, no balloon ─────────
-    // Argonaut's formula original abanica la cola cuadráticamente con
-    // headToTail. Pero Tytell 2004 + Domenici & Blake 1997 demostraron
-    // con video PIV que un pez REAL en C-bend (Stage 1 fast-start)
-    // ADUCE los rayos del caudal fin → span 50-70% del rest, NO 200-400%.
-    // El abanico solo aparece en Stage 2 (return stroke). Aquí gateamos
-    // el flare con smoothstep para que solo se abra en bend moderado
-    // (turns suaves) y se SUPRIMA + NARROW en bend fuerte (C cerrada).
-    const headToTail = wrapAngleSigned(this.chainAngles[0] - this.chainAngles[N - 1]);
-    const tailBend = Math.abs(headToTail);
-    // smoothstep(0.6π, 1.1π) — flareGate=1 cuando bend<108°, ramp a 0
-    // arriba de 198°. Reproduce: cola flares en undulación normal (Stage 2),
-    // se cierra en C cerrada (Stage 1). Coefs del reporte biomecánico.
-    const flareLo = Math.PI * 0.6;
-    const flareHi = Math.PI * 1.1;
-    let flareGate = 1;
-    if (tailBend >= flareHi) flareGate = 0;
-    else if (tailBend > flareLo) {
-      const t = (tailBend - flareLo) / (flareHi - flareLo);
-      flareGate = 1 - (t * t * (3 - 2 * t));
-    }
-    // Drive efectivo del fan, ya gateado
-    const drive = headToTail * flareGate;
-    // narrowFactor: en C cerrada (flareGate→0), la cola se ESTRECHA
-    // a 60% del rest (matches Domenici & Blake fin span en Stage 1).
-    const narrowFactor = 0.6 + 0.4 * flareGate;
+    // ─── 8) Caudal fin — rigid local-frame V-fork (no bend deform) ───
+    // Refactor completo (anterior approach iteraba 4 xU positions con
+    // flare/narrow math reactivos a headToTail → durante turns el drive
+    // llegaba a π → fanOut ≈ 4.7 → tail tall ~3 spine units = "demasiado
+    // grande" + lóbulos como líneas deformes que el usuario reportó).
+    //
+    // Nuevo: polígono FIJO en local-frame anclado en peduncle (xU=-1.55),
+    // orientado por la tangent del spine + sway phase-lagged del swim
+    // wave. NO se deforma con el bend del cuerpo — el bend lo absorbe la
+    // chain misma (peduncle anchor + tangent ya curvan smooth con FABRIK).
+    // Sizing proporcional al body (tailL = 0.55s = 15% del body length,
+    // antes podía llegar a 80%+ del body length). Render style idéntico
+    // al soft dorsal: radial con AO base, rays radiales, biolum trailing.
+    const peduncleXU = -1.55;
+    const peduncleAnchor = mapToSpine(peduncleXU, 0);
+    const pedTang = tangentAt(peduncleXU);
 
-    const tailXUnits = [-1.55, -1.80, -2.05, -2.30];
-    const tailBotPts: Vec[] = [];
-    const tailTopPts: Vec[] = [];
-    for (let i = 0; i < tailXUnits.length; i++) {
-      const xU = tailXUnits[i];
-      const idxNorm = i / (tailXUnits.length - 1); // 0 base → 1 tip
-      // Outer edge (asymmetric flare, gateado por flareGate)
-      const fanOut = 1.5 * Math.abs(drive) * idxNorm * idxNorm;
-      // Top edge cap absoluto (argonaut style): max ±13/s body-units
-      const topCap = 13 / s;
-      const symFlare = Math.max(-topCap, Math.min(topCap, drive * 6 / s));
+    // Sway phase-lagged del swim wave (π/2 lag típico carangiform).
+    // Magnitud escala con bodyEffort (más wag en burst, menos en idle)
+    // y se atenúa con swimGateLagged (durante C-bend el sway → 0).
+    const swayPhase = this.swimPhase + k * peduncleXU - Math.PI * 0.5;
+    const swayMag = (0.10 + 0.22 * this.bodyEffort) * this.swimGateLagged;
+    const swayOffset = Math.sin(swayPhase) * swayMag;
+    const tailOrient = pedTang + Math.PI + swayOffset;
 
-      const sgn = Math.sign(headToTail) || 1;
-      // base widths * narrowFactor (cola narrow durante C)
-      const baseTopY = (-0.10 - fanOut * 0.6) * narrowFactor;
-      const baseBotY = (+0.10 + fanOut * 0.6) * narrowFactor;
-      const topY = sgn > 0 ? baseTopY : (-symFlare - 0.10) * narrowFactor;
-      const botY = sgn > 0 ? (+symFlare + 0.10) * narrowFactor : baseBotY;
-      tailTopPts.push(mapToSpine(xU, topY));
-      tailBotPts.push(mapToSpine(xU, botY));
-    }
-    // FORKED tail polygon — V notch en la centerline crea la indentación
-    // entre los dos lóbulos (feature más diagnóstico de "pez" según
-    // research). La PROFUNDIDAD del notch escala con dos factores:
-    //
-    //   forkOpenness = flareGate * (1 - m)
-    //
-    //   • flareGate=1, m=0  (lateral, swimming relajado): notch a xU
-    //     -1.70 = profundidad máxima, V claramente visible.
-    //   • flareGate→0       (C-bend de un giro fuerte): notch migra
-    //     hacia el tip (xU -2.25) → fork se "cierra" suavemente como
-    //     en los peces reales durante caudal aducción (Domenici & Blake
-    //     1997). Sin esto, el notch fijo + lóbulos contraídos por
-    //     narrowFactor producía polígonos deformes durante turns.
-    //   • m→1               (top view, pez nadando vertical): notch
-    //     migra hacia el tip → cola lee como single blade (un pez
-    //     visto desde arriba no muestra V notch). Antes con notch
-    //     fijo en top view, los lóbulos finos parecían "dos palitos".
-    //
-    // notchXU rangea [-2.25 (no fork) .. -1.70 (full V deep)] linear
-    // sobre forkOpenness.
-    const forkOpenness = flareGate * (1 - m);
-    const notchXU = -2.25 + forkOpenness * 0.55;
-    const forkNotch = mapToSpine(notchXU, 0);
+    // Local→world basis (anchor at 0,0; +x = aft, +y = ventral local)
+    const tcA = Math.cos(tailOrient);
+    const tsA = Math.sin(tailOrient);
+    const toWorld = (lx: number, ly: number): Vec => ({
+      x: peduncleAnchor.x + lx * tcA - ly * tsA,
+      y: peduncleAnchor.y + lx * tsA + ly * tcA,
+    });
+
+    // Sizing proporcional. m=1 (top view) achata el lobe span a 30%
+    // (la cola vista desde arriba se proyecta como single blade) y
+    // cierra el V-notch (notch migra hacia el tip).
+    const tailL = s * 0.68;
+    const lobeBend = (1 - m) * 0.85 + 0.30; // 1.15 side → 0.30 top
+    const lobeW = s * 0.39 * lobeBend;
+    const baseHalfW = s * 0.11;
+    const vDepth = (1 - m) * 0.40;
+    const notchInset = tailL * (1 - vDepth);
+
+    // Local vertices (forked polygon: 9 puntos para quadratic curves)
+    const wBaseTop  = toWorld(0,             -baseHalfW);
+    const wUpperOut = toWorld(tailL * 0.45,  -lobeW * 0.92);
+    const wUpperTip = toWorld(tailL,         -lobeW * 0.78);
+    const wUpperIn  = toWorld(tailL * 0.78,  -lobeW * 0.30);
+    const wNotch    = toWorld(notchInset,    0);
+    const wLowerIn  = toWorld(tailL * 0.78,  +lobeW * 0.30);
+    const wLowerTip = toWorld(tailL,         +lobeW * 0.78);
+    const wLowerOut = toWorld(tailL * 0.45,  +lobeW * 0.92);
+    const wBaseBot  = toWorld(0,             +baseHalfW);
+
+    // Outline — quadratic curves estilo soft dorsal/anal
     ctx.beginPath();
-    ctx.moveTo(tailTopPts[0].x, tailTopPts[0].y);
-    for (let i = 1; i < tailTopPts.length; i++) {
-      ctx.lineTo(tailTopPts[i].x, tailTopPts[i].y);
-    }
-    // Indent into V notch antes de cruzar al lóbulo inferior.
-    ctx.lineTo(forkNotch.x, forkNotch.y);
-    for (let i = tailBotPts.length - 1; i >= 0; i--) {
-      ctx.lineTo(tailBotPts[i].x, tailBotPts[i].y);
-    }
+    ctx.moveTo(wBaseTop.x, wBaseTop.y);
+    ctx.quadraticCurveTo(wUpperOut.x, wUpperOut.y, wUpperTip.x, wUpperTip.y);
+    ctx.quadraticCurveTo(wUpperIn.x,  wUpperIn.y,  wNotch.x,    wNotch.y);
+    ctx.quadraticCurveTo(wLowerIn.x,  wLowerIn.y,  wLowerTip.x, wLowerTip.y);
+    ctx.quadraticCurveTo(wLowerOut.x, wLowerOut.y, wBaseBot.x,  wBaseBot.y);
     ctx.closePath();
-    ctx.fillStyle = hexA(this.color.body, 0.26);
+
+    // Radial gradient con AO base shadow + body fill MÁS BRILLOSO que
+    // el soft dorsal porque el caudal es más grande y bajo additive
+    // composite necesita más alpha para leerse contra el background.
+    const tailGrad = ctx.createRadialGradient(
+      peduncleAnchor.x, peduncleAnchor.y, 0,
+      peduncleAnchor.x, peduncleAnchor.y, tailL,
+    );
+    tailGrad.addColorStop(0,    hexA('#020610', 0.30));
+    tailGrad.addColorStop(0.15, hexA(this.color.body, 0.52));
+    tailGrad.addColorStop(0.70, hexA(this.color.body, 0.22));
+    tailGrad.addColorStop(1,    hexA(this.color.body, 0.05));
+    ctx.fillStyle = tailGrad;
     ctx.fill();
-    ctx.strokeStyle = hexA(this.color.rim, 0.42);
-    ctx.lineWidth = Math.max(0.30, s * 0.06);
+
+    // OUTLINE silueta — el caudal anterior tenía outline rim alpha 0.42
+    // y al removerlo el polígono quedaba sin definición de borde, leyendo
+    // como halo difuso en lugar de aleta. Lo restauramos con leading
+    // edge alpha más alto para matchear la presencia visual del dorsal.
+    ctx.strokeStyle = hexA(this.color.rim, 0.45);
+    ctx.lineWidth = Math.max(0.35, s * 0.055);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Caudal fin RAYS — 2 líneas tenues desde la base de la cola hacia
-    // los tips de cada lóbulo, sugieren la membrana radiada del fin
-    // sin volverse noise. Solo cuando flareGate > 0.5 (no durante C
-    // cerrada — ahí la cola está aducida y los rays no leen).
-    if (flareGate > 0.5) {
-      const rayBase = mapToSpine(-1.55, 0);
-      const rayUpperTip = tailTopPts[tailTopPts.length - 1];
-      const rayLowerTip = tailBotPts[tailBotPts.length - 1];
-      ctx.save();
-      ctx.globalAlpha = (flareGate - 0.5) * 2;
-      ctx.strokeStyle = hexA(this.color.rim, 0.30);
-      ctx.lineWidth = Math.max(0.20, s * 0.03);
-      ctx.lineCap = 'round';
+    // Rays — 4 líneas radiando del peduncle hacia outer de cada lóbulo
+    ctx.strokeStyle = hexA(this.color.rim, 0.32);
+    ctx.lineWidth = Math.max(0.16, s * 0.022);
+    const rayLocal: Array<[number, number]> = [
+      [tailL * 0.50, -lobeW * 0.82],
+      [tailL * 0.85, -lobeW * 0.75],
+      [tailL * 0.85, +lobeW * 0.75],
+      [tailL * 0.50, +lobeW * 0.82],
+    ];
+    for (const [rlx, rly] of rayLocal) {
+      const wr = toWorld(rlx, rly);
       ctx.beginPath();
-      ctx.moveTo(rayBase.x, rayBase.y);
-      ctx.lineTo(rayUpperTip.x, rayUpperTip.y);
-      ctx.moveTo(rayBase.x, rayBase.y);
-      ctx.lineTo(rayLowerTip.x, rayLowerTip.y);
+      ctx.moveTo(peduncleAnchor.x, peduncleAnchor.y);
+      ctx.lineTo(wr.x, wr.y);
       ctx.stroke();
-      ctx.restore();
     }
 
-    // ─── Caudal trailing-edge bioluminescence (Avatar reef fish) ──────
-    // Banda fina additive solo en los bordes EXTERIORES de cada lóbulo
-    // (de base a tip). El interior del fin queda con el fill dark; solo
-    // los bordes glow. Da el "neón en el filo" característico de
-    // criaturas bioluminiscentes de reef. Fade con flareGate para que
-    // durante C-bend (caudal aducción) no se sobre-marque.
-    {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.4 + flareGate * 0.5;
-      ctx.strokeStyle = hexA(this.color.rim, 0.70);
-      ctx.lineWidth = Math.max(0.4, s * 0.05);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      // Upper lobe outer edge
-      ctx.beginPath();
-      ctx.moveTo(tailTopPts[0].x, tailTopPts[0].y);
-      for (let i = 1; i < tailTopPts.length; i++) {
-        ctx.lineTo(tailTopPts[i].x, tailTopPts[i].y);
-      }
-      ctx.stroke();
-      // Lower lobe outer edge
-      ctx.beginPath();
-      ctx.moveTo(tailBotPts[0].x, tailBotPts[0].y);
-      for (let i = 1; i < tailBotPts.length; i++) {
-        ctx.lineTo(tailBotPts[i].x, tailBotPts[i].y);
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
+    // Trailing-edge biolum — bordes exteriores (Avatar reef fish).
+    // Alpha 0.75 (era 0.55) — el caudal trailing-edge es THE feature
+    // bioluminiscente más diagnóstico, debe leerse claro contra el lake.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = hexA(this.color.rim, 0.62);
+    ctx.lineWidth = Math.max(0.35, s * 0.045);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(wBaseTop.x, wBaseTop.y);
+    ctx.quadraticCurveTo(wUpperOut.x, wUpperOut.y, wUpperTip.x, wUpperTip.y);
+    ctx.moveTo(wBaseBot.x, wBaseBot.y);
+    ctx.quadraticCurveTo(wLowerOut.x, wLowerOut.y, wLowerTip.x, wLowerTip.y);
+    ctx.stroke();
+    ctx.restore();
 
       ctx.restore(); // close MORPHED VIEW block
     }
