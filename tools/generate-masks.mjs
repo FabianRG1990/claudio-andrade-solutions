@@ -1,130 +1,125 @@
-// Genera las máscaras necesarias para el hero animado de MK3:
-//   - lake-mask-mk3.png: blanco donde los peces pueden nadar (lago),
-//     negro donde no (cielo, montañas, rocas, lobo, árboles)
-//   - wolf-mask-mk3.png: blanco solo en el silueta del lobo (para
-//     animación de respiración con scale en una capa enmascarada)
-//   - city-mask-mk3.png: blanco donde están las luces de la ciudad
-//     (para parpadeo CSS encima)
+// Genera lake-mask-mk3.png erosionando water-mask-mk6.png 1rem (16px)
+// hacia adentro.
 //
-// Los polígonos están definidos en coordenadas de la imagen MK3 (1672×941).
-// Si el usuario regenera el PNG con otro encuadre, hay que retocar los
-// vértices acá — la geometría no se auto-detecta para mantener control.
+// Approach anterior (polígono manual): el usuario tenía que estimar
+// vértices visualmente y yo los implementaba en código → loop frágil
+// que terminó con peces volando sobre la ciudad porque mis estimaciones
+// no matcheaban exactamente la orilla real.
+//
+// Approach nuevo (water-mask + erode): water-mask-mk6.png es ground
+// truth — define con anti-aliasing dónde está el agua (la usa el shader
+// de ondas wolf-lake-flow.ts). Erosionarla 16px shrink el área un rem
+// hacia adentro → margen suficiente para que el pez NO toque la orilla,
+// y el límite sigue automáticamente la geometría real del lago.
+//
+// Algoritmo de erosión: separable min filter (2 passes O(W*H*R)).
+// Por cada pixel, output = MIN de todos los pixels dentro de radius R.
+// Esto encoge el área blanca (agua) por R pixels en todas direcciones.
 import { PNG } from 'pngjs';
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir = resolve(__dirname, '..', 'apps/claudio-andrade-solutions/public/hero-wolf');
+const heroDir = resolve(__dirname, '..', 'apps/claudio-andrade-solutions/public/hero-wolf');
 
-const W = 1672;
-const H = 941;
+const ERODE_PX = 16; // 1rem — margen del pez a la orilla
 
-// Polígono del lago — en coordenadas de la imagen MK3.
-// Recorrido: empezamos en la esquina sup-izq del agua (orilla izquierda
-// donde los árboles tocan el agua), seguimos la línea del horizonte
-// hacia la derecha, bordeamos la roca del lobo con una curva, y cerramos
-// por la base de la imagen.
-// Nota: en MK3 el horizonte está aprox en y=425, y la roca del lobo
-// jadea hacia el agua entre x≈1090 y x≈1530.
-// Polígono trazado a partir de la línea roja del usuario sobre el screenshot.
-// Línea horizontal alta en y≈510 desde el borde izquierdo hasta justo antes
-// del borde izquierdo de la roca (x≈1000). Caída casi vertical en la cara
-// izquierda de la roca, curva siguiendo la base del reflejo del lobo, y
-// corte agresivo en el lado derecho del lago para que el pez nunca entre
-// en el área del reflejo opaco de la roca.
-const LAKE_POLYGON = [
-  // Borde superior — horizonte limpio del lago.
-  [   0,  510],
-  [ 200,  510],
-  [ 400,  508],
-  [ 600,  508],
-  [ 800,  510],
-  [1000,  510],
-  // Caída casi vertical en la cara izquierda de la roca del lobo —
-  // sigue la línea roja que el usuario trazó.
-  [1015,  555],
-  [1035,  605],
-  [1080,  655],
-  [1140,  695],
-  // Curva siguiendo la base del reflejo del lobo en el agua.
-  [1220,  720],
-  [1300,  735],
-  [1380,  745],
-  [1460,  748],
-  [1500,  748],
-  // Corte agresivo en el lado derecho — el reflejo se extiende hasta el
-  // borde derecho del lago. Bajamos vertical a la base de la imagen
-  // para excluir todo el strip derecho.
-  [1510,  941],
-  // Cierre por la base hacia la izquierda.
-  [   0,  941],
-];
+console.log(`[1/4] Loading water-mask-mk6.png (ground truth)...`);
+const src = PNG.sync.read(readFileSync(resolve(heroDir, 'water-mask-mk6.png')));
+const W = src.width;
+const H = src.height;
+console.log(`  ${W}×${H}`);
 
-// Punto-en-polígono (algoritmo ray casting). Trabaja en floats para
-// soportar muestreo subpixel para anti-alias del borde.
-function pointInPolygon(x, y, poly) {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const xi = poly[i][0], yi = poly[i][1];
-    const xj = poly[j][0], yj = poly[j][1];
-    const intersect =
-      (yi > y) !== (yj > y) &&
-      x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-9) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
+// Extraer canal R como Uint8Array (la mask es grayscale, RGB iguales)
+console.log('[2/4] Extracting grayscale channel...');
+const gray = new Uint8Array(W * H);
+for (let i = 0; i < W * H; i++) {
+  gray[i] = src.data[i * 4];
 }
 
-// Renderiza el polígono a un PNG grayscale con anti-aliasing 4×4.
-// Cada pixel del output muestrea 16 puntos dentro de su área y promedia
-// el resultado — bordes suaves sin postprocess de blur.
-function renderPolygonMask(poly, width, height) {
-  const png = new PNG({ width, height });
-  const data = png.data;
+console.log(`[3/5] Eroding ${ERODE_PX}px (separable min filter)...`);
+console.time('  erode');
+const eroded = erodeSeparable(gray, W, H, ERODE_PX);
+console.timeEnd('  erode');
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let inside = 0;
-      // 4×4 supersample
-      for (let sy = 0; sy < 4; sy++) {
-        for (let sx = 0; sx < 4; sx++) {
-          const px = x + (sx + 0.5) / 4;
-          const py = y + (sy + 0.5) / 4;
-          if (pointInPolygon(px, py, poly)) inside++;
-        }
-      }
-      const v = Math.round((inside / 16) * 255);
-      const i = (y * width + x) * 4;
-      data[i] = v;
-      data[i + 1] = v;
-      data[i + 2] = v;
-      data[i + 3] = 255;
+// Binarizar — hard edge, no feathered. CRÍTICO para fish boundary
+// detection: con feather, la zona donde sampleMask retorna 0.4-0.85
+// genera "limbo" entre cursorOnWater y wallAvoidance → oscilación
+// 60Hz cuando el pez se acerca a la orilla = "zigzag de serpiente"
+// reportada por el usuario. Threshold a 128 (mid-gray) para que el
+// borde quede en el pixel exacto donde el min filter dejó la mitad.
+console.log('[4/5] Binarizing (threshold 128)...');
+for (let i = 0; i < W * H; i++) {
+  eroded[i] = eroded[i] >= 128 ? 255 : 0;
+}
+
+// Reconstruir PNG RGBA
+console.log('[5/5] Writing lake-mask-mk3.png...');
+const out = new PNG({ width: W, height: H });
+for (let i = 0; i < W * H; i++) {
+  const v = eroded[i];
+  out.data[i * 4]     = v;
+  out.data[i * 4 + 1] = v;
+  out.data[i * 4 + 2] = v;
+  out.data[i * 4 + 3] = 255;
+}
+const outPath = resolve(heroDir, 'lake-mask-mk3.png');
+writeFileSync(outPath, PNG.sync.write(out));
+console.log(`  ->`, outPath);
+
+// Bounding box del agua erosionada para sanity check
+let minX = W, minY = H, maxX = 0, maxY = 0;
+let waterPx = 0;
+for (let y = 0; y < H; y++) {
+  for (let x = 0; x < W; x++) {
+    if (eroded[y * W + x] > 128) {
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+      waterPx++;
     }
   }
-  return png;
 }
-
-console.log('[1/3] Renderizando lake mask MK3 (1672×941, supersample 4x4)...');
-console.time('  render');
-const lakeMask = renderPolygonMask(LAKE_POLYGON, W, H);
-console.timeEnd('  render');
-
-const lakePath = resolve(outDir, 'lake-mask-mk3.png');
-writeFileSync(lakePath, PNG.sync.write(lakeMask));
-console.log('  ->', lakePath);
-
-// Bounding box del lago para clipping rápido del canvas en runtime.
-let minX = W, minY = H, maxX = 0, maxY = 0;
-for (const [x, y] of LAKE_POLYGON) {
-  if (x < minX) minX = x;
-  if (y < minY) minY = y;
-  if (x > maxX) maxX = x;
-  if (y > maxY) maxY = y;
-}
-console.log('\n[2/3] Lake bounding box:');
+console.log(`\nLake (eroded) bounding box:`);
 console.log(`  x: ${minX}..${maxX}  (${maxX - minX}px wide)`);
 console.log(`  y: ${minY}..${maxY}  (${maxY - minY}px tall)`);
 console.log(`  normalized: x:${(minX/W).toFixed(3)}..${(maxX/W).toFixed(3)}  y:${(minY/H).toFixed(3)}..${(maxY/H).toFixed(3)}`);
+console.log(`  area: ${waterPx} px (${((waterPx/(W*H))*100).toFixed(1)}% del canvas)`);
+console.log('\nDone. Inspect lake-mask-mk3.png o corré generate-mask-overlay.mjs.');
 
-console.log('\n[3/3] Done. Inspect lake-mask-mk3.png to verify polygon.');
+// ──────────────────────────────────────────────────────────────────────
+// Erosion via separable min filter — O(W*H*R) por axis, total O(W*H*R*2).
+// Para W=1672 H=941 R=16: ~100M ops. ~1-2s en Node.
+function erodeSeparable(src, w, h, r) {
+  const tmp = new Uint8Array(w * h);
+  // Horizontal pass
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let minV = 255;
+      for (let dx = -r; dx <= r; dx++) {
+        const sx = x + dx;
+        if (sx < 0 || sx >= w) { minV = 0; break; }
+        const v = src[y * w + sx];
+        if (v < minV) minV = v;
+      }
+      tmp[y * w + x] = minV;
+    }
+  }
+  // Vertical pass
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let minV = 255;
+      for (let dy = -r; dy <= r; dy++) {
+        const sy = y + dy;
+        if (sy < 0 || sy >= h) { minV = 0; break; }
+        const v = tmp[sy * w + x];
+        if (v < minV) minV = v;
+      }
+      out[y * w + x] = minV;
+    }
+  }
+  return out;
+}

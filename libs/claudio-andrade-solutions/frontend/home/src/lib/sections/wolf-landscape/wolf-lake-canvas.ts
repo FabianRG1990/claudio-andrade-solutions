@@ -2130,6 +2130,51 @@ const clampSpineToLake = (
   }
 };
 
+/**
+ * Clampea un punto (x, y) en canvas-px al PUNTO MÁS CERCANO con mask
+ * binary alta (≥ 0.85). Si el punto YA está en agua segura, retorna sin
+ * cambios. Si no, busca espiral outward hasta encontrar agua.
+ *
+ * Uso clave: clampear el target del cursor fish antes de pasárselo. El
+ * pez nunca recibe un target fuera del lago → wall avoidance NUNCA tiene
+ * conflicto con cursor pursuit → cero oscilación = cero zigzag de
+ * serpiente. Esto es el fix de raíz de "lombriz con sal" reportado por
+ * el usuario al pasar el cursor por la orilla.
+ */
+const clampToSafeWater = (
+  x: number, y: number,
+  cw: number, ch: number, imgW: number, imgH: number,
+  mask: { data: Uint8ClampedArray; width: number; height: number },
+): Vec => {
+  const iuv = canvasUVToImgUV({ x: x / cw, y: y / ch }, cw, ch, imgW, imgH);
+  if (sampleMask(mask, iuv.x, iuv.y) >= 0.85) return { x, y };
+  // Espiral búsqueda outward — 16 direcciones a radios crecientes.
+  // Stops temprano cuando encuentra agua. Max 250 px de búsqueda
+  // (rangeo razonable para el viewport del hero).
+  for (let r = 8; r <= 250; r += 12) {
+    let bestX = 0, bestY = 0, bestDist = Infinity;
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      const tx = x + Math.cos(angle) * r;
+      const ty = y + Math.sin(angle) * r;
+      const tIuv = canvasUVToImgUV({ x: tx / cw, y: ty / ch }, cw, ch, imgW, imgH);
+      if (sampleMask(mask, tIuv.x, tIuv.y) >= 0.85) {
+        // Tomar el más cercano al original (ya estamos a radio r del origen,
+        // pero el slot exacto puede variar — mismo radio = misma distancia).
+        const d = Math.hypot(tx - x, ty - y);
+        if (d < bestDist) {
+          bestDist = d;
+          bestX = tx;
+          bestY = ty;
+        }
+      }
+    }
+    if (bestDist < Infinity) return { x: bestX, y: bestY };
+  }
+  // Fallback: centro del lago (raramente alcanzable).
+  return { x: cw * 0.5, y: ch * 0.7 };
+};
+
 // Sample mask con bilinear interpolation. Si está fuera del rango → 0.
 const sampleMask = (
   mask: { data: Uint8ClampedArray; width: number; height: number },
@@ -2253,6 +2298,17 @@ export class WolfLakeCanvas {
     // de station-keeping donde se pueden acumular bugs visuales sutiles.
     let cursorIdleWhileHovering = 0; // segundos
     let cursorDisengaged = false;
+    // Hysteresis para cursorOnWater — antes el threshold era 0.35 (low) y
+    // wall avoidance triggea con 0.85. En la zona feathered de la mask
+    // (0.35-0.85) ambos firaban juntos → cursor pull vs wall escape =
+    // oscilación 60Hz = "lombriz con sal" reportada por el usuario al
+    // mover el cursor cerca de la orilla del nuevo lago.
+    // Fix: thresholds alineados con el wall avoidance + hysteresis para
+    // evitar toggle al borde del threshold:
+    //   • ENTER on-water: mask > 0.80 (claramente dentro del agua)
+    //   • EXIT on-water:  mask < 0.65 (claramente fuera)
+    // El gap 0.65-0.80 es la zona de hysteresis donde el estado previo manda.
+    let cursorOnWaterStable = false;
 
     // Hover state — anchor (position target congelado al entrar al hover,
     // "strike post" estilo Naughty Dog AI) y look target (smoothed cursor
@@ -2282,26 +2338,24 @@ export class WolfLakeCanvas {
     window.addEventListener('pointerleave', onLeave, { passive: true });
 
     // ─── depthScale: pez Y normalizado al rango del lago → escala visual.
-    // Rango ATENUADO (antes era 0.18×→1.25×, ratio 7×). El usuario pidió
-    // que el shrink hacia la ciudad se note pero sin volverse "punto":
-    // el fondo del hero ya cambió y un achique tan dramático perdió
-    // sentido. Nuevo rango:
-    //   y_v 0.540 (orilla lejana, cerca de la ciudad) → 0.50× (visible
-    //                                                    como pez chico,
-    //                                                    no como punto)
-    //   y_v 1.000 (frente del lago, justo abajo)      → 1.15× (sigue
-    //                                                    siendo más
-    //                                                    grande, ratio
-    //                                                    visible 2.3×)
-    const LAKE_TOP_V = 0.540;
+    // El usuario pidió MUCHO más control de profundidad. Los peces cerca
+    // de la ciudad (top del lago, lejos en 3D) deben verse claramente más
+    // chicos que los del frente. Rango ampliado:
+    //   y_v 0.429 (nuevo top del lago erosionado) → 0.30× (pez muy chico)
+    //   y_v 1.000 (frente del lago)               → 1.40× (pez grande)
+    //                                               ratio 4.67×
+    // LAKE_TOP_V matchea el bounding box real del lake-mask-mk3.png
+    // erosionado de water-mask-mk6.png (1rem de margen). Antes 0.540
+    // (polígono manual), ahora 0.429 (mask-derived).
+    const LAKE_TOP_V = 0.429;
     const LAKE_BOTTOM_V = 1.00;
     const depthScaleAt = (yV: number): number => {
       const t = Math.max(0, Math.min(1, (yV - LAKE_TOP_V) / (LAKE_BOTTOM_V - LAKE_TOP_V)));
-      // Curva t² mantiene la sensación de perspectiva (cambio gradual
-      // hacia el fondo, acelera hacia el frente), pero el rango total
-      // es mucho más suave que antes.
+      // Curva t² para perspectiva acelerada hacia el frente. Range total
+      // 0.30→1.40 = ratio 4.67× (era 2.3×) — la profundidad ahora se
+      // siente como "este pez está a metros vs. justo aquí".
       const curved = t * t;
-      return 0.50 + curved * 0.65;
+      return 0.30 + curved * 1.10;
     };
 
     // ─── Wander territory — el pez deja de patrullar en una órbita chica y
@@ -2314,19 +2368,22 @@ export class WolfLakeCanvas {
     // (agua sólida, no feather de orilla). Fallback al centro del lago
     // si después de 40 intentos no encuentra — virtualmente imposible
     // con el área del polígono actual.
-    // Y range = [0.58, 0.85] — el extremo bottom (>0.85) suele recortarse
+    // Y range = [0.45, 0.85] — el extremo bottom (>0.85) suele recortarse
     // del viewport en desktop wide (object-fit: cover hace clip top+bottom).
-    // Y distribuido UNIFORME para que los peces aprovechen todo el rango
-    // vertical del lago (no acumularse en una banda).
+    // Top 0.45 = un poquito DENTRO del nuevo lake-mask-mk3.png erosionado
+    // (que empieza en y_v=0.429), feather extra para no spawnear en la
+    // mismísima orilla. La validación final la hace sampleMask>0.65 abajo.
+    // X range 0.04-0.96 — el lake erosionado cubre 0.010-0.990, dejamos
+    // safety margin extra.
     const pickWaterPoint = (): Vec => {
       for (let i = 0; i < 40; i++) {
-        const u = 0.08 + Math.random() * 0.75;
-        const v = 0.58 + Math.random() * 0.27;
+        const u = 0.04 + Math.random() * 0.92;
+        const v = 0.45 + Math.random() * 0.40;
         if (sampleMask(mask, u, v) > 0.65) {
           return { x: u, y: v };
         }
       }
-      return { x: 0.45, y: 0.72 };
+      return { x: 0.45, y: 0.70 };
     };
 
     /**
@@ -2353,7 +2410,7 @@ export class WolfLakeCanvas {
         const dist = 0.30 + Math.random() * 0.25;
         const u = headUV.x + Math.cos(sampleAngle) * dist;
         const v = headUV.y + Math.sin(sampleAngle) * dist;
-        if (u < 0.08 || u > 0.83 || v < 0.58 || v > 0.85) continue;
+        if (u < 0.04 || u > 0.96 || v < 0.45 || v > 0.85) continue;
         if (sampleMask(mask, u, v) > 0.65) {
           return { x: u, y: v };
         }
@@ -2506,14 +2563,16 @@ export class WolfLakeCanvas {
       { rim: '#2c5cdc', body: '#050828', core: '#1048d8', halo: '#0030e0' },
       { rim: '#5088ff', body: '#0a1040', core: '#2868ff', halo: '#0050ff' },
     ];
-    // 4 spawn points para los ambientales (el 5º pez total es el cursorFish,
-    // que patrulla cerca de 0.40,0.82 cuando no hay cursor sobre el agua).
-    // Todos en y ≤ 0.83 para que estén dentro del área visible del hero.
+    // Spawn points distribuidos por TODO el nuevo lago (era 4 todos en
+    // y=0.70-0.83). Ahora 5 puntos cubriendo todo el rango de profundidad
+    // y ancho — los peces empiezan repartidos y el wander los mantiene
+    // distribuidos. Y range [0.50, 0.85] para aprovechar el área nueva.
     const GLOW_SPAWN: Vec[] = [
-      { x: 0.12, y: 0.72 }, // fondo izq
-      { x: 0.45, y: 0.70 }, // fondo medio (lejos)
-      { x: 0.62, y: 0.82 }, // cerca derecha-medio
-      { x: 0.18, y: 0.83 }, // cerca izq
+      { x: 0.15, y: 0.55 }, // top-left  (lejos, chico)
+      { x: 0.50, y: 0.52 }, // top-center (muy lejos, frente a la ciudad)
+      { x: 0.85, y: 0.62 }, // top-right (lejos)
+      { x: 0.25, y: 0.82 }, // bottom-left (cerca, grande)
+      { x: 0.70, y: 0.84 }, // bottom-right (cerca)
     ];
     const glowFishes: GlowFish[] = [];
     const buildGlowFishes = (): void => {
@@ -2635,10 +2694,16 @@ export class WolfLakeCanvas {
       let cursorOnWater = false;
       if (pointer.active && !cursorInEdgeGutter && !cursorDisengaged) {
         const iuv = canvasUVToImgUV({ x: pointer.x / cw, y: pointer.y / ch }, cw, ch, IMG_W, IMG_H);
-        if (sampleMask(mask, iuv.x, iuv.y) > 0.35) {
-          cursorOnWater = true;
-        }
+        const m = sampleMask(mask, iuv.x, iuv.y);
+        // Hysteresis: ENTER threshold 0.80, EXIT threshold 0.65. Alineado
+        // con wall avoidance (0.85) para que no se traslapen las zonas.
+        const enterThreshold = 0.80;
+        const exitThreshold = 0.65;
+        cursorOnWater = cursorOnWaterStable
+          ? (m > exitThreshold)
+          : (m > enterThreshold);
       }
+      cursorOnWaterStable = cursorOnWater;
 
       // Wall avoidance corre primero, EXCEPTO si ya estamos en hover —
       // el hover no se mueve hacia adelante, así que los feelers ya no
@@ -2754,7 +2819,14 @@ export class WolfLakeCanvas {
             cursorFish.lookTarget.y = hoverLookY;
           } else {
             hoverStateInitialized = false;
-            cursorFish.setTargetSmooth({ x: pointer.x, y: pointer.y }, 0.18);
+            // CLAMP del cursor target a agua segura — el pez nunca chase
+            // un punto fuera del lago binario. Esto elimina por completo
+            // el conflicto cursor-pursuit vs wall-avoidance que producía
+            // el zigzag de serpiente cuando el cursor rosaba la orilla.
+            const safeTarget = clampToSafeWater(
+              pointer.x, pointer.y, cw, ch, IMG_W, IMG_H, mask,
+            );
+            cursorFish.setTargetSmooth(safeTarget, 0.18);
             // En cruising, lookTarget sigue al target (no decoupling).
             cursorFish.lookTarget.x = cursorFish.target.x;
             cursorFish.lookTarget.y = cursorFish.target.y;
