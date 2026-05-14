@@ -697,13 +697,19 @@ class GlowFish {
       const dist = Math.hypot(dx, dy);
 
       // 1) Steering — heading bounded turn rate hacia target.
+      // Turn rate cap escala con huntingBoost: ambientales (boost=1) giran
+      // a 2.0 rad/s (115°/s), cursor fish en chase (boost up to 8) puede
+      // girar hasta 7.0 rad/s (~400°/s ≈ 360° en 0.9s). Capped para que
+      // no spinee imposiblemente rápido. Real fish in chase: muy ágiles
+      // gracias a pectorales asymmetric brake (Drucker & Lauder 2003).
       let alignment = 1;
       if (dist > 0.5) {
         const targetAngle = Math.atan2(dy, dx);
         let diff = targetAngle - this.heading;
         while (diff > Math.PI) diff -= 2 * Math.PI;
         while (diff < -Math.PI) diff += 2 * Math.PI;
-        const turn = Math.sign(diff) * Math.min(Math.abs(diff), 2.0 * _dt);
+        const turnRateMax = Math.min(7.0, 2.0 * this.huntingBoost);
+        const turn = Math.sign(diff) * Math.min(Math.abs(diff), turnRateMax * _dt);
         this.heading += turn;
         alignment = Math.cos(diff);
       }
@@ -756,8 +762,11 @@ class GlowFish {
       //     el pez DISIPE la velocidad rápido y pivote en sitio en lugar
       //     de arrastrarse curvado. Esto fix el "camarón" y también las
       //     colisiones con bordes a alta velocidad.
-      //   2 default (tau ~500ms) para la aceleración natural en chase.
-      const lerpRate = brakeActive ? 6 : (alignment < 0 ? 5 : 2);
+      //   3.5 cursor fish en chase (boost > 1, tau ~285ms) — arranca
+      //     más rápido que ambient, simula la "predator burst" del pez.
+      //   2 ambientales default (tau ~500ms) — aceleración natural patrol.
+      const cruiseLerp = this.huntingBoost > 1 ? 3.5 : 2;
+      const lerpRate = brakeActive ? 6 : (alignment < 0 ? 5 : cruiseLerp);
       this.currentSpeed += (targetSpeed - this.currentSpeed) * Math.min(1, _dt * lerpRate);
 
       // 3) Integra currentSpeed (con inercia) en heading direction.
@@ -2774,11 +2783,13 @@ export class WolfLakeCanvas {
           const distNorm = Math.min(1, Math.max(0, (dToCursor - closeRadius) / (farRadius - closeRadius)));
           const distFactor = Math.sqrt(distNorm);
           const nominalPxPerSec = 216; // 3.6 px/frame * 60 fps
-          const matchBoost = Math.max(1.0, Math.min(4.0, cursorSpeedSmoothed / nominalPxPerSec));
-          // sprintBoost = 6.0 → maxSpeed efectivo ≈ 21.6 px/frame ≈ 1300 px/s
-          // a distancia farRadius+. El pez se ve claramente "acelerando para
-          // alcanzar" cuando está lejos, no solo "moviéndose más rápido".
-          const sprintBoost = 6.0;
+          const matchBoost = Math.max(1.0, Math.min(5.0, cursorSpeedSmoothed / nominalPxPerSec));
+          // sprintBoost = 8.0 → maxSpeed efectivo ≈ 28.8 px/frame ≈ 1730 px/s
+          // (era 6.0 / 1300 px/s). Subido para que el "como pez en el agua"
+          // se sienta — chase real es ágil y veloz, no torpe. Combinado con
+          // turn rate que escala con huntingBoost, el cursor fish se vuelve
+          // claramente más rápido + más maniobrable cuando caza.
+          const sprintBoost = 8.0;
           cursorFish.huntingBoost = matchBoost + distFactor * (sprintBoost - matchBoost);
         }
       } else {
