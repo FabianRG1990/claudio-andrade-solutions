@@ -3250,13 +3250,18 @@ export class WolfLakeCanvas {
           const distNorm = Math.min(1, Math.max(0, (dToCursor - closeRadius) / (farRadius - closeRadius)));
           const distFactor = Math.sqrt(distNorm);
           const nominalPxPerSec = 216; // 3.6 px/frame * 60 fps
-          const matchBoost = Math.max(1.0, Math.min(5.0, cursorSpeedSmoothed / nominalPxPerSec));
+          // matchBoost cap subido a 9.0 (era 5.0). Cuando el cursor va
+          // MUY rapido (>~1080 px/s), el cap de 5.0 limitaba al pez a
+          // ~1170 px/s mientras el cursor podia ir a 2000+ px/s → lag
+          // visible. Cap 9.0 = hasta ~1944 px/s, suficiente para
+          // matchear swipes rapidos del usuario.
+          const matchBoost = Math.max(1.0, Math.min(9.0, cursorSpeedSmoothed / nominalPxPerSec));
           // sprintBoost = 12.0 (era 8.0). Tras cambiar depthScaleAt a
           // [0.15, 1.40] (peces atras mas chicos), el depthFactor en la
           // zona media del lago bajo ~20% → cursor fish se sentia mas
           // lento. Compensamos subiendo sprintBoost 50% para mantener
           // la sensacion de "rapido y agil" que ya tenia.
-          const sprintBoost = 12.0;
+          const sprintBoost = 15.0;
           let huntingBoost = matchBoost + distFactor * (sprintBoost - matchBoost);
 
           // U-TURN BOOST: cuando el cursor esta MARCADAMENTE detras del
