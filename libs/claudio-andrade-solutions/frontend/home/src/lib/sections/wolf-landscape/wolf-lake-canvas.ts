@@ -710,17 +710,19 @@ class GlowFish {
 
       // 1) Steering — heading bounded turn rate hacia target.
       // Turn rate cap escala con huntingBoost: ambientales (boost=1) giran
-      // a 2.0 rad/s (115°/s), cursor fish en chase (boost up to 8) puede
-      // girar hasta 7.0 rad/s (~400°/s ≈ 360° en 0.9s). Capped para que
-      // no spinee imposiblemente rápido. Real fish in chase: muy ágiles
+      // a 2.5 rad/s (143°/s), cursor fish en chase (boost up to 8) puede
+      // girar hasta 11 rad/s (630°/s ≈ 360° en 0.57s). Capped para que
+      // no spinee imposiblemente rapido. Real fish en chase: muy agiles
       // gracias a pectorales asymmetric brake (Drucker & Lauder 2003).
+      // Bumpeado de 7→11 rad/s para responder al feedback "el pez dura
+      // mucho dando la vuelta para seguir el cursor".
       let alignment = 1;
       if (dist > 0.5) {
         const targetAngle = Math.atan2(dy, dx);
         let diff = targetAngle - this.heading;
         while (diff > Math.PI) diff -= 2 * Math.PI;
         while (diff < -Math.PI) diff += 2 * Math.PI;
-        const turnRateMax = Math.min(7.0, 2.0 * this.huntingBoost);
+        const turnRateMax = Math.min(11.0, 2.5 * this.huntingBoost);
         const turn = Math.sign(diff) * Math.min(Math.abs(diff), turnRateMax * _dt);
         this.heading += turn;
         alignment = Math.cos(diff);
@@ -743,12 +745,20 @@ class GlowFish {
       // luego accelerate cuando aligned.
       //
       // minSpeed = 0 (no floor) → el pez efectivamente puede pararse.
-      // speedFactor01 = max(0, alignment) → no aporta speed con target
-      // detrás. Combinado con lerp rápido (k=5) cuando alignment<0, la
-      // velocidad se disipa en ~200ms al cambiar de alineado a desalineado.
+      // speedFactor01:
+      //   • Default (ambient): max(0, alignment) — pivota en sitio cuando
+      //     target detras. Conservador, evita el efecto "camaron".
+      //   • Pursuit (huntingBoost > 1.2 = cursor fish chasing): mantiene
+      //     minimo 40% de speed aunque target este detras → el pez hace
+      //     ARC TURN (traza una curva) en lugar de pivot turn en sitio.
+      //     Resultado: U-turns mucho mas rapidos visualmente — el pez
+      //     no se "estaciona" para girar, sigue avanzando mientras gira.
+      // Fix del feedback: "el pez gira sin nadar primero y dura mucho
+      // dando la vuelta para seguir el cursor".
       const minSpeed = 0;
-      const maxSpeed = 3.6 * this.speedScale * depthFactor * energy * this.huntingBoost;
-      const speedFactor01 = Math.max(0, alignment);
+      const maxSpeed = 4.6 * this.speedScale * depthFactor * energy * this.huntingBoost;
+      const pursuitFloor = this.huntingBoost > 1.2 ? 0.40 : 0;
+      const speedFactor01 = Math.max(pursuitFloor, alignment);
       const turnDamping = Math.min(0.25, Math.abs(this.angularVel) * 0.20);
       let targetSpeed = (minSpeed + (maxSpeed - minSpeed) * speedFactor01) * (1 - turnDamping);
 
@@ -3183,7 +3193,31 @@ export class WolfLakeCanvas {
           // turn rate que escala con huntingBoost, el cursor fish se vuelve
           // claramente más rápido + más maniobrable cuando caza.
           const sprintBoost = 8.0;
-          cursorFish.huntingBoost = matchBoost + distFactor * (sprintBoost - matchBoost);
+          let huntingBoost = matchBoost + distFactor * (sprintBoost - matchBoost);
+
+          // U-TURN BOOST: cuando el cursor esta MARCADAMENTE detras del
+          // pez (alignment muy negativo), forzar huntingBoost al maximo
+          // (8) sin importar la distancia. Razon: durante un U-turn, el
+          // distFactor se mantiene bajo (cursor cerca) pero el pez ocupa
+          // toda la agilidad posible para girar rapido y no demorar.
+          // Sin este override, U-turns lentos cuando el cursor esta a
+          // 50-200 px detras y los huntingBoost queda en 2-3.
+          const dxToPtr = pointer.x - cursorFish.position.x;
+          const dyToPtr = pointer.y - cursorFish.position.y;
+          const angToPtr = Math.atan2(dyToPtr, dxToPtr);
+          let headingDiff = angToPtr - cursorFish.heading;
+          while (headingDiff > Math.PI) headingDiff -= 2 * Math.PI;
+          while (headingDiff < -Math.PI) headingDiff += 2 * Math.PI;
+          const cursorAlignment = Math.cos(headingDiff);
+          if (cursorAlignment < -0.15) {
+            // Cursor mas atras que perp = el pez tiene que dar U-turn.
+            // Boost a 8 (max) garantiza turnRate 11 rad/s + speedFactor
+            // 40% durante el giro = U-turn fluido en ~0.5s en lugar de
+            // 1.5-2s.
+            huntingBoost = Math.max(huntingBoost, sprintBoost);
+          }
+
+          cursorFish.huntingBoost = huntingBoost;
         }
       } else {
         cursorFish.glowBoostTarget = 0.4;
