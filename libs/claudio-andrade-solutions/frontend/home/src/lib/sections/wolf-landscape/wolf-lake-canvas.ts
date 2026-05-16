@@ -2415,7 +2415,19 @@ const clampToSafeWater = (
   return { x: cw * 0.5, y: ch * 0.7 };
 };
 
-// Sample mask con bilinear interpolation. Si está fuera del rango → 0.
+// ── Limite virtual superior del lago para los peces ─────────────────
+// Calibrado al overlay que marco el usuario: la linea de "no fish" cae
+// justo debajo del skyline de la ciudad (~y_v 0.43-0.45). Antes 0.62
+// era demasiado bajo (los peces solo tenian ~38% del lago para nadar).
+// Ahora ~57% del lago disponible (y_v 0.43 a 1.0) — area amplia, pero
+// sin acercarse a la ciudad/horizonte (los peces igual no la tocan
+// porque el mask real ya excluye montañas y lobo en los lados).
+const FISH_UPPER_LIMIT_V = 0.43;
+const FISH_LIMIT_FEATHER = 0.04;
+
+// Sample mask con bilinear interpolation + virtual upper limit para
+// la zona donde puede nadar el pez. Si v < FISH_UPPER_LIMIT_V → 0
+// (mas alto = fuera del lago "for fish"). En la transicion fade lineal.
 const sampleMask = (
   mask: { data: Uint8ClampedArray; width: number; height: number },
   u: number, v: number,
@@ -2433,7 +2445,15 @@ const sampleMask = (
   const b = mask.data[y0 * mask.width + x1];
   const c = mask.data[y1 * mask.width + x0];
   const d = mask.data[y1 * mask.width + x1];
-  return ((a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy) / 255;
+  const m = ((a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy) / 255;
+  // Aplica falloff superior: por encima del limite virtual = 0,
+  // dentro del feather = ramp lineal, debajo del feather = full mask.
+  if (v < FISH_UPPER_LIMIT_V) return 0;
+  if (v < FISH_UPPER_LIMIT_V + FISH_LIMIT_FEATHER) {
+    const t = (v - FISH_UPPER_LIMIT_V) / FISH_LIMIT_FEATHER;
+    return m * t;
+  }
+  return m;
 };
 
 // =============================================================================
@@ -2587,10 +2607,12 @@ export class WolfLakeCanvas {
     //   y_v 0.429 (nuevo top del lago erosionado) → 0.30× (pez muy chico)
     //   y_v 1.000 (frente del lago)               → 1.40× (pez grande)
     //                                               ratio 4.67×
-    // LAKE_TOP_V matchea el bounding box real del lake-mask-mk3.png
-    // erosionado de water-mask-mk6.png (1rem de margen). Antes 0.540
-    // (polígono manual), ahora 0.429 (mask-derived).
-    const LAKE_TOP_V = 0.429;
+    // LAKE_TOP_V alineado con FISH_UPPER_LIMIT_V (no con el bounding box
+    // real del mask): los peces solo nadan en y_v >= 0.62 — la curva de
+    // perspectiva calibrada a ESE rango efectivo, no al rango total del
+    // mask. Asi el pez en el "top" visible (y_v=0.62) renderiza al
+    // tamaño minimo (0.30x), no a 0.42x como antes.
+    const LAKE_TOP_V = FISH_UPPER_LIMIT_V;
     const LAKE_BOTTOM_V = 1.00;
     const depthScaleAt = (yV: number): number => {
       const t = Math.max(0, Math.min(1, (yV - LAKE_TOP_V) / (LAKE_BOTTOM_V - LAKE_TOP_V)));
@@ -2621,12 +2643,14 @@ export class WolfLakeCanvas {
     const pickWaterPoint = (): Vec => {
       for (let i = 0; i < 40; i++) {
         const u = 0.04 + Math.random() * 0.92;
-        const v = 0.45 + Math.random() * 0.40;
+        // Empezar el sampling DESDE el limite virtual + feather, asi
+        // no perdemos intentos en zonas que sampleMask devuelve 0.
+        const v = (FISH_UPPER_LIMIT_V + FISH_LIMIT_FEATHER) + Math.random() * 0.30;
         if (sampleMask(mask, u, v) > 0.65) {
           return { x: u, y: v };
         }
       }
-      return { x: 0.45, y: 0.70 };
+      return { x: 0.45, y: 0.85 };
     };
 
     /**
@@ -2722,8 +2746,10 @@ export class WolfLakeCanvas {
       //   • Force currentSpeed = max(current, 2.0) — evita que el proximity
       //     brake cancele la fuga si el target queda cerca casualmente
       if (bestScore < 0.6) {
+        // Refugio al medio del lago (no al bottom) — asi los peces no
+        // se acumulan abajo y exploran toda la altura disponible.
         const refugeCanvasUV = imgUVToCanvasUV(
-          { x: 0.50, y: 0.85 },
+          { x: 0.50, y: 0.70 },
           cw, ch, IMG_W, IMG_H,
         );
         f.target.x = refugeCanvasUV.x * cw;
@@ -2852,18 +2878,14 @@ export class WolfLakeCanvas {
     //     vagando en zona de ~80 px ("stuck loose") cerca de "Y" del título
     //     y al lado del card del hero.
     // 4 glowFishes ambientales + 1 cursorFish = 5 peces total.
-    // Spawns reubicados a zona segura del lago: y >= 0.78 (debajo del
-     // título y del card del hero, sin overlap de texto HTML). El bug
-     // "pez pegado a la Y" venia de que el top-left spawn (0.22, 0.68)
-     // visualmente quedaba bajo el texto del título "y Diseño", y el
-     // orbit center caia en zona donde el wander lookahead se confundia
-     // con el horizonte. Mover todos los spawns al banda inferior del
-     // lago les da orbit centers garantizadamente safe-water + lejos
-     // del texto HTML overlay.
+    // Spawns distribuidos por todo el lago expandido (y_v ∈ [0.43, 1.0]).
+    // Lejos del texto HTML (titulo + card) pero ocupando la altura
+    // completa del area de nado para que los peces se vean dispersos
+    // y no clustered abajo.
     const GLOW_SPAWN: Vec[] = [
-      { x: 0.20, y: 0.80 }, // mid-left  (zona lago seguro, sin overlay)
-      { x: 0.82, y: 0.80 }, // mid-right (sin overlap con card)
-      { x: 0.35, y: 0.88 }, // bottom-left (cerca, grande)
+      { x: 0.20, y: 0.65 }, // mid-left (altura media, lejos del titulo)
+      { x: 0.82, y: 0.65 }, // mid-right (lejos del card)
+      { x: 0.30, y: 0.88 }, // bottom-left (cerca, grande)
       { x: 0.65, y: 0.88 }, // bottom-right (cerca, grande)
     ];
     const glowFishes: GlowFish[] = [];
@@ -3185,8 +3207,10 @@ export class WolfLakeCanvas {
       // tiene su propio waypoint y reloj de burst-glide. Resultado:
       // movimiento desincronizado, sensación de instinto natural.
       const nowMs = now;
+      // Refugio del stuck-detector al medio del lago (consistente con
+      // wander fallback) — no al bottom, asi peces no se acumulan abajo.
       const refugeCanvasUV = imgUVToCanvasUV(
-        { x: 0.50, y: 0.85 },
+        { x: 0.50, y: 0.70 },
         cw, ch, IMG_W, IMG_H,
       );
       const refugeX = refugeCanvasUV.x * cw;
