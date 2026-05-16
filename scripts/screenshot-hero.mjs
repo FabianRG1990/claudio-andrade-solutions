@@ -34,8 +34,12 @@ const ctx = await browser.newContext({
 const page = await ctx.newPage();
 
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+page.on('console', (m) => { if (m.type() === 'error') errors.push(`[console] ${m.text()}`); });
+page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}\n${e.stack ?? ''}`));
+page.on('requestfailed', (req) => errors.push(`[reqfail] ${req.url()} ${req.failure()?.errorText ?? ''}`));
+page.on('response', async (resp) => {
+  if (resp.status() >= 400) errors.push(`[http${resp.status()}] ${resp.url()}`);
+});
 
 console.log(`[shot] navigating to ${url}`);
 await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
