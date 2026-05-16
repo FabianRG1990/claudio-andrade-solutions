@@ -300,6 +300,12 @@ export class FishThreeRenderer {
         // ramp = 1.5x mas suavidad percibida en la transicion).
         uRampStart: { value: 0.28 },
         uRampEnd: { value: 0.62 },
+        // Horizontal mask — solo aplica effect en el oval centro (zona
+        // de reflejos de ciudad que el user marco en rojo). uHCenter=0.50
+        // = centro pantalla. uHFalloff=0.22 = a 22% del centro el effect
+        // cae a 0 → ancho total del oval ~0.28 a 0.72 en vUv.x.
+        uHCenter: { value: 0.50 },
+        uHFalloff: { value: 0.22 },
         uApplyFade: { value: 0.0 },
       },
       vertexShader: `
@@ -316,6 +322,8 @@ export class FishThreeRenderer {
         uniform float uMaxBlurPx;
         uniform float uRampStart;
         uniform float uRampEnd;
+        uniform float uHCenter;
+        uniform float uHFalloff;
         uniform float uApplyFade;
         varying vec2 vUv;
         // SMOOTHERSTEP (Perlin 6t^5 - 15t^4 + 10t^3) — derivada Y
@@ -327,14 +335,20 @@ export class FishThreeRenderer {
         }
         void main() {
           float zoneAmt = smootherstep(uRampStart, uRampEnd, vUv.y);
-          if (zoneAmt < 0.002) {
+          // Horizontal bell: 1 en uHCenter, 0 a uHFalloff de distancia.
+          // smootherstep da gradient premium suave hacia los bordes.
+          float dCenter = abs(vUv.x - uHCenter) / uHFalloff;
+          float hAmt = 1.0 - smootherstep(0.0, 1.0, clamp(dCenter, 0.0, 1.0));
+          // Combinar: effect SOLO donde vertical * horizontal > 0.
+          // Sobre orillas/rocas (hAmt=0) o abajo de roca (zoneAmt=0):
+          // effectAmt=0 → no blur ni fade, pez intacto y bonito.
+          float effectAmt = zoneAmt * hAmt;
+          if (effectAmt < 0.002) {
             gl_FragColor = texture2D(tDiffuse, vUv);
             return;
           }
-          // Blur radius con pow(zoneAmt, 2.0) — quadratic ease-in,
-          // arranca a casi 0 (0.01 a zoneAmt=0.1) → invisible al entrar.
-          // Acelera hacia el top donde llega a max 6 px.
-          float blurT = pow(zoneAmt, 2.0);
+          // Blur radius con pow(effectAmt, 2.0) — quadratic ease-in.
+          float blurT = pow(effectAmt, 2.0);
           float radiusPx = blurT * uMaxBlurPx;
           vec2 step = (uBlurDirection / uResolution) * radiusPx;
           vec4 c = vec4(0.0);
@@ -347,10 +361,10 @@ export class FishThreeRenderer {
           c += texture2D(tDiffuse, vUv + step *  2.0) * 0.12;
           c += texture2D(tDiffuse, vUv + step *  3.0) * 0.09;
           c += texture2D(tDiffuse, vUv + step *  4.0) * 0.05;
-          // Alpha fade con pow(zoneAmt, 1.5) — ease-in mas suave que
-          // pow(0.85) del v33. Arranca a 0.03 a zoneAmt=0.1 (vs 0.14
-          // antes) → desvanecimiento imperceptible al entrar.
-          float fadeAmt = pow(zoneAmt, 1.5);
+          // Alpha fade con pow(effectAmt, 1.5) — usa effectAmt asi el
+          // fade tambien respeta el oval horizontal (no fade fuera del
+          // centro brillante).
+          float fadeAmt = pow(effectAmt, 1.5);
           c.a *= mix(1.0, 1.0 - fadeAmt, uApplyFade);
           gl_FragColor = c;
         }
