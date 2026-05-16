@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { FishThreeRenderer } from './wolf-fish-three';
+import { FishThreeRenderer, type FishHandle } from './wolf-fish-three';
 
 /**
  * WolfLakeCanvas — capa interactiva sobre el lago del Hero MK6.
@@ -2314,6 +2314,52 @@ const imageToMask = (img: HTMLImageElement): { data: Uint8ClampedArray; width: n
   return { data: out, width: c.width, height: c.height };
 };
 
+/** Decodifica el PNG del hero a un buffer RGB denso. Usado para samplear
+ *  el color del agua donde nada cada pez → underwater tint. */
+const imageToColor = (img: HTMLImageElement): { data: Uint8ClampedArray; width: number; height: number } => {
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('no 2d ctx for hero color');
+  ctx.drawImage(img, 0, 0);
+  const id = ctx.getImageData(0, 0, c.width, c.height);
+  // Compact RGB layout (sin alpha) — 3 bytes/px en lugar de 4.
+  const out = new Uint8ClampedArray(c.width * c.height * 3);
+  for (let i = 0; i < c.width * c.height; i++) {
+    out[i * 3]     = id.data[i * 4];
+    out[i * 3 + 1] = id.data[i * 4 + 1];
+    out[i * 3 + 2] = id.data[i * 4 + 2];
+  }
+  return { data: out, width: c.width, height: c.height };
+};
+
+/** Sample bilinear del color del hero en image-UV. Retorna {r,g,b} en [0,1]. */
+const sampleHeroColor = (
+  hero: { data: Uint8ClampedArray; width: number; height: number },
+  u: number, v: number,
+): { r: number; g: number; b: number } => {
+  const x = Math.max(0, Math.min(hero.width - 1, u * hero.width));
+  const y = Math.max(0, Math.min(hero.height - 1, v * hero.height));
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const fx = x - x0;
+  const fy = y - y0;
+  const x1 = Math.min(hero.width - 1, x0 + 1);
+  const y1 = Math.min(hero.height - 1, y0 + 1);
+  const idxA = (y0 * hero.width + x0) * 3;
+  const idxB = (y0 * hero.width + x1) * 3;
+  const idxC = (y1 * hero.width + x0) * 3;
+  const idxD = (y1 * hero.width + x1) * 3;
+  const lerp = (a: number, b: number, c: number, d: number): number =>
+    ((a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy) / 255;
+  return {
+    r: lerp(hero.data[idxA], hero.data[idxB], hero.data[idxC], hero.data[idxD]),
+    g: lerp(hero.data[idxA + 1], hero.data[idxB + 1], hero.data[idxC + 1], hero.data[idxD + 1]),
+    b: lerp(hero.data[idxA + 2], hero.data[idxB + 2], hero.data[idxC + 2], hero.data[idxD + 2]),
+  };
+};
+
 /** Cover transform: image-UV (0..1) → canvas-UV (0..1) con object-fit:cover + position:center. */
 const imgUVToCanvasUV = (
   uv: Vec, canvasW: number, canvasH: number, imgW: number, imgH: number,
@@ -2522,13 +2568,15 @@ export class WolfLakeCanvas {
     // elimina los "brincos" entre ángulos.
     const fishRenderer = new FishThreeRenderer(GLOW_BODY_PROFILE.length);
 
-    // ─── Init Three.js + cargar máscara del lago en paralelo
+    // ─── Init Three.js + cargar máscara + hero color del lago en paralelo
     let maskImg: HTMLImageElement;
+    let heroImg: HTMLImageElement;
     try {
       const initialW = host.offsetWidth || 1;
       const initialH = host.offsetHeight || 1;
-      [maskImg] = await Promise.all([
+      [maskImg, heroImg] = await Promise.all([
         loadImage('/hero-wolf/lake-mask-mk3.png'),
+        loadImage('/hero-wolf/hero-mk6.png'),
         fishRenderer.init(canvas, initialW, initialH),
       ]);
     } catch {
@@ -2536,6 +2584,9 @@ export class WolfLakeCanvas {
       return;
     }
     const mask = imageToMask(maskImg);
+    // Hero como buffer RGB para samplear el color del agua en cada pez.
+    // Cada frame por pez ~3 lookups bilinear = <100µs total.
+    const heroColor = imageToColor(heroImg);
     // Dimensiones nativas de la imagen del hero (MK6 = mismas que MK3:
     // 1672×941). Si en el futuro se cambia el src del `<img class="hero__bg">`
     // por una imagen de OTRO tamaño, hay que actualizar estos y regenerar
@@ -3310,12 +3361,35 @@ export class WolfLakeCanvas {
       clampSpineToLake(cursorFish, mask, cw, ch, IMG_W, IMG_H, safeAnchor);
 
       // ─── Three.js render — mesh 3D real, swim wave en vertex shader.
-      // El underwater color cast vive en el lighting del scene (ambient
-      // tintado azul + key warm + fill cool) en wolf-fish-three.ts.
+      // Tambien actualizamos uWaterColor sampleando el hero image en la
+      // posicion de cada pez: el fragment shader lo usa para mezclar el
+      // color del pez con el del agua → efecto "sumergido" (mas marcado
+      // en las zonas brillantes donde reflejan luces de la ciudad).
+      const applyWaterTint = (handle: FishHandle, fishX: number, fishY: number): void => {
+        const headUV = canvasUVToImgUV(
+          { x: fishX / cw, y: fishY / ch }, cw, ch, IMG_W, IMG_H,
+        );
+        const c = sampleHeroColor(heroColor, headUV.x, headUV.y);
+        handle.uniforms.uWaterColor.value.setRGB(c.r, c.g, c.b);
+        // ─── uSubmergeDepth: SOLO en la zona alta donde refleja la ciudad
+        // (top ~15% del lago). El user fue explicito: "Solo en el centro
+        // no me lo toques, no me lo cambies, porque los peces me gusta como
+        // se ven ahi". Asi que mapping ACOTADO al top, con falloff rapido:
+        //   y_v 0.43 (top water, max reflejos)  → 1.0  (max submerge)
+        //   y_v 0.58 (fin del top brillante)    → 0.0  (clear, sin tocar)
+        //   y_v > 0.58 (centro y abajo)         → 0.0  (intacto)
+        // Zona de efecto: solo 15% vertical del lago, exactamente donde
+        // vive el reflejo de la ciudad. Centro y abajo quedan como ya
+        // gustan al user. Falloff lineal de 0.15 unidades de y_v.
+        const TOP_ZONE_END = 0.58;
+        const sub = Math.max(0, Math.min(1, (TOP_ZONE_END - headUV.y) / (TOP_ZONE_END - FISH_UPPER_LIMIT_V)));
+        handle.uniforms.uSubmergeDepth.value = sub;
+      };
       for (let i = 0; i < glowFishes.length; i++) {
         const gf = glowFishes[i];
         const ghV = canvasUVToImgUV({ x: gf.spine[0].x / cw, y: gf.spine[0].y / ch }, cw, ch, IMG_W, IMG_H).y;
         if (glowFishHandles[i]) {
+          applyWaterTint(glowFishHandles[i], gf.spine[0].x, gf.spine[0].y);
           fishRenderer.updateFish(glowFishHandles[i], gf, depthScaleAt(ghV));
         }
       }
@@ -3323,6 +3397,7 @@ export class WolfLakeCanvas {
         { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
         cw, ch, IMG_W, IMG_H,
       ).y;
+      applyWaterTint(cursorFishHandle, cursorFish.spine[0].x, cursorFish.spine[0].y);
       fishRenderer.updateFish(cursorFishHandle, cursorFish, depthScaleAt(cursorHeadV));
       fishRenderer.render();
 

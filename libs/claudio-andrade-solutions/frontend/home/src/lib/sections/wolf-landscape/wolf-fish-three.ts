@@ -92,6 +92,31 @@ interface FishUniforms {
   // [0,1] consistentes a lo largo de cualquier mesh.
   uMeshMin: { value: THREE.Vector3 };
   uMeshMax: { value: THREE.Vector3 };
+  // Color del agua sampleado de la imagen del lago en la posicion actual
+  // del pez. El fragment shader mezcla el color del cuerpo con este tint
+  // para que el pez "se sumerja" — en zonas brillantes (reflejos de la
+  // ciudad) el blend es mayor, el pez se ve mas integrado al agua. En
+  // zonas oscuras el blend es minimo, el pez mantiene su color robotico.
+  uWaterColor: { value: THREE.Color };
+  // Tiempo en segundos para animar caustics. La caustic pattern se mueve
+  // lentamente sobre el pez = pista visual definitiva de "esta bajo agua".
+  uTime: { value: number };
+  // Profundidad de inmersion visual segun posicion Y del pez en image-UV.
+  // 1.0 = pez en la zona alta brillante (reflejos de la ciudad) → debe
+  // verse borroso/sumergido/integrado al agua (ripple distortion, blend
+  // pesado, alpha bajo para que la ciudad se cuele a traves).
+  // 0.0 = pez en la zona clara baja → mantiene definicion crisp como
+  // ahora (donde "ya se ve bonito"). Mapping en wolf-lake-canvas.ts:
+  // y_v 0.43→1.0, y_v 0.85→0.0 (lineal).
+  // NOTA v20: el fragment shader usa gl_FragCoord.y/uResolution.y para
+  // computar submerge PER-FRAGMENT (no por-pez) → un pez cruzando el
+  // boundary tiene mitad nitido y mitad borroso. uSubmergeDepth se usa
+  // solo para el ripple vertex (que necesita un valor uniform por mesh).
+  uSubmergeDepth: { value: number };
+  // Resolucion canvas (px) para que el fragment shader pueda derivar
+  // su posicion screen-Y normalizada via gl_FragCoord. Actualizado en
+  // resize() para todos los handles.
+  uResolution: { value: THREE.Vector2 };
 }
 
 export interface FishHandle {
@@ -234,6 +259,68 @@ export class FishThreeRenderer {
       0.25, // threshold — capta cualquier pixel apenas brillante
     );
     this.composer.addPass(this.bloomPass);
+
+    // ─── v26: Frosted Glass Blur ZONE-GATED (solo top, donde refleja luz) ──
+    // El user corrigio: "no a todo, arriba donde esta la luz". Vuelve
+    // a zone-gating con smoothstep ramp 0.30→0.65 (35% del viewport
+    // — transicion noble, no cortina). Max 2.5 px en el top zone.
+    //
+    // vUv.y en Three.js EffectComposer: 0 bottom, 1 top. Top zone =
+    // 0.30 a 0.65. Falloff smoothstep → debajo de 0.30 = 0 (intacto),
+    // de 0.30 a 0.65 = ramp 0 → 1 (suave), arriba de 0.65 = 1 (max).
+    const zoneBlurShader = {
+      uniforms: {
+        tDiffuse: { value: null as THREE.Texture | null },
+        uResolution: { value: new THREE.Vector2(width, height) },
+        uBlurDirection: { value: new THREE.Vector2(1, 0) },
+        uMaxBlurPx: { value: 0.4 },
+        uRampStart: { value: 0.30 },
+        uRampEnd: { value: 0.65 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2 uResolution;
+        uniform vec2 uBlurDirection;
+        uniform float uMaxBlurPx;
+        uniform float uRampStart;
+        uniform float uRampEnd;
+        varying vec2 vUv;
+        void main() {
+          float zoneAmt = smoothstep(uRampStart, uRampEnd, vUv.y);
+          if (zoneAmt < 0.01) {
+            gl_FragColor = texture2D(tDiffuse, vUv);
+            return;
+          }
+          float radiusPx = zoneAmt * uMaxBlurPx;
+          vec2 step = (uBlurDirection / uResolution) * radiusPx;
+          vec4 c = vec4(0.0);
+          c += texture2D(tDiffuse, vUv + step * -4.0) * 0.05;
+          c += texture2D(tDiffuse, vUv + step * -3.0) * 0.09;
+          c += texture2D(tDiffuse, vUv + step * -2.0) * 0.12;
+          c += texture2D(tDiffuse, vUv + step * -1.0) * 0.15;
+          c += texture2D(tDiffuse, vUv)               * 0.18;
+          c += texture2D(tDiffuse, vUv + step *  1.0) * 0.15;
+          c += texture2D(tDiffuse, vUv + step *  2.0) * 0.12;
+          c += texture2D(tDiffuse, vUv + step *  3.0) * 0.09;
+          c += texture2D(tDiffuse, vUv + step *  4.0) * 0.05;
+          gl_FragColor = c;
+        }
+      `,
+    };
+    const blurH = new ShaderPass(zoneBlurShader);
+    blurH.material.uniforms['uBlurDirection'].value = new THREE.Vector2(1, 0);
+    this.composer.addPass(blurH);
+    const blurV = new ShaderPass(zoneBlurShader);
+    blurV.material.uniforms['uBlurDirection'].value = new THREE.Vector2(0, 1);
+    this.composer.addPass(blurV);
+
     const copyPass = new ShaderPass(CopyShader);
     copyPass.renderToScreen = true;
     this.composer.addPass(copyPass);
@@ -326,6 +413,11 @@ export class FishThreeRenderer {
     // El multiplicador cyan del emissive tinta el glow.
     this.baseMaterial.emissive = new THREE.Color(0x90c8ff);
     this.baseMaterial.emissiveIntensity = 1.0;
+    // Transparent: el fragment baja gl_FragColor.a en zona sumergida para
+    // que el lake canvas (city refleja) brille a traves del cuerpo del
+    // pez = lectura visual "esta DENTRO del agua, no encima". Sin esto
+    // el alpha se descarta antes del composite.
+    this.baseMaterial.transparent = true;
     this.baseMaterial.needsUpdate = true;
   }
 
@@ -345,12 +437,19 @@ export class FishThreeRenderer {
       uCosE: { value: COS_E },
       uMeshMin: { value: this.meshMin.clone() },
       uMeshMax: { value: this.meshMax.clone() },
+      // Defalt = midnight navy (caso pre-sample sin tint).
+      uWaterColor: { value: new THREE.Color(0.04, 0.06, 0.14) },
+      uTime: { value: 0 },
+      // Default 0 = clear zone (sin distorsion). El simulador lo actualiza
+      // cada frame segun la Y del pez.
+      uSubmergeDepth: { value: 0 },
+      uResolution: { value: new THREE.Vector2(this.canvasW, this.canvasH) },
     };
     material.userData = { uniforms };
 
     material.onBeforeCompile = (shader) => {
       // eslint-disable-next-line no-console
-      console.log('[FishThree] shader compile v10-eye-down-side');
+      console.log('[FishThree] shader compile v30-blur-0p4px');
       shader.uniforms['uSpine'] = uniforms.uSpine;
       shader.uniforms['uSegLen'] = uniforms.uSegLen;
       shader.uniforms['uSegN'] = uniforms.uSegN;
@@ -360,6 +459,10 @@ export class FishThreeRenderer {
       shader.uniforms['uCosE'] = uniforms.uCosE;
       shader.uniforms['uMeshMin'] = uniforms.uMeshMin;
       shader.uniforms['uMeshMax'] = uniforms.uMeshMax;
+      shader.uniforms['uWaterColor'] = uniforms.uWaterColor;
+      shader.uniforms['uTime'] = uniforms.uTime;
+      shader.uniforms['uSubmergeDepth'] = uniforms.uSubmergeDepth;
+      shader.uniforms['uResolution'] = uniforms.uResolution;
 
       // ─── Fragment <common>: varying + uniformes para neon procedural ────
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -368,6 +471,10 @@ export class FishThreeRenderer {
         varying vec3 vLocalPos;
         uniform vec3 uMeshMin;
         uniform vec3 uMeshMax;
+        uniform vec3 uWaterColor;
+        uniform float uTime;
+        uniform float uSubmergeDepth;
+        uniform vec2 uResolution;
         `,
       );
 
@@ -498,21 +605,85 @@ export class FishThreeRenderer {
         // vec3(0.40,0.95,1.80) = canal B peak ~9.0 → tras ACES queda
         // WHITE-cyan blown-out → bloom (threshold 0.40, strength 2.20)
         // genera halo amplio = "destello" permanente en las lineas.
-        gl_FragColor.rgb += vec3(0.40, 0.95, 1.80) * lineMask * 5.0;
+        // v22 cristal liquido: pfSubmerge ya NO modula color/alpha/neon
+        // (eso era el approach "neblina" que el user rechazo). El unico
+        // efecto submerged vive en el vertex shader (ripple/refraccion).
+        // Mantenemos neonAtten=1.0 para que los neones brillen plenos.
+        float neonAtten = 1.0;
+        gl_FragColor.rgb += vec3(0.40, 0.95, 1.80) * lineMask * 5.0 * neonAtten;
 
         // (2) Texture neon boost — ojos pintados en el texture
         #ifdef USE_EMISSIVEMAP
           vec4 neonTexel = texture2D(emissiveMap, vEmissiveMapUv);
           float neonLum = max(neonTexel.r, max(neonTexel.g, neonTexel.b));
           float neonMaskAdd = smoothstep(0.55, 0.80, neonLum);
-          gl_FragColor.rgb += neonTexel.rgb * vec3(0.80, 1.10, 1.60) * neonMaskAdd * 5.0;
+          gl_FragColor.rgb += neonTexel.rgb * vec3(0.80, 1.10, 1.60) * neonMaskAdd * 5.0 * neonAtten;
         #endif
 
-        // (3) Fresnel rim — destello en silueta (giros)
+        // (3) Fresnel rim — destello en silueta (giros).
+        // El rim casi desaparece en zona sumergida — un pez bajo agua no
+        // tiene silueta nitida brillante, la luz lo atraviesa y se difunde.
         vec3 vRimViewDir = normalize(vViewPosition);
         float vRimNoV = max(0.0, dot(normalize(vNormal), vRimViewDir));
         float vRimFresnel = pow(1.0 - vRimNoV, 2.5);
-        gl_FragColor.rgb += vec3(0.30, 0.70, 1.50) * vRimFresnel * 1.20;
+        gl_FragColor.rgb += vec3(0.30, 0.70, 1.50) * vRimFresnel * 1.20 * neonAtten;
+
+        // ── (4) SUBMERGED FISH — perdida de definicion en zona alta ─────
+        // El usuario fue muy claro con las referencias (peces en lago real
+        // visto desde arriba):
+        //   • zona alta brillante (reflejos ciudad) → fish BORROSO,
+        //     poca definicion, integrado al agua, "no me importa como se
+        //     vea ahi". Las ondas lo afectan.
+        //   • zona baja clara → fish DEFINIDO como ahora ("ya se ve bonito").
+        //
+        // uSubmergeDepth (0 a 1) viene del simulador segun la Y del pez:
+        //   y_v=0.43 (top) → uSubmergeDepth=1.0 → fish casi disuelto en agua
+        //   y_v=0.85+ (bot) → uSubmergeDepth=0.0 → fish intacto / definido
+        //
+        // 3 mecanismos combinados sellan la lectura "sumergido":
+        //   A) BLEND PESADO con water tint: hasta 92% del color del pez se
+        //      sustituye por el color del agua local. Fish se ve como
+        //      "sombra coloreada" del agua, no como objeto encima.
+        //   B) ALPHA REDUCIDO: hasta 50% transparente — el lake canvas
+        //      detras (con city reflejada) literalmente SE CUELA a traves
+        //      del cuerpo del pez. Esto es lo que vende "esta DENTRO del
+        //      agua, no encima" mas que cualquier color.
+        //   C) DESATURACION + LOW CONTRAST: lerp a fishLuma * waterColor —
+        //      el pez pierde sus tonos navy oscuros y adopta el cromatismo
+        //      del entorno. Combinado con (A) y la ripple del vertex, la
+        //      silueta deja de tener bordes nitidos → lectura "blurry".
+        //
+        // Proteccion neon: luma > 0.4 se preserva — los ojos y lineas
+        // brillantes siguen visibles incluso en zona sumergida (sirven
+        // como pista de "hay un pez ahi") aunque atenuadas por neonAtten.
+        float waterLuma = dot(uWaterColor, vec3(0.299, 0.587, 0.114));
+        float fishLuma = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
+        float neonProtect = 1.0 - smoothstep(0.4, 1.2, fishLuma);
+
+        // v22: TODO el color tinting removido (base submerge + zone
+        // submerge). "Cristal liquido" = pez nitido visible con sus
+        // colores reales, distorsionado por las ondas del shader vertex
+        // — no tintado de azul agua (eso es "neblina"). waterLuma se
+        // mantiene declarado arriba porque caustics lo usa abajo.
+
+        // ── (5) CAUSTICS animadas (mas fuertes en zona sumergida) ───────
+        // Tecnica NVIDIA GPU Gems Ch.2: patrones de luz refractada por la
+        // superficie ondulante proyectan lineas brillantes moviendose
+        // sobre objetos sumergidos. Es lo que vimos en las refs del user
+        // (pez en lago, lineas de luz danzan encima del cuerpo).
+        // Intensidad: linear con uSubmergeDepth — donde hay reflejos
+        // hay caustics, abajo en zona oscura casi no se ven.
+        vec2 cUV = vLocalPos.xy * 8.0 + uTime * 0.6;
+        float c1 = sin(cUV.x * 1.3 + cUV.y * 0.9);
+        float c2 = sin(cUV.x * 0.7 - cUV.y * 1.5 + uTime * 0.4);
+        float c3 = sin((cUV.x + cUV.y) * 1.1 + uTime * 0.8);
+        float caustic = (c1 + c2 + c3) * 0.333;
+        caustic = pow(max(0.0, caustic), 6.0);
+        float causticIntensity = caustic * (0.4 + 1.6 * uSubmergeDepth) * neonProtect;
+        gl_FragColor.rgb += vec3(0.65, 1.05, 1.45) * causticIntensity;
+
+        // v22: alpha 1.0 — pez 100% opaco. "Cristal liquido" implica
+        // pez nitido y visible, no semi-transparente / desvanecido.
 
         #include <output_fragment>
         `,
@@ -528,6 +699,8 @@ export class FishThreeRenderer {
         uniform float uMeshScale;
         uniform float uSinE;
         uniform float uCosE;
+        uniform float uTime;
+        uniform float uSubmergeDepth;
         // Globals compartidos entre <beginnormal_vertex> y <begin_vertex>
         // (ambos viven en el mismo main()). Calculamos el frame de
         // deformacion en beginnormal_vertex y lo reusamos para position.
@@ -600,6 +773,41 @@ export class FishThreeRenderer {
           vSpinePos.y + vSpinePerp.y * position.z * uMeshScale + position.y * uMeshScale * uSinE,
           position.y * uMeshScale * uCosE
         );
+
+        // ─── RIPPLE DISTORTION (refraccion a traves de ondas) ───────────
+        // El usuario pidio textualmente: "un detallazo seria que las ondas
+        // del agua lo afecten a el". Y "ocupo que se vea borroso/sumergido
+        // en la zona alta". Cuando ves un pez bajo agua a traves de la
+        // superficie ondulante, la luz se refracta y la silueta del pez
+        // se DISTORSIONA visualmente — partes del cuerpo se ven desplazadas
+        // y la silueta se ondula al ritmo de las ondas de la superficie.
+        //
+        // Tecnica: desplazamos cada vertex en screen-space por una suma de
+        // dos sine waves de baja frecuencia en world coords + uTime.
+        // Magnitud escala con uSubmergeDepth y uMeshScale (peces grandes
+        // visiblemente cerca = wobble proporcional). Frecuencia espacial
+        // baja (period ~80 px) para que la distorsion se vea como ONDAS
+        // de la superficie, no como noise.
+        //
+        // Pequeño extra: la ola fija al body (vLocalPos) pierde el efecto
+        // de superficie sobre el pez. Usar world position del vertex hace
+        // que la onda PASE OVER el pez al moverse (mismo principio que
+        // caustics moviendose por suelo de piscina).
+        // v26: ripple ZONE-GATED de nuevo (user: "no a todo, arriba
+        // donde esta la luz"). Solo activa cuando uSubmergeDepth > 0,
+        // que solo pasa en y_v 0.43-0.58 (top de lago = reflejos ciudad).
+        // Magnitud 0.060 (v23 level) = ~8px wobble en zona alta.
+        float subD = uSubmergeDepth;
+        if (subD > 0.001) {
+          float rippleMag = subD * uMeshScale * 0.060;
+          float t = uTime * 1.6;
+          float wx = transformed.x * 0.012;
+          float wy = transformed.y * 0.014;
+          float dx = sin(wy + t) + 0.6 * sin(wy * 2.3 - t * 1.7);
+          float dy = cos(wx - t * 0.8) + 0.6 * cos(wx * 1.9 + t * 1.3);
+          transformed.x += dx * rippleMag;
+          transformed.y += dy * rippleMag * 0.7;
+        }
         `,
       );
     };
@@ -746,6 +954,9 @@ export class FishThreeRenderer {
     handle.uniforms.uSegN.value = N;
     handle.uniforms.uSpineTotal.value = cum;
     handle.uniforms.uMeshScale.value = targetBodyLen;
+    // Tiempo para animar caustics — performance.now() / 1000 = segundos.
+    // Cada pez tiene su uTime, pero todos avanzan sincronizados con clock.
+    handle.uniforms.uTime.value = performance.now() * 0.001;
 
     // ─── Update posiciones de luces overlay ────────────────────────────
     // Por cada LIGHT_DEF, calculamos la world position del punto en mesh-
@@ -826,6 +1037,11 @@ export class FishThreeRenderer {
     this.camera.updateProjectionMatrix();
     this.composer?.setSize(width, height);
     this.bloomPass?.setSize(width, height);
+    // Actualiza uResolution en todos los handles para que el fragment
+    // shader compute correctamente screen-Y per-fragment.
+    for (const h of this.handles) {
+      h.uniforms.uResolution.value.set(width, height);
+    }
   }
 
   render(): void {
