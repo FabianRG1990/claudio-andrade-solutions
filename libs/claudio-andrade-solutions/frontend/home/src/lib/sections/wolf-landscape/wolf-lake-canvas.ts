@@ -2479,6 +2479,12 @@ const clampToSafeWater = (
 // sin acercarse a la ciudad/horizonte (los peces igual no la tocan
 // porque el mask real ya excluye montañas y lobo en los lados).
 const FISH_UPPER_LIMIT_V = 0.43;
+// Limite SUPERIOR para peces AMBIENTALES (glow). El user pidio que solo
+// el pez del cursor pueda llegar hasta arriba. Los ambientales se quedan
+// "de la roca para abajo" — y_v=0.62 es la linea aproximada de la roca.
+// Si necesita ajuste, mover este valor (mas alto = peces ambientales mas
+// arriba; mas bajo = mas abajo).
+const AMBIENT_UPPER_LIMIT_V = 0.62;
 const FISH_LIMIT_FEATHER = 0.04;
 
 // Sample mask con bilinear interpolation + virtual upper limit para
@@ -2677,11 +2683,12 @@ export class WolfLakeCanvas {
     const LAKE_BOTTOM_V = 1.00;
     const depthScaleAt = (yV: number): number => {
       const t = Math.max(0, Math.min(1, (yV - LAKE_TOP_V) / (LAKE_BOTTOM_V - LAKE_TOP_V)));
-      // Curva t² para perspectiva acelerada hacia el frente. Range total
-      // 0.30→1.40 = ratio 4.67× (era 2.3×) — la profundidad ahora se
-      // siente como "este pez está a metros vs. justo aquí".
+      // Range 0.15→1.40 = ratio 9.3× (era 4.67×). User pidio peces atras
+      // "mas pequeños todavia de lo que son" — atras = cerca ciudad =
+      // y_v 0.43 = scale 0.15 (la mitad del previo 0.30). Al frente
+      // (y_v=1.00) sigue en 1.40 = no toca el tamaño que ya le gusta.
       const curved = t * t;
-      return 0.30 + curved * 1.10;
+      return 0.15 + curved * 1.25;
     };
 
     // ─── Wander territory — el pez deja de patrullar en una órbita chica y
@@ -2765,7 +2772,7 @@ export class WolfLakeCanvas {
       -Math.PI / 2, +Math.PI / 2,
       -3 * Math.PI / 4, +3 * Math.PI / 4,
     ];
-    const applyWander = (f: GlowFish, _dtNow: number): void => {
+    const applyWander = (f: GlowFish, _dtNow: number, upperLimitV?: number): void => {
       const headX = f.spine[0].x;
       const headY = f.spine[0].y;
       const lookaheadDist = 200 + f.bodyScale * 7;
@@ -2781,10 +2788,14 @@ export class WolfLakeCanvas {
         );
         // Penaliza si el lookahead cae fuera del hero visible (y > 0.85)
         const outOfHero = tryIUV.y > 0.85 ? 0.5 : 0;
+        // Penaliza FUERTE si el lookahead cruza el limite superior
+        // ambient (linea roca). Solo aplica si upperLimitV fue dado
+        // (cursor fish no pasa este parametro → no se restringe).
+        const aboveAmbientLimit = (upperLimitV !== undefined && tryIUV.y < upperLimitV) ? 2.0 : 0;
         // Preference fuerte por seguir derecho (dev=0) — solo gira si
         // la deviación tiene MUY mejor agua que el frente actual.
         const preference = dev === 0 ? 0.25 : 0;
-        const score = sampleMask(mask, tryIUV.x, tryIUV.y) - outOfHero + preference;
+        const score = sampleMask(mask, tryIUV.x, tryIUV.y) - outOfHero - aboveAmbientLimit + preference;
         if (score > bestScore) {
           bestScore = score;
           bestAngle = tryAngle;
@@ -2944,8 +2955,10 @@ export class WolfLakeCanvas {
     // completa del area de nado para que los peces se vean dispersos
     // y no clustered abajo.
     const GLOW_SPAWN: Vec[] = [
-      { x: 0.20, y: 0.65 }, // mid-left (altura media, lejos del titulo)
-      { x: 0.82, y: 0.65 }, // mid-right (lejos del card)
+      // y >= 0.72 — todos abajo de la linea de la roca (0.62) con margen,
+      // para que ambient fish nazcan ya en su zona permitida.
+      { x: 0.20, y: 0.72 }, // mid-left (debajo de roca)
+      { x: 0.82, y: 0.72 }, // mid-right (debajo de roca)
       { x: 0.30, y: 0.88 }, // bottom-left (cerca, grande)
       { x: 0.65, y: 0.88 }, // bottom-right (cerca, grande)
     ];
@@ -3238,12 +3251,12 @@ export class WolfLakeCanvas {
           const distFactor = Math.sqrt(distNorm);
           const nominalPxPerSec = 216; // 3.6 px/frame * 60 fps
           const matchBoost = Math.max(1.0, Math.min(5.0, cursorSpeedSmoothed / nominalPxPerSec));
-          // sprintBoost = 8.0 → maxSpeed efectivo ≈ 28.8 px/frame ≈ 1730 px/s
-          // (era 6.0 / 1300 px/s). Subido para que el "como pez en el agua"
-          // se sienta — chase real es ágil y veloz, no torpe. Combinado con
-          // turn rate que escala con huntingBoost, el cursor fish se vuelve
-          // claramente más rápido + más maniobrable cuando caza.
-          const sprintBoost = 8.0;
+          // sprintBoost = 12.0 (era 8.0). Tras cambiar depthScaleAt a
+          // [0.15, 1.40] (peces atras mas chicos), el depthFactor en la
+          // zona media del lago bajo ~20% → cursor fish se sentia mas
+          // lento. Compensamos subiendo sprintBoost 50% para mantener
+          // la sensacion de "rapido y agil" que ya tenia.
+          const sprintBoost = 12.0;
           let huntingBoost = matchBoost + distFactor * (sprintBoost - matchBoost);
 
           // U-TURN BOOST: cuando el cursor esta MARCADAMENTE detras del
@@ -3274,10 +3287,12 @@ export class WolfLakeCanvas {
         cursorFish.glowBoostTarget = 0.4;
         cursorFish.huntingBoost = 1;
         if (!cursorFishEscaping) {
-          // Modo patrullaje — mismo comportamiento que los ambientales:
-          // wander libre, huntingBoost=1 (sin boost), energy oscila normal,
-          // speedScale ambiente. El pez no recuerda que era cazador.
-          applyWander(cursorFish, dt);
+          // Modo patrullaje — el cursor fish ahora NADA IGUAL que los
+          // ambientales (restringido abajo de la roca). El user aclaro:
+          // "el que sigue el cursor igual que nade igual que los otros
+          // a menos que siga el cursor". Solo cuando esta cazando
+          // activamente (cursor sobre agua), puede subir hasta el top.
+          applyWander(cursorFish, dt, AMBIENT_UPPER_LIMIT_V);
           cursorFish.isHovering = false;
         }
       }
@@ -3332,7 +3347,11 @@ export class WolfLakeCanvas {
         // pez atorado contra la orilla brincando frame tras frame.
         const escaping = applyWallAvoidance(gf, dt);
         if (!escaping) {
-          applyWander(gf, dt);
+          // Ambient fish RESTRINGIDO a y_v >= AMBIENT_UPPER_LIMIT_V
+          // (linea de la roca, 0.62) — el user pidio "los demas peces
+          // de la roca para abajo". Solo el cursor fish puede subir
+          // hasta el top del lago.
+          applyWander(gf, dt, AMBIENT_UPPER_LIMIT_V);
         }
 
         const ghead = gf.spine[0];

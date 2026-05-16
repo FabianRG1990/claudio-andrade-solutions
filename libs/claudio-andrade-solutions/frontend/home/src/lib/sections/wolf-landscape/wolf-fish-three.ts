@@ -449,7 +449,7 @@ export class FishThreeRenderer {
 
     material.onBeforeCompile = (shader) => {
       // eslint-disable-next-line no-console
-      console.log('[FishThree] shader compile v30-blur-0p4px');
+      console.log('[FishThree] shader compile v32-reflection-lit');
       shader.uniforms['uSpine'] = uniforms.uSpine;
       shader.uniforms['uSegLen'] = uniforms.uSegLen;
       shader.uniforms['uSegN'] = uniforms.uSegN;
@@ -660,11 +660,23 @@ export class FishThreeRenderer {
         float fishLuma = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
         float neonProtect = 1.0 - smoothstep(0.4, 1.2, fishLuma);
 
-        // v22: TODO el color tinting removido (base submerge + zone
-        // submerge). "Cristal liquido" = pez nitido visible con sus
-        // colores reales, distorsionado por las ondas del shader vertex
-        // — no tintado de azul agua (eso es "neblina"). waterLuma se
-        // mantiene declarado arriba porque caustics lo usa abajo.
+        // v32: REFLECTION-LIT — el pez se ilumina segun la BRILLANTEZ del
+        // agua a su posicion exacta (waterLuma), no segun zona Y. El user
+        // fue claro: "la luz le esta pegando" — fisicamente, donde el agua
+        // refleja brillante la ciudad, esa luz tambien ilumina al pez.
+        //
+        // ADDITIVE (no blend): sumamos uWaterColor (ya esta brillante en
+        // zonas de reflejo de ciudad — naranja/cyan/blanco) escalado por
+        // waterLuma curve. Esto es fisica real: light_received = ambient_light
+        // (el reflejo del agua actua como light source para el pez sumergido).
+        //
+        // smoothstep(0.10, 0.50): zona oscura del agua (luma < 0.10) = 0
+        // boost. Zona media-brillante (luma 0.10-0.50) = ramp up. Zona muy
+        // brillante (luma > 0.50, reflejo de ciudad) = boost MAX.
+        // x1.2 mult = el pez recibe ~120% del color del agua brillante.
+        // neonProtect: las luces neon ya brillan plenas, no necesitan boost.
+        float reflectionBoost = smoothstep(0.10, 0.50, waterLuma) * 1.2;
+        gl_FragColor.rgb += uWaterColor * reflectionBoost * neonProtect;
 
         // ── (5) CAUSTICS animadas (mas fuertes en zona sumergida) ───────
         // Tecnica NVIDIA GPU Gems Ch.2: patrones de luz refractada por la
