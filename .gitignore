@@ -61,3 +61,6 @@ vitest.config.*.timestamp*
 
 .nx/polygraph
 .nx/self-healing
+
+# Visual-verification artifacts from scripts/screenshot-hero.mjs
+scripts/_screenshots/

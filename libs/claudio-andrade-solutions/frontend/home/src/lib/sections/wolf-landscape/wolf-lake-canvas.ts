@@ -8,6 +8,8 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { FishThreeRenderer } from './wolf-fish-three';
+
 /**
  * WolfLakeCanvas — capa interactiva sobre el lago del Hero MK6.
  *
@@ -77,9 +79,9 @@ interface GlowFishColor {
  */
 const GLOW_BODY_PROFILE: ReadonlyArray<readonly [number, number, number]> = [
   [ 2.20,  0.00,  0.00], // nariz
-  [ 2.00, -0.13,  0.06],
-  [ 1.70, -0.29,  0.15],
-  [ 1.35, -0.45,  0.24],
+  [ 2.00, -0.08,  0.03], // snout taper más afilado (era -0.13, 0.06)
+  [ 1.70, -0.20,  0.10], // snout slim (era -0.29, 0.15)
+  [ 1.35, -0.40,  0.20], // (era -0.45, 0.24)
   [ 0.95, -0.57,  0.32],
   [ 0.55, -0.64,  0.33],
   [ 0.20, -0.66,  0.33], // joroba peak
@@ -149,9 +151,9 @@ const constrainAngleArg = (angle: number, anchor: number, limit: number): number
  */
 const GLOW_TOP_PROFILE: ReadonlyArray<readonly [number, number]> = [
   [ 2.20, 0.00], // nariz
-  [ 2.00, 0.10],
-  [ 1.70, 0.20],
-  [ 1.35, 0.30],
+  [ 2.00, 0.06], // snout taper sync con BODY_PROFILE (era 0.10)
+  [ 1.70, 0.14], // (era 0.20)
+  [ 1.35, 0.25], // (era 0.30)
   [ 0.95, 0.38],
   [ 0.55, 0.42],
   [ 0.20, 0.43], // máximo width
@@ -1253,76 +1255,138 @@ class GlowFish {
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
 
-    // Pass 1: solid body color base (siempre opaco)
+    // Pass 1: BODY METÁLICO STEEL — fill sólido oscuro (no biolum).
+    // Reemplaza el counter-shading anatómico (oscuro arriba/pale abajo)
+    // por un metallic body uniform, característico de robotic.
     ctx.fillStyle = this.color.body;
     ctx.fill();
 
-    // Pass 2: counter-shading gradient on top, fadea con viewMorph
-    const csAlpha = (1 - m);
-    if (csAlpha > 0.02) {
-      const csGrad = ctx.createLinearGradient(dx0, dy0, vx0, vy0);
-      csGrad.addColorStop(0, hexA('#020610', csAlpha));
-      csGrad.addColorStop(0.45, hexA(this.color.body, 0)); // mid transparente para blend con base
-      csGrad.addColorStop(1, hexA('#dde6ff', csAlpha));
-      ctx.fillStyle = csGrad;
+    // Pass 2: SUTIL METAL SHEEN — gradient cyan tenue desde el dorsal,
+    // simula reflejo de luz sobre superficie metálica curva (NO counter-
+    // shading anatómico). Solo en side view, fade en top view.
+    const sheenAlpha = (1 - m) * 0.22;
+    if (sheenAlpha > 0.02) {
+      const sheenGrad = ctx.createLinearGradient(dx0, dy0, vx0, vy0);
+      sheenGrad.addColorStop(0,    hexA(this.color.rim, sheenAlpha)); // dorsal: leve glow cyan
+      sheenGrad.addColorStop(0.40, hexA(this.color.body, 0));         // mid: transparente
+      sheenGrad.addColorStop(1,    hexA('#000000', sheenAlpha * 0.5)); // ventral: ligero shadow
+      ctx.fillStyle = sheenGrad;
       ctx.fill();
     }
 
-    // ─── 2b) 3-pass edge treatment (Phosphor "engraved" look) ────────
-    // Tres strokes layered sobre el mismo path para obtener depth en el
-    // borde sin hard cartoon outline:
-    //   Pass 1: halo exterior — stroke ancho con rim color en additive
-    //           (lighter), 30% alpha. Crea el "glow envelope".
-    //   Pass 2: línea principal — stroke fino oscuro source-over, 95%
-    //           alpha. La "línea negra" que da definición a la silueta.
-    //   Pass 3: highlight interior — stroke muy fino blanco source-over,
-    //           22% alpha. Sugiere "reflejo del agua" sobre el dorsal.
-    // Pass 1 va antes en additive; pass 2 y 3 en source-over para que
-    // los colores oscuros y claros se vean reales (no se aditivan).
-
-    // Pass 1 — outer halo (additive). TIGHTENED de 0.18 → 0.08 para
-    // que el halo no bleed lejos del silhouette. Antes el halo wide
-    // hacía que el pez se viera "borroso, sin definición" (reportado
-    // por el usuario). Con halo angosto el silhouette queda crisp y
-    // el glow envelope sigue presente pero contenido.
+    // ─── 2b) ROBOTIC EDGE TREATMENT (Tron loop) ───────────────────────
+    // Reemplaza el 3-pass anatómico por edge robotic: outer cyan glow
+    // (presence) + crisp cyan line (silhouette definition). Sin highlight
+    // blanco interior (eso era reading orgánico/húmedo).
+    //
+    // Pass 1: outer cyan glow ancho (additive) — el "Tron loop of light"
+    //         continuo bordeando todo el pez. Premium presence sin reading bio.
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = hexA(this.color.rim, 0.35 + boost * 0.15);
-    ctx.lineWidth = Math.max(1.0, s * 0.08);
+    ctx.strokeStyle = hexA(this.color.rim, 0.45 + boost * 0.20);
+    ctx.lineWidth = Math.max(1.2, s * 0.10);
     ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Pass 2 — main edge (dark, source-over). Línea dura de definición.
+    // Pass 2: crisp cyan silhouette (source-over) — línea dura cyan que
+    // define el contorno mecánico exacto. Nada de inner white highlight.
     ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = hexA('#020610', 0.95);
-    ctx.lineWidth = Math.max(0.5, s * 0.06);
-    ctx.stroke();
-
-    // Pass 3 — inner highlight (white, source-over). Refleja "luz del
-    // agua" sobre el dorsal.
-    ctx.strokeStyle = hexA('#ffffff', 0.22);
-    ctx.lineWidth = Math.max(0.3, s * 0.03);
+    ctx.strokeStyle = hexA(this.color.rim, 0.95);
+    ctx.lineWidth = Math.max(0.6, s * 0.055);
     ctx.stroke();
 
     ctx.restore(); // restaura globalCompositeOperation a 'lighter' del padre
 
-    // ─── 2c) Lateral line (anatomical detail tipo Audubon ichthyology) ──
-    // Single 0.5-1px stroke a lo largo del flanco del pez, en yU 0.05
-    // (~55% de altura corporal medida desde dorsal = línea lateral
-    // anatómica). Color = rim del palette pero alpha bajísimo (0.18-0.22)
-    // para que sea sutil — se nota como detalle pero no compite con el
-    // counter-shading. Solo side view (m bajo) — en top view la línea
-    // lateral no es visible.
-    const lateralLineAlpha = (1 - m) * 0.22;
+    // ─── 2b-bis) HEX GRID PANEL TEXTURE ───────────────────────────────
+    // Pattern hexagonal sobre el body para reading "armor panels".
+    // Clipped al body silhouette (re-issue del path porque el original
+    // ya fue consumido por fill+sheen+stroke). Solo side view — en top
+    // las hex se proyectarían deformes sobre la silueta lateral fina.
+    // Performance: ~30-50 hexes per fish per frame, well within budget.
+    const hexAlpha = (1 - m) * 0.32;
+    if (hexAlpha > 0.02) {
+      ctx.save();
+      // Re-issue body path para el clip
+      ctx.beginPath();
+      ctx.moveTo(topPts[0].x, topPts[0].y);
+      smoothPath(topPts);
+      ctx.lineTo(botPts[N - 1].x, botPts[N - 1].y);
+      const bodyClipBot: Vec[] = [];
+      for (let i = N - 1; i >= 0; i--) bodyClipBot.push(botPts[i]);
+      smoothPath(bodyClipBot);
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.globalAlpha = hexAlpha;
+      ctx.strokeStyle = this.color.rim;
+      ctx.lineWidth = Math.max(0.35, s * 0.014);
+      ctx.lineJoin = 'round';
+
+      // Body bbox
+      let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity;
+      for (let i = 0; i < N; i++) {
+        if (topPts[i].x < mnx) mnx = topPts[i].x;
+        if (topPts[i].x > mxx) mxx = topPts[i].x;
+        if (botPts[i].x < mnx) mnx = botPts[i].x;
+        if (botPts[i].x > mxx) mxx = botPts[i].x;
+        if (topPts[i].y < mny) mny = topPts[i].y;
+        if (topPts[i].y > mxy) mxy = topPts[i].y;
+        if (botPts[i].y < mny) mny = botPts[i].y;
+        if (botPts[i].y > mxy) mxy = botPts[i].y;
+      }
+
+      // Flat-top hex grid: side hxs, width 2*hxs, height sqrt(3)*hxs.
+      // Columns step hxs*1.5, rows step hxs*sqrt(3), alternate column
+      // offset hxH*0.5 vertical for proper hex tiling.
+      const hxs = Math.max(1.8, s * 0.10);
+      const hxH = hxs * Math.sqrt(3);
+      const hStep = hxs * 1.5;
+      const halfH = hxH * 0.5;
+
+      ctx.beginPath();
+      let colIdx = 0;
+      for (let cx = mnx - hxs * 2; cx <= mxx + hxs * 2; cx += hStep, colIdx++) {
+        const yOff = (colIdx & 1) * halfH;
+        for (let cy = mny - hxH + yOff; cy <= mxy + hxH; cy += hxH) {
+          // Flat-top hex vertices (clockwise from right)
+          ctx.moveTo(cx + hxs, cy);
+          ctx.lineTo(cx + hxs * 0.5, cy + halfH);
+          ctx.lineTo(cx - hxs * 0.5, cy + halfH);
+          ctx.lineTo(cx - hxs, cy);
+          ctx.lineTo(cx - hxs * 0.5, cy - halfH);
+          ctx.lineTo(cx + hxs * 0.5, cy - halfH);
+          ctx.lineTo(cx + hxs, cy);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ─── 2c) Lateral line — STRIP ROBÓTICO BRILLANTE (LED accent) ────
+    // Promovida de detalle Audubon sutil (alpha 0.22) a feature visual
+    // PRINCIPAL del cuerpo robótico (alpha 0.95). En la referencia del
+    // usuario es la firma más fuerte: una banda azul brillante a lo
+    // largo del flanco. 2 capas: outer glow additive + crisp inner line.
+    // Solo side view (fade en top).
+    const lateralLineAlpha = (1 - m);
     if (lateralLineAlpha > 0.02) {
       const llStart = mapToSpine(1.40, 0.05);
       const llXs = [1.40, 0.80, 0.20, -0.40, -0.95, -1.30];
       const llPts = llXs.map(x => mapToSpine(x, 0.05));
       ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = lateralLineAlpha;
-      ctx.strokeStyle = this.color.rim;
-      ctx.lineWidth = Math.max(0.4, s * 0.04);
+      // Outer glow additive — el "LED bleed" hacia el body
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexA(this.color.rim, 0.55);
+      ctx.lineWidth = Math.max(1.0, s * 0.075);
       ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(llStart.x, llStart.y);
+      smoothPath(llPts);
+      ctx.stroke();
+      // Crisp inner bright line — el strip activo
+      ctx.strokeStyle = hexA(this.color.rim, 0.95);
+      ctx.lineWidth = Math.max(0.5, s * 0.035);
       ctx.beginPath();
       ctx.moveTo(llStart.x, llStart.y);
       smoothPath(llPts);
@@ -1330,6 +1394,35 @@ class GlowFish {
       ctx.restore();
     }
 
+    // ─── 2c-bis) BELLY LED STRIPE — 2do strip ventral más corto ─────
+    // Acompaña al lateral line — replica el patrón "multi-stripe LED"
+    // de la referencia. yU=0.22 (en el vientre), un poco más corto que
+    // el lateral line y leve menos brillante para jerarquía visual.
+    const bellyAlpha = (1 - m) * 0.88;
+    if (bellyAlpha > 0.02) {
+      const blStart = mapToSpine(1.05, 0.20);
+      const blXs = [1.05, 0.55, 0.05, -0.45, -0.85];
+      const blPts = blXs.map(x => mapToSpine(x, 0.22));
+      ctx.save();
+      ctx.globalAlpha = bellyAlpha;
+      // Outer glow additive
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexA(this.color.rim, 0.45);
+      ctx.lineWidth = Math.max(0.85, s * 0.060);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(blStart.x, blStart.y);
+      smoothPath(blPts);
+      ctx.stroke();
+      // Crisp inner
+      ctx.strokeStyle = hexA(this.color.rim, 0.85);
+      ctx.lineWidth = Math.max(0.4, s * 0.028);
+      ctx.beginPath();
+      ctx.moveTo(blStart.x, blStart.y);
+      smoothPath(blPts);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // ─── 3.5) Línea del opérculo (branquia) — solo side view ─────────
     // Curva única que separa cabeza de tronco a xUnit ≈ 0.95 (limite del
@@ -1338,25 +1431,117 @@ class GlowFish {
     // tienen este arco visible. Stroked tenue (alpha 0.45) para no
     // competir con el rim. Fade con (1-m)² porque en top view la cabeza
     // se ve desde arriba y el opérculo ya no aplica.
+    // Operculum (head/body seam) — promovido a HEAD HATCH SEAM robótico.
+    // Era ya prominente; ahora con outer glow para que matchee la
+    // intensidad del lateral line y los panel seams.
     const operculumAlpha = (1 - m) * (1 - m);
     if (operculumAlpha > 0.02) {
-      const opXU = 1.00; // anatomical operculum boundary
-      const opTop = mapToSpine(opXU, -0.55); // dorsal side
-      const opMid = mapToSpine(opXU - 0.10, 0); // bulge inward (curva característica)
-      const opBot = mapToSpine(opXU, 0.30);  // ventral side
+      const opXU = 1.00;
+      const opTop = mapToSpine(opXU, -0.55);
+      const opMid = mapToSpine(opXU - 0.10, 0);
+      const opBot = mapToSpine(opXU, 0.30);
       ctx.save();
       ctx.globalAlpha = operculumAlpha;
-      // Alpha bumpeado a 0.95 y stroke más grueso — bajo additive blending
-      // ('lighter' composite del ctx padre), el rim color a 0.50 alpha
-      // se difumina con el body underneath y la línea no se notaba.
-      // 0.95 + stroke 0.07s la hace claramente visible como gill cover.
-      ctx.strokeStyle = hexA(this.color.rim, 0.95);
-      ctx.lineWidth = Math.max(0.55, s * 0.07);
+      // Outer glow additive — el "panel edge bleed"
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexA(this.color.rim, 0.55);
+      ctx.lineWidth = Math.max(1.0, s * 0.10);
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(opTop.x, opTop.y);
       ctx.quadraticCurveTo(opMid.x, opMid.y, opBot.x, opBot.y);
       ctx.stroke();
+      // Crisp inner seam line
+      ctx.strokeStyle = hexA(this.color.rim, 0.95);
+      ctx.lineWidth = Math.max(0.55, s * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(opTop.x, opTop.y);
+      ctx.quadraticCurveTo(opMid.x, opMid.y, opBot.x, opBot.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ─── 3a) PANEL SEAMS diagonales — mechanical body partition ───────
+    // 3 seams diagonales + 1 horizontal sutil que rompen el body en
+    // paneles mecánicos discretos (estilo Cyberpunk fish + tu referencia).
+    // Cada seam: outer glow additive + crisp inner line. Solo side view
+    // (los paneles son features laterales). xU positions elegidos para
+    // que dividan el cuerpo en zonas anatómicas:
+    //   • Shoulder (después del operculum, xU 0.55→0.42)
+    //   • Mid-body break (xU -0.20→-0.40)
+    //   • Pre-peduncle (xU -0.85→-1.05)
+    const seamAlpha = (1 - m) * (1 - m);
+    if (seamAlpha > 0.02) {
+      const seamDefs: Array<[[number, number], [number, number]]> = [
+        [[ 0.58, -0.50], [ 0.42, +0.38]], // shoulder armor
+        [[-0.18, -0.52], [-0.36, +0.32]], // mid-body
+        [[-0.85, -0.35], [-1.05, +0.20]], // pre-peduncle
+      ];
+      ctx.save();
+      ctx.globalAlpha = seamAlpha;
+      for (const [[x1, y1], [x2, y2]] of seamDefs) {
+        const p1 = mapToSpine(x1, y1);
+        const p2 = mapToSpine(x2, y2);
+        // Outer glow additive
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexA(this.color.rim, 0.45);
+        ctx.lineWidth = Math.max(0.8, s * 0.07);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        // Crisp inner line
+        ctx.strokeStyle = hexA(this.color.rim, 0.85);
+        ctx.lineWidth = Math.max(0.4, s * 0.03);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // ─── 3b) BODY JOINT RINGS — 2 anillos modulares extras ──────────
+    // Además del peduncle ring (al final). Posicionados en el centerline
+    // (yU=0) en xU=+0.20 (between operculum y mid-body) y xU=-0.55
+    // (between mid-body y pre-peduncle). Sirven como pivots visibles
+    // entre paneles armor → reading "cuerpo segmentado tipo Festo
+    // BionicFinWave / robot articulado". Más pequeños que el peduncle
+    // (s*0.11 vs s*0.18). Solo side view.
+    const bodyRingsAlpha = (1 - m) * (1 - m);
+    if (bodyRingsAlpha > 0.02) {
+      const ringPositions = [0.20, -0.55];
+      ctx.save();
+      ctx.globalAlpha = bodyRingsAlpha;
+      const bjR = Math.max(1.8, s * 0.11);
+      for (const rxU of ringPositions) {
+        const rPos = mapToSpine(rxU, 0);
+        // Outer glow additive
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexA(this.color.rim, 0.45);
+        ctx.lineWidth = Math.max(0.8, s * 0.07);
+        ctx.beginPath();
+        ctx.arc(rPos.x, rPos.y, bjR, 0, Math.PI * 2);
+        ctx.stroke();
+        // Crisp ring outline
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = hexA(this.color.rim, 0.85);
+        ctx.lineWidth = Math.max(0.4, s * 0.030);
+        ctx.beginPath();
+        ctx.arc(rPos.x, rPos.y, bjR, 0, Math.PI * 2);
+        ctx.stroke();
+        // Center black housing + LED dot
+        ctx.fillStyle = hexA('#020610', 0.85);
+        ctx.beginPath();
+        ctx.arc(rPos.x, rPos.y, bjR * 0.40, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = hexA(this.color.core, 0.80);
+        ctx.beginPath();
+        ctx.arc(rPos.x, rPos.y, bjR * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
@@ -1372,25 +1557,9 @@ class GlowFish {
     //
     // Ref: ilustraciones de lanternfish/myctophidae premium donde la
     // luz es niebla distribuida bajo la piel translúcida.
-    if (operculumAlpha > 0.02) {
-      const headCenter = mapToSpine(1.00, 0);
-      const headR = Math.max(4, s * 0.85);
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = operculumAlpha;
-      const headGlow = ctx.createRadialGradient(
-        headCenter.x, headCenter.y, 0,
-        headCenter.x, headCenter.y, headR,
-      );
-      headGlow.addColorStop(0,    hexA(this.color.halo, 0.06));
-      headGlow.addColorStop(0.45, hexA(this.color.halo, 0.035));
-      headGlow.addColorStop(1,    hexA(this.color.halo, 0));
-      ctx.fillStyle = headGlow;
-      ctx.beginPath();
-      ctx.arc(headCenter.x, headCenter.y, headR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    // HEAD WARMTH REMOVED para robotic style — la luz distribuida bajo
+    // la piel es reading orgánico/biolum. Robotic fish tiene panel
+    // seams + sensor activo, no glow corporal warm.
 
     // ─── 4) Ojos morpheados — anatomía clara (iris + pupila + reflejo) ──
     // Posición xUnit 1.30 ≈ 24% desde la nariz → cae en upper-third de
@@ -1411,72 +1580,62 @@ class GlowFish {
       const ex = eyeBase.x - Math.sin(eyeθGlobal) * saccadeMag;
       const ey = eyeBase.y + Math.cos(eyeθGlobal) * saccadeMag;
 
-      // Eye stack 5 capas (Pixar dual-highlight pattern):
-      //   1) Socket shadow ring → marca el "hueco" del ojo en el cráneo
-      //   2) Iris radial gradient
-      //   3) Pupila vertical-oval (no round) — peces tienen pupila ligeramente
-      //      vertical-elíptica, no circular perfecta
-      //   4) Catchlight 11 o'clock (reflejo principal)
-      //   5) Cornea sheen — crescent arc en el back-bottom del ojo (segunda
-      //      luz de la córnea curva, vende la "esfera mojada")
+      // SENSOR ROBÓTICO (4 capas) — reemplaza el ojo orgánico 5-layer:
+      //   1) Black disc (lens housing oscuro)
+      //   2) Bright cyan ring (lens rim glow — el "anillo del lente")
+      //   3) Cyan center dot (active aperture / pilot light brillante)
+      //   4) Single bright reflection arc upper-left (catchlight metálico)
+      // Ref: Cyberpunk 2077 fish concept art + Tachikoma sensor cluster.
 
-      // Capa 1 — Socket shadow ring (anillo oscuro 1px afuera del iris)
+      // Capa 1 — Lens housing (black disc) en source-over
       ctx.save();
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = hexA('#020610', 0.55);
+      ctx.fillStyle = hexA('#020610', 0.95);
       ctx.beginPath();
-      ctx.arc(ex, ey, eyeR * 1.20, 0, Math.PI * 2);
+      ctx.arc(ex, ey, eyeR * 1.10, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Capa 2 — Iris ANATÓMICO (source-over, no additive). Antes era
-      // radial gradient bajo el composite 'lighter' del padre →
-      // creaba un disco glowing que se leía como "faro". Ahora es un
-      // disco de color iris (cyan/teal del rim) con sutil radial
-      // darker-toward-pupil → ojo realista con iris pigmentado, no luz.
-      // Patrón opuesto al glow: oscuro al centro (cerca de la pupila)
-      // y rim del iris más claro — exactamente como un iris real bajo
-      // luz frontal.
+      // Capa 2 — Bright cyan ring outline (lens rim) en additive
       ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
-      const iris = ctx.createRadialGradient(ex, ey, 0, ex, ey, eyeR * 0.95);
-      iris.addColorStop(0,    hexA(this.color.core, 0.85)); // darker hacia pupila
-      iris.addColorStop(0.55, hexA(this.color.rim, 0.75));  // mid: color del iris
-      iris.addColorStop(1,    hexA(this.color.rim, 0.55));  // edge: ligero fade al socket
-      ctx.fillStyle = iris;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexA(this.color.rim, 0.95);
+      ctx.lineWidth = Math.max(0.5, eyeR * 0.16);
       ctx.beginPath();
-      ctx.arc(ex, ey, eyeR * 0.95, 0, Math.PI * 2);
+      ctx.arc(ex, ey, eyeR * 1.05, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Capa 3 — Center blue dot (active aperture). NO grande pero SÍ
+      // fuerte: solid core + tight glow halo. Radio chico (0.30 eyeR vs
+      // 0.55 anterior) para que se vea como punto definido, no como
+      // glow difuso. Core sólido a 95% alpha = "fuerte" perceptualmente.
+      const dotR = eyeR * 0.30;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      // Tight glow halo around the dot
+      const dotGlow = ctx.createRadialGradient(ex, ey, dotR * 0.8, ex, ey, dotR * 2.4);
+      dotGlow.addColorStop(0, hexA(this.color.core, 0.55));
+      dotGlow.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = dotGlow;
+      ctx.beginPath();
+      ctx.arc(ex, ey, dotR * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      // Solid bright core dot — strong, vivid, defined
+      ctx.fillStyle = hexA(this.color.core, 0.95);
+      ctx.beginPath();
+      ctx.arc(ex, ey, dotR, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Capa 3 — Pupila vertical-oval. Real fish pupils son ligeramente
-      // verticales, no circulares perfectas. ry = 1.15 * rx → oval sutil.
+      // Capa 4 — Reflection arc upper-left (metallic catchlight)
       ctx.save();
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = hexA('#020610', 0.92);
-      ctx.beginPath();
-      ctx.ellipse(ex, ey, eyeR * 0.45, eyeR * 0.55, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Capa 4 — Catchlight (11 o'clock). Alpha reducido (0.92→0.60) y
-      // tamaño chico para que sea un destello sutil de "ojo vivo", no
-      // un reflejo de faro.
-      ctx.fillStyle = hexA('#ffffff', 0.60);
-      ctx.beginPath();
-      ctx.arc(ex - eyeR * 0.20, ey - eyeR * 0.22, eyeR * 0.13, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Capa 5 — Cornea sheen (crescent arc en el lower-back del ojo).
-      // Alpha reducido (0.30→0.18) — sigue presente como sutileza pero
-      // no agrega al ruido lumínico de la cabeza.
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = hexA('#ffffff', 0.18);
+      ctx.strokeStyle = hexA('#ffffff', 0.45);
       ctx.lineWidth = Math.max(0.3, eyeR * 0.10);
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.arc(ex, ey, eyeR * 0.85, Math.PI * 0.15, Math.PI * 0.55);
+      ctx.arc(ex, ey, eyeR * 0.95, Math.PI * 1.05, Math.PI * 1.45);
       ctx.stroke();
       ctx.restore();
     }
@@ -1506,86 +1665,72 @@ class GlowFish {
       // trailing-base. Wag mínimo (rayos espinosos = rígidos, casi sin
       // movimiento — solo trim sutil con el body wave).
       //
-      // ERECT/DEPRESS dinámico (Lauder bluegill JEB 2001): a velocidad
-      // cruise (>0.5 BL/s) el spinous dorsal se PLIEGA contra el lomo
-      // por hidrodinámica. spErect lerpa la altura de apex de full
-      // sail (1.0 idle) a colapsada (~0.30 cruise). Las deviations
-      // de los rayos también escalan → toda la vela colapsa coherente.
+      // SPINOUS DORSAL — SAW-TOOTH COMB ROBÓTICO. Reemplaza el sail
+      // anatómico por una serie de spikes triangulares (estilo de tu
+      // referencia: peine de espinas duras con tips brillantes).
+      // 6 dientes a lo largo de xU [+0.55, -0.05]. Cada uno colapsa
+      // con spErect cuando velocidad sube (Lauder bluegill JEB 2001).
       const spErect = 1 - speed01 * 0.70;
       const spBaseY = -0.62;
-      const spWag = Math.sin(this.finPhase * 0.7) * s * 0.020 * spErect;
-      const spLeadBase = mapToSpine(0.55, spBaseY);
-      const spApex = mapToSpine(0.20, spBaseY - 0.46 * spErect);
-      const spTrailTip = mapToSpine(-0.05, spBaseY - 0.16 * spErect);
-      const spTrailBase = mapToSpine(-0.05, -0.55);
-      const spθ = tangentAt(0.20);
-      const spApexX = spApex.x + Math.cos(spθ) * spWag;
-      const spApexY = spApex.y + Math.sin(spθ) * spWag;
+      const N_TEETH = 6;
+      const xStart = 0.55;
+      const xEnd = -0.05;
+      const teethStep = (xStart - xEnd) / N_TEETH;
+      const peakDeviation = 0.32 * spErect; // tooth height (smaller than sail apex 0.46)
 
+      // Build zigzag path: leading base → up-down-up-down... → trailing base
       ctx.beginPath();
-      ctx.moveTo(spLeadBase.x, spLeadBase.y);
-      // Leading edge: convex up arc desde leading-base al apex
-      const spLeadMid = mapToSpine(0.40, spBaseY - 0.33 * spErect);
-      ctx.quadraticCurveTo(spLeadMid.x, spLeadMid.y, spApexX, spApexY);
-      // Trailing edge: línea recta del apex al trailing-tip
-      ctx.lineTo(spTrailTip.x, spTrailTip.y);
-      ctx.lineTo(spTrailBase.x, spTrailBase.y);
+      const startBase = mapToSpine(xStart, spBaseY);
+      ctx.moveTo(startBase.x, startBase.y);
+      const peakPts: Vec[] = []; // store peak points for tip dots
+      for (let i = 0; i < N_TEETH; i++) {
+        const xPeak = xStart - (i + 0.5) * teethStep;
+        const xValleyEnd = xStart - (i + 1) * teethStep;
+        const peak = mapToSpine(xPeak, spBaseY - peakDeviation);
+        const valley = mapToSpine(xValleyEnd, spBaseY);
+        ctx.lineTo(peak.x, peak.y);
+        ctx.lineTo(valley.x, valley.y);
+        peakPts.push(peak);
+      }
       ctx.closePath();
 
-      const spBaseMid = {
-        x: (spLeadBase.x + spTrailBase.x) * 0.5,
-        y: (spLeadBase.y + spTrailBase.y) * 0.5,
-      };
-      const spRadius = Math.hypot(spApexX - spBaseMid.x, spApexY - spBaseMid.y);
-      const spGrad = ctx.createRadialGradient(
-        spBaseMid.x, spBaseMid.y, 0,
-        spBaseMid.x, spBaseMid.y, spRadius,
-      );
-      // AO base shadow (stop 0) → main fill → fade. La aleta lee como
-      // "saliendo de un crease oscuro" en su attachment al body, no
-      // flotando encima.
-      spGrad.addColorStop(0,    hexA('#020610', 0.30));
-      spGrad.addColorStop(0.15, hexA(this.color.body, 0.50));
-      spGrad.addColorStop(0.70, hexA(this.color.body, 0.20));
-      spGrad.addColorStop(1,    hexA(this.color.body, 0.05));
-      ctx.fillStyle = spGrad;
+      // Fill steel oscuro (translucent body color)
+      ctx.fillStyle = hexA(this.color.body, 0.85);
       ctx.fill();
 
-      // Spinous rays (3) — líneas RECTAS de base a apex, suggesting
-      // las espinas óseas no segmentadas. Bunching toward leading edge
-      // (real spinous rays no van uniformemente espaciados).
-      // Rays escalan con spErect (cuando la vela colapsa, los spines
-      // se pliegan contra el lomo y las líneas se acortan coherente).
-      ctx.strokeStyle = hexA(this.color.rim, 0.40);
-      ctx.lineWidth = Math.max(0.18, s * 0.024);
+      // Crisp blue outline (todo el contorno del peine)
+      ctx.strokeStyle = hexA(this.color.rim, 0.85);
+      ctx.lineWidth = Math.max(0.40, s * 0.04);
       ctx.lineCap = 'round';
-      const spRayDefs: Array<[number, number]> = [
-        [0.45, -0.33],
-        [0.30, -0.40],
-        [0.10, -0.33],
-      ];
-      for (const [rxU, rDevYU] of spRayDefs) {
-        const rb = mapToSpine(rxU, -0.60);
-        const rt = mapToSpine(rxU, -0.60 + rDevYU * spErect);
-        ctx.beginPath();
-        ctx.moveTo(rb.x, rb.y);
-        ctx.lineTo(rt.x, rt.y);
-        ctx.stroke();
-      }
-
-      // Leading-edge sharp outline (espinoso = borde óseo duro)
-      ctx.strokeStyle = hexA(this.color.rim, 0.65);
-      ctx.lineWidth = Math.max(0.35, s * 0.06);
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(spLeadBase.x, spLeadBase.y);
-      ctx.quadraticCurveTo(spLeadMid.x, spLeadMid.y, spApexX, spApexY);
+      ctx.lineJoin = 'round';
       ctx.stroke();
 
-      // ── 5b) SOFT DORSAL (trapezoidal flexible, rayos segmentados) ──
-      // Wag mayor que la espinosa (rayos soft = flexibles). Phase
-      // shifteado +π/2 vs espinosa para que las dos no se muevan en
-      // fase (real fish: spinous mostly static, soft undulates).
+      // Tip dot brillante en cada peak (tooth-tip LED)
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const tipR = Math.max(0.6, s * 0.04);
+      for (const peak of peakPts) {
+        // outer glow
+        const glow = ctx.createRadialGradient(peak.x, peak.y, 0, peak.x, peak.y, tipR * 2.2);
+        glow.addColorStop(0, hexA(this.color.core, 0.75));
+        glow.addColorStop(1, hexA(this.color.core, 0));
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(peak.x, peak.y, tipR * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        // solid bright dot
+        ctx.fillStyle = hexA(this.color.core, 0.95);
+        ctx.beginPath();
+        ctx.arc(peak.x, peak.y, tipR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ── 5b) SOFT DORSAL — MECHANICAL CONTROL SURFACE ─────────────
+      // Reemplaza membrane translúcida + 4 soft rays + biolum trailing
+      // por panel sólido steel + Tron outline + LED tip (matchea body
+      // y caudal). Conserva el wag antifase con el espinoso para que
+      // siga sintiéndose actuated, no estático.
       const sdWag = Math.sin(this.finPhase * 0.9 + Math.PI * 0.5) * s * 0.045;
       const sdLeadBase = mapToSpine(-0.05, -0.55);
       const sdApex = mapToSpine(-0.40, -0.92);
@@ -1593,65 +1738,73 @@ class GlowFish {
       const sdθ = tangentAt(-0.40);
       const sdApexX = sdApex.x + Math.cos(sdθ) * sdWag;
       const sdApexY = sdApex.y + Math.sin(sdθ) * sdWag;
+      const sdLeadCtrl = mapToSpine(-0.20, -0.78);
+      const sdTrailCtrl = mapToSpine(-0.65, -0.65);
 
       ctx.beginPath();
       ctx.moveTo(sdLeadBase.x, sdLeadBase.y);
-      // Smooth quadratic arc del leading-base al apex (membrane curve)
-      const sdLeadCtrl = mapToSpine(-0.20, -0.78);
       ctx.quadraticCurveTo(sdLeadCtrl.x, sdLeadCtrl.y, sdApexX, sdApexY);
-      // Trailing arc del apex al trailing-base (membrane fade)
-      const sdTrailCtrl = mapToSpine(-0.65, -0.65);
       ctx.quadraticCurveTo(sdTrailCtrl.x, sdTrailCtrl.y, sdTrailBase.x, sdTrailBase.y);
       ctx.closePath();
 
-      const sdBaseMid = {
-        x: (sdLeadBase.x + sdTrailBase.x) * 0.5,
-        y: (sdLeadBase.y + sdTrailBase.y) * 0.5,
-      };
-      const sdRadius = Math.hypot(sdApexX - sdBaseMid.x, sdApexY - sdBaseMid.y);
-      const sdGrad = ctx.createRadialGradient(
-        sdBaseMid.x, sdBaseMid.y, 0,
-        sdBaseMid.x, sdBaseMid.y, sdRadius,
-      );
-      sdGrad.addColorStop(0,    hexA('#020610', 0.28));
-      sdGrad.addColorStop(0.15, hexA(this.color.body, 0.45));
-      sdGrad.addColorStop(0.70, hexA(this.color.body, 0.18));
-      sdGrad.addColorStop(1,    hexA(this.color.body, 0.04));
-      ctx.fillStyle = sdGrad;
+      // Solid steel fill
+      ctx.fillStyle = hexA(this.color.body, 0.92);
       ctx.fill();
 
-      // Soft rays (4) — líneas tenues, ligeramente convergentes hacia
-      // el apex. Real soft rays son segmentados → en 2D solo sugerimos
-      // como separadores radiales finos.
-      ctx.strokeStyle = hexA(this.color.rim, 0.30);
-      ctx.lineWidth = Math.max(0.16, s * 0.020);
-      const sdRayDefs: Array<[number, number, number]> = [
-        [-0.10, -0.50, -0.78],
-        [-0.30, -0.55, -0.88],
-        [-0.50, -0.55, -0.82],
-        [-0.70, -0.50, -0.62],
-      ];
-      for (const [rxU, rBaseYU, rTipYU] of sdRayDefs) {
-        const rb = mapToSpine(rxU, rBaseYU);
-        const rt = mapToSpine(rxU, rTipYU);
-        ctx.beginPath();
-        ctx.moveTo(rb.x, rb.y);
-        ctx.lineTo(rt.x, rt.y);
-        ctx.stroke();
-      }
-
-      // Trailing-edge bioluminescence (Avatar reef fish style) — solo
-      // en el soft dorsal porque su trailing edge es la parte más
-      // translúcida del fin. La spinous tiene leading-edge brillante
-      // (hueso) en lugar de trailing-edge biolum.
+      // Tron outline (outer glow + crisp)
+      ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = hexA(this.color.rim, 0.55);
-      ctx.lineWidth = Math.max(0.32, s * 0.04);
+      ctx.lineWidth = Math.max(0.9, s * 0.075);
+      ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(sdApexX, sdApexY);
-      ctx.quadraticCurveTo(sdTrailCtrl.x, sdTrailCtrl.y, sdTrailBase.x, sdTrailBase.y);
       ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = hexA(this.color.rim, 0.95);
+      ctx.lineWidth = Math.max(0.5, s * 0.04);
+      ctx.stroke();
+      ctx.restore();
+
+      // Internal slats — 5 louvers radiando desde la base hacia el apex,
+      // stop al 78% del camino. Misma color rim que el body para visual
+      // consistency. Más fuertes (alpha 0.55) y más anchos (s*0.022) que
+      // los rays orgánicos previos = reading "control surface mecánico".
+      ctx.save();
+      ctx.strokeStyle = hexA(this.color.rim, 0.55);
+      ctx.lineWidth = Math.max(0.22, s * 0.022);
+      ctx.lineCap = 'round';
+      const sdSlatXs = [-0.10, -0.25, -0.40, -0.55, -0.70];
+      for (const sxU of sdSlatXs) {
+        // Punto en la base del fin (yU = -0.55, en la línea body→fin)
+        const sb = mapToSpine(sxU, -0.55);
+        // Slat hacia el apex pero solo 78% del camino — deja espacio
+        // para el LED tip y para el outer outline brillante.
+        const tipFrac = 0.78;
+        const sx = sb.x + (sdApexX - sb.x) * tipFrac;
+        const sy = sb.y + (sdApexY - sb.y) * tipFrac;
+        ctx.beginPath();
+        ctx.moveTo(sb.x, sb.y);
+        ctx.lineTo(sx, sy);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // LED tip dot en el apex
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const sdTipR = Math.max(0.6, s * 0.045);
+      const sdTipGlow = ctx.createRadialGradient(sdApexX, sdApexY, 0, sdApexX, sdApexY, sdTipR * 2.4);
+      sdTipGlow.addColorStop(0, hexA(this.color.core, 0.75));
+      sdTipGlow.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = sdTipGlow;
+      ctx.beginPath();
+      ctx.arc(sdApexX, sdApexY, sdTipR * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hexA(this.color.core, 0.95);
+      ctx.beginPath();
+      ctx.arc(sdApexX, sdApexY, sdTipR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
 
       ctx.restore();
     }
@@ -1697,35 +1850,62 @@ class GlowFish {
       ctx.quadraticCurveTo(pTip.x, pTip.y, pMid.x, pMid.y);
       ctx.lineTo(pBP.x, pBP.y);
       ctx.closePath();
-      // Membrane gradient base→tip (Audubon dry-brush translucency).
-      const pBaseMid = {
-        x: (pBA.x + pBP.x) * 0.5,
-        y: (pBA.y + pBP.y) * 0.5,
-      };
-      const pecRadius = Math.hypot(pTip.x - pBaseMid.x, pTip.y - pBaseMid.y);
-      const pecGrad = ctx.createRadialGradient(
-        pBaseMid.x, pBaseMid.y, 0,
-        pBaseMid.x, pBaseMid.y, pecRadius,
-      );
-      pecGrad.addColorStop(0,    hexA('#020610', 0.25));
-      pecGrad.addColorStop(0.15, hexA(this.color.body, 0.40));
-      pecGrad.addColorStop(0.75, hexA(this.color.body, 0.15));
-      pecGrad.addColorStop(1,    hexA(this.color.body, 0.04));
-      ctx.fillStyle = pecGrad;
+
+      // Solid steel — sin membrane gradient (era reading dry-brush orgánico)
+      ctx.fillStyle = hexA(this.color.body, 0.92);
       ctx.fill();
-      ctx.strokeStyle = hexA(this.color.rim, 0.40);
-      ctx.lineWidth = Math.max(0.25, s * 0.05);
-      ctx.stroke();
-      // Ray central — una sola línea tenue de la base al tip, sugiere
-      // la membrana radiada del pectoral. Una sola línea (no dos como
-      // dorsal) porque el pectoral es más chico — más detalle satura.
-      ctx.strokeStyle = hexA(this.color.rim, 0.30);
-      ctx.lineWidth = Math.max(0.18, s * 0.022);
+
+      // Tron outline (outer glow + crisp)
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexA(this.color.rim, 0.55);
+      ctx.lineWidth = Math.max(0.8, s * 0.07);
+      ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(pBA.x, pBA.y);
-      ctx.lineTo(pTip.x, pTip.y);
       ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = hexA(this.color.rim, 0.92);
+      ctx.lineWidth = Math.max(0.45, s * 0.038);
+      ctx.stroke();
+      ctx.restore();
+
+      // Internal slats — 4 louvers desde la base hacia el tip, stop al
+      // 65% del camino. Reading "control surface ribs / vent louvers".
+      ctx.save();
+      ctx.strokeStyle = hexA(this.color.rim, 0.55);
+      ctx.lineWidth = Math.max(0.22, s * 0.022);
+      ctx.lineCap = 'round';
+      const slatStops = [0.20, 0.42, 0.62, 0.82];
+      for (const t of slatStops) {
+        // Punto en la base (línea pBA→pBP)
+        const bx = pBA.x + (pBP.x - pBA.x) * t;
+        const by = pBA.y + (pBP.y - pBA.y) * t;
+        // Stop al 65% hacia el tip
+        const sxe = bx + (pTip.x - bx) * 0.65;
+        const sye = by + (pTip.y - by) * 0.65;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(sxe, sye);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // LED tip dot
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const pcTipR = Math.max(0.5, s * 0.04);
+      const pcGlow = ctx.createRadialGradient(pTip.x, pTip.y, 0, pTip.x, pTip.y, pcTipR * 2.4);
+      pcGlow.addColorStop(0, hexA(this.color.core, 0.70));
+      pcGlow.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = pcGlow;
+      ctx.beginPath();
+      ctx.arc(pTip.x, pTip.y, pcTipR * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hexA(this.color.core, 0.95);
+      ctx.beginPath();
+      ctx.arc(pTip.x, pTip.y, pcTipR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     // ─── 6.5) Pelvic fins — paired thoracic position ─────────────────
@@ -1773,60 +1953,60 @@ class GlowFish {
         const pvBP = mapToSpine(pvBaseXU - 0.10, pvBaseYU + 0.04);
         const pvTip = mapToSpine(pvTipXU, pvTipYU);
 
-        // Triangular paddle pequeño (~50% del pectoral)
-        ctx.beginPath();
-        ctx.moveTo(pvBA.x, pvBA.y);
+        // Triangular paddle pequeño (~50% del pectoral) — MECHANICAL
         const pvLeadCtrl = {
           x: (pvBA.x + pvTip.x) * 0.5,
           y: (pvBA.y + pvTip.y) * 0.5,
         };
+        ctx.beginPath();
+        ctx.moveTo(pvBA.x, pvBA.y);
         ctx.quadraticCurveTo(pvLeadCtrl.x, pvLeadCtrl.y, pvTip.x, pvTip.y);
         ctx.lineTo(pvBP.x, pvBP.y);
         ctx.closePath();
 
-        const pvBaseMid = {
-          x: (pvBA.x + pvBP.x) * 0.5,
-          y: (pvBA.y + pvBP.y) * 0.5,
-        };
-        const pvRadius = Math.hypot(pvTip.x - pvBaseMid.x, pvTip.y - pvBaseMid.y);
-        const pvGrad = ctx.createRadialGradient(
-          pvBaseMid.x, pvBaseMid.y, 0,
-          pvBaseMid.x, pvBaseMid.y, pvRadius,
-        );
-        pvGrad.addColorStop(0,    hexA('#020610', 0.22));
-        pvGrad.addColorStop(0.15, hexA(this.color.body, 0.35));
-        pvGrad.addColorStop(0.70, hexA(this.color.body, 0.12));
-        pvGrad.addColorStop(1,    hexA(this.color.body, 0.03));
-        ctx.fillStyle = pvGrad;
+        // Solid steel — sin radial gradient orgánico
+        ctx.fillStyle = hexA(this.color.body, 0.90);
         ctx.fill();
 
-        // Leading edge stroke (1 spine bony) sutil
-        ctx.strokeStyle = hexA(this.color.rim, 0.32);
-        ctx.lineWidth = Math.max(0.18, s * 0.035);
+        // Tron outline (outer glow + crisp)
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexA(this.color.rim, 0.50);
+        ctx.lineWidth = Math.max(0.6, s * 0.055);
+        ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(pvBA.x, pvBA.y);
-        ctx.quadraticCurveTo(pvLeadCtrl.x, pvLeadCtrl.y, pvTip.x, pvTip.y);
         ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = hexA(this.color.rim, 0.90);
+        ctx.lineWidth = Math.max(0.35, s * 0.030);
+        ctx.stroke();
+        ctx.restore();
 
-        // 1 ray central (fin chico, no satura con más detalle)
-        ctx.strokeStyle = hexA(this.color.rim, 0.22);
-        ctx.lineWidth = Math.max(0.13, s * 0.016);
+        // LED tip dot
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const pvTipR = Math.max(0.4, s * 0.032);
+        const pvGlow = ctx.createRadialGradient(pvTip.x, pvTip.y, 0, pvTip.x, pvTip.y, pvTipR * 2.4);
+        pvGlow.addColorStop(0, hexA(this.color.core, 0.65));
+        pvGlow.addColorStop(1, hexA(this.color.core, 0));
+        ctx.fillStyle = pvGlow;
         ctx.beginPath();
-        ctx.moveTo(pvBP.x, pvBP.y);
-        ctx.lineTo(pvTip.x, pvTip.y);
-        ctx.stroke();
+        ctx.arc(pvTip.x, pvTip.y, pvTipR * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = hexA(this.color.core, 0.92);
+        ctx.beginPath();
+        ctx.arc(pvTip.x, pvTip.y, pvTipR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
 
-    // ─── 7) Aleta anal — antifase del soft dorsal (ventral mirror) ────
-    // Espejo ventral del soft dorsal: trapezoidal flexible con rayos
-    // segmentados. Counter-shading INVERTIDO: tinte ventral claro
-    // (#dde6ff) en lugar del body color del dorsal — hereda la lógica
-    // de counter-shading del cuerpo (dorsal oscuro / ventral claro).
-    // Wave phase + π/2 vs soft dorsal: cuando el dorsal flexa una vía,
-    // el anal flexa la opuesta — produce jets laterales OPUESTOS que
-    // anulan el yaw torque del body wave (Standen & Lauder 2005).
+    // ─── 7) Aleta anal — MECHANICAL VENTRAL CONTROL SURFACE ─────────
+    // Reemplaza counter-shading pale (#dde6ff = "vientre claro orgánico")
+    // + rays + biolum trailing por panel sólido steel + Tron outline +
+    // LED tip. El counter-shading pale era el cue #1 de "pez vivo" en
+    // la anal — quitarlo es crítico para reading robótico.
+    // Conserva el wag antifase con soft dorsal (Standen & Lauder 2005).
     const analAlpha = (1 - m) * (1 - m);
     if (analAlpha > 0.02) {
       ctx.save();
@@ -1839,59 +2019,68 @@ class GlowFish {
       const anθ = tangentAt(-0.90);
       const anApexX = anApex.x + Math.cos(anθ) * anWag;
       const anApexY = anApex.y + Math.sin(anθ) * anWag;
+      const anLeadCtrl = mapToSpine(-0.70, 0.62);
+      const anTrailCtrl = mapToSpine(-1.10, 0.55);
 
       ctx.beginPath();
       ctx.moveTo(anLeadBase.x, anLeadBase.y);
-      const anLeadCtrl = mapToSpine(-0.70, 0.62);
       ctx.quadraticCurveTo(anLeadCtrl.x, anLeadCtrl.y, anApexX, anApexY);
-      const anTrailCtrl = mapToSpine(-1.10, 0.55);
       ctx.quadraticCurveTo(anTrailCtrl.x, anTrailCtrl.y, anTrailBase.x, anTrailBase.y);
       ctx.closePath();
 
-      // Counter-shading ventral: tinte pale en lugar del body dark
-      const anBaseMid = {
-        x: (anLeadBase.x + anTrailBase.x) * 0.5,
-        y: (anLeadBase.y + anTrailBase.y) * 0.5,
-      };
-      const anRadius = Math.hypot(anApexX - anBaseMid.x, anApexY - anBaseMid.y);
-      const anGrad = ctx.createRadialGradient(
-        anBaseMid.x, anBaseMid.y, 0,
-        anBaseMid.x, anBaseMid.y, anRadius,
-      );
-      // AO base shadow → ventral pale → fade
-      anGrad.addColorStop(0,    hexA('#020610', 0.25));
-      anGrad.addColorStop(0.15, hexA('#dde6ff', 0.35));
-      anGrad.addColorStop(0.70, hexA('#dde6ff', 0.15));
-      anGrad.addColorStop(1,    hexA('#dde6ff', 0.03));
-      ctx.fillStyle = anGrad;
+      // Solid steel — body color, sin pale ventral
+      ctx.fillStyle = hexA(this.color.body, 0.92);
       ctx.fill();
 
-      // Soft rays (3, menos que el dorsal porque anal es más chico)
-      ctx.strokeStyle = hexA(this.color.rim, 0.28);
-      ctx.lineWidth = Math.max(0.14, s * 0.018);
-      ctx.lineCap = 'round';
-      const anRayDefs: Array<[number, number, number]> = [
-        [-0.65, 0.40, 0.68],
-        [-0.90, 0.42, 0.75],
-        [-1.15, 0.35, 0.55],
-      ];
-      for (const [rxU, rBaseYU, rTipYU] of anRayDefs) {
-        const rb = mapToSpine(rxU, rBaseYU);
-        const rt = mapToSpine(rxU, rTipYU);
-        ctx.beginPath();
-        ctx.moveTo(rb.x, rb.y);
-        ctx.lineTo(rt.x, rt.y);
-        ctx.stroke();
-      }
-
-      // Trailing-edge biolum (mirror del soft dorsal)
+      // Tron outline (outer glow + crisp)
+      ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = hexA(this.color.rim, 0.50);
-      ctx.lineWidth = Math.max(0.30, s * 0.04);
-      ctx.beginPath();
-      ctx.moveTo(anApexX, anApexY);
-      ctx.quadraticCurveTo(anTrailCtrl.x, anTrailCtrl.y, anTrailBase.x, anTrailBase.y);
+      ctx.lineWidth = Math.max(0.8, s * 0.07);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = hexA(this.color.rim, 0.92);
+      ctx.lineWidth = Math.max(0.45, s * 0.035);
+      ctx.stroke();
+      ctx.restore();
+
+      // Internal slats — 4 louvers ventrales radiando desde la base
+      // hacia el apex (mirror del soft dorsal). Stop al 78%.
+      ctx.save();
+      ctx.strokeStyle = hexA(this.color.rim, 0.50);
+      ctx.lineWidth = Math.max(0.20, s * 0.020);
+      ctx.lineCap = 'round';
+      const anSlatXs = [-0.65, -0.85, -1.05, -1.20];
+      for (const sxU of anSlatXs) {
+        const sb = mapToSpine(sxU, 0.32);
+        const tipFrac = 0.78;
+        const sx = sb.x + (anApexX - sb.x) * tipFrac;
+        const sy = sb.y + (anApexY - sb.y) * tipFrac;
+        ctx.beginPath();
+        ctx.moveTo(sb.x, sb.y);
+        ctx.lineTo(sx, sy);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // LED tip en el apex
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const anTipR = Math.max(0.55, s * 0.04);
+      const anGlow = ctx.createRadialGradient(anApexX, anApexY, 0, anApexX, anApexY, anTipR * 2.4);
+      anGlow.addColorStop(0, hexA(this.color.core, 0.70));
+      anGlow.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = anGlow;
+      ctx.beginPath();
+      ctx.arc(anApexX, anApexY, anTipR * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hexA(this.color.core, 0.95);
+      ctx.beginPath();
+      ctx.arc(anApexX, anApexY, anTipR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
 
       ctx.restore();
     }
@@ -1959,61 +2148,98 @@ class GlowFish {
     ctx.quadraticCurveTo(wLowerOut.x, wLowerOut.y, wBaseBot.x,  wBaseBot.y);
     ctx.closePath();
 
-    // Radial gradient con AO base shadow + body fill MÁS BRILLOSO que
-    // el soft dorsal porque el caudal es más grande y bajo additive
-    // composite necesita más alpha para leerse contra el background.
-    const tailGrad = ctx.createRadialGradient(
-      peduncleAnchor.x, peduncleAnchor.y, 0,
-      peduncleAnchor.x, peduncleAnchor.y, tailL,
-    );
-    tailGrad.addColorStop(0,    hexA('#020610', 0.30));
-    tailGrad.addColorStop(0.15, hexA(this.color.body, 0.52));
-    tailGrad.addColorStop(0.70, hexA(this.color.body, 0.22));
-    tailGrad.addColorStop(1,    hexA(this.color.body, 0.05));
-    ctx.fillStyle = tailGrad;
+    // Solid steel fill — mechanical fork, sin radial gradient ni AO
+    // (esos eran reading orgánico). Color body uniforme.
+    ctx.fillStyle = hexA(this.color.body, 0.92);
     ctx.fill();
 
-    // OUTLINE silueta — el caudal anterior tenía outline rim alpha 0.42
-    // y al removerlo el polígono quedaba sin definición de borde, leyendo
-    // como halo difuso en lugar de aleta. Lo restauramos con leading
-    // edge alpha más alto para matchear la presencia visual del dorsal.
-    ctx.strokeStyle = hexA(this.color.rim, 0.45);
-    ctx.lineWidth = Math.max(0.35, s * 0.055);
+    // Tron outline — outer glow additive + crisp inner. Mismo tratamiento
+    // que el body para que las aletas se sientan parte del armor.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = hexA(this.color.rim, 0.55);
+    ctx.lineWidth = Math.max(1.0, s * 0.085);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = hexA(this.color.rim, 0.95);
+    ctx.lineWidth = Math.max(0.5, s * 0.04);
+    ctx.stroke();
+    ctx.restore();
 
-    // Rays — 4 líneas radiando del peduncle hacia outer de cada lóbulo
-    ctx.strokeStyle = hexA(this.color.rim, 0.32);
-    ctx.lineWidth = Math.max(0.16, s * 0.022);
-    const rayLocal: Array<[number, number]> = [
-      [tailL * 0.50, -lobeW * 0.82],
-      [tailL * 0.85, -lobeW * 0.75],
-      [tailL * 0.85, +lobeW * 0.75],
-      [tailL * 0.50, +lobeW * 0.82],
+    // 5 spars del peduncle a puntos clave del outline (hardpoints
+    // estructurales tipo control surface ribs). Más densidad lectura
+    // mecánica vs el "fork de pez" de 2 spars previos.
+    const sparTargets: Vec[] = [
+      wUpperOut,
+      wUpperTip,
+      wNotch,
+      wLowerTip,
+      wLowerOut,
     ];
-    for (const [rlx, rly] of rayLocal) {
-      const wr = toWorld(rlx, rly);
-      ctx.beginPath();
-      ctx.moveTo(peduncleAnchor.x, peduncleAnchor.y);
-      ctx.lineTo(wr.x, wr.y);
-      ctx.stroke();
-    }
-
-    // Trailing-edge biolum — bordes exteriores (Avatar reef fish).
-    // Alpha 0.75 (era 0.55) — el caudal trailing-edge es THE feature
-    // bioluminiscente más diagnóstico, debe leerse claro contra el lake.
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = hexA(this.color.rim, 0.62);
-    ctx.lineWidth = Math.max(0.35, s * 0.045);
+    ctx.strokeStyle = hexA(this.color.rim, 0.45);
+    ctx.lineWidth = Math.max(0.20, s * 0.022);
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(wBaseTop.x, wBaseTop.y);
-    ctx.quadraticCurveTo(wUpperOut.x, wUpperOut.y, wUpperTip.x, wUpperTip.y);
-    ctx.moveTo(wBaseBot.x, wBaseBot.y);
-    ctx.quadraticCurveTo(wLowerOut.x, wLowerOut.y, wLowerTip.x, wLowerTip.y);
+    for (const target of sparTargets) {
+      ctx.moveTo(peduncleAnchor.x, peduncleAnchor.y);
+      ctx.lineTo(target.x, target.y);
+    }
     ctx.stroke();
+
+    // LED tip dots en cada lobe tip — solid bright core + tight glow halo.
+    // Reemplaza el biolum trailing-edge (que era reading orgánico Avatar).
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const tlTipR = Math.max(0.7, s * 0.05);
+    for (const tip of [wUpperTip, wLowerTip]) {
+      const tlGlow = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, tlTipR * 2.6);
+      tlGlow.addColorStop(0, hexA(this.color.core, 0.75));
+      tlGlow.addColorStop(1, hexA(this.color.core, 0));
+      ctx.fillStyle = tlGlow;
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, tlTipR * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hexA(this.color.core, 0.95);
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, tlTipR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // ─── ROBOTIC: Caudal joint ring (mechanical pivot) ────────────────
+    // El cue MÁS diagnóstico de "robot" — un anillo brillante cyan en el
+    // peduncle, donde el cuerpo se conecta con la cola. Lectura inmediata
+    // de "exposed pivot / actuator joint". Es exactamente lo que tiene
+    // la referencia del usuario y los Festo BionicFinWave.
+    // 3 capas: outer glow + crisp ring + center dot.
+    const jointR = Math.max(2.5, s * 0.18);
+    ctx.save();
+    // Outer glow (additive)
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = hexA(this.color.rim, 0.55);
+    ctx.lineWidth = Math.max(1.2, s * 0.10);
+    ctx.beginPath();
+    ctx.arc(peduncleAnchor.x, peduncleAnchor.y, jointR, 0, Math.PI * 2);
+    ctx.stroke();
+    // Crisp ring outline
+    ctx.strokeStyle = hexA(this.color.rim, 0.95);
+    ctx.lineWidth = Math.max(0.5, s * 0.045);
+    ctx.beginPath();
+    ctx.arc(peduncleAnchor.x, peduncleAnchor.y, jointR, 0, Math.PI * 2);
+    ctx.stroke();
+    // Center bright dot
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = hexA('#020610', 0.95);
+    ctx.beginPath();
+    ctx.arc(peduncleAnchor.x, peduncleAnchor.y, jointR * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = hexA(this.color.core, 0.85);
+    ctx.beginPath();
+    ctx.arc(peduncleAnchor.x, peduncleAnchor.y, jointR * 0.25, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
 
       ctx.restore(); // close MORPHED VIEW block
@@ -2049,6 +2275,10 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
     img.onerror = (e) => reject(e);
     img.src = src;
   });
+
+// (Toda la lógica de fish render vive ahora en wolf-fish-three.ts. Versiones
+//  previas — Canvas 2D, luego PIXI sprite-crossfade — fueron removidas; git
+//  history tiene el código si hace falta rollback.)
 
 /** Decodifica el PNG de máscara a un buffer denso de 1 byte/px (canal R). */
 const imageToMask = (img: HTMLImageElement): { data: Uint8ClampedArray; width: number; height: number } => {
@@ -2244,14 +2474,25 @@ export class WolfLakeCanvas {
 
     const canvas = this.canvasRef().nativeElement;
     const host = this.hostRef.nativeElement;
-    const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
 
-    // ─── Cargar máscara del lago
+    // Three.js toma posesión del canvas (contexto WebGL). El renderer carga
+    // un GLB del pez (Tripo3D) y aplica swim wave via vertex shader sobre
+    // el material PBR estándar. Sustituye al sprite-crossfade que vivía en
+    // wolf-fish-pixi.ts — los giros ahora son geometría 3D real, lo que
+    // elimina los "brincos" entre ángulos.
+    const fishRenderer = new FishThreeRenderer(GLOW_BODY_PROFILE.length);
+
+    // ─── Init Three.js + cargar máscara del lago en paralelo
     let maskImg: HTMLImageElement;
     try {
-      maskImg = await loadImage('/hero-wolf/lake-mask-mk3.png');
+      const initialW = host.offsetWidth || 1;
+      const initialH = host.offsetHeight || 1;
+      [maskImg] = await Promise.all([
+        loadImage('/hero-wolf/lake-mask-mk3.png'),
+        fishRenderer.init(canvas, initialW, initialH),
+      ]);
     } catch {
+      fishRenderer.destroy();
       return;
     }
     const mask = imageToMask(maskImg);
@@ -2262,23 +2503,15 @@ export class WolfLakeCanvas {
     const IMG_W = 1672;
     const IMG_H = 941;
 
-    // ─── Resize handler — mantiene canvas sincronizado al host
+    // ─── Resize handler — mantiene canvas sincronizado al host.
+    // Three.js maneja canvas.width/height vía setSize + setPixelRatio (clamp
+    // 2.0 set en init). Solo le decimos las dimensiones lógicas.
     let cw = 0, ch = 0;
-    // DPR clamp 2.0 (era 1.5). En displays retina (2×) ahora renderizamos
-    // a resolución nativa en vez de a 1.5× y dejar que el browser haga
-    // upscale 1.33× — fuente directa de blur perceptual. En 3× phones
-    // seguimos clampeando a 2.0 para no triplicar el pixel count.
-    let dpr = Math.min(window.devicePixelRatio || 1, 2.0);
     const resize = (): void => {
       const rect = host.getBoundingClientRect();
       cw = Math.max(1, rect.width);
       ch = Math.max(1, rect.height);
-      dpr = Math.min(window.devicePixelRatio || 1, 2.0);
-      canvas.width = Math.floor(cw * dpr);
-      canvas.height = Math.floor(ch * dpr);
-      canvas.style.width = `${cw}px`;
-      canvas.style.height = `${ch}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fishRenderer.resize(cw, ch);
     };
     resize();
 
@@ -2556,6 +2789,13 @@ export class WolfLakeCanvas {
     // verificados dentro del polígono seguro del agua.
     // Paleta azul ELÉCTRICO PURO, sin celeste/cyan. Hexes con G < B/2
     // para forzar el tono "literalmente azul" que el usuario pidió.
+    // Paleta ROBÓTICA con AZUL ELÉCTRICO (matchea las luces azules del
+    // lobo, NO cyan). Body navy steel oscuro + accents azul eléctrico
+    // saturado. Cada entrada con leve variación por-instance.
+    //   • body: navy steel casi negro (igual que paleta original)
+    //   • rim:  blue eléctrico saturado (Tron loop, lateral line, joint glow)
+    //   • core: bright blue (sensor pupil, dot accents)
+    //   • halo: deep blue (outer presence)
     const GLOW_PALETTE: GlowFishColor[] = [
       { rim: '#3870ff', body: '#060932', core: '#1858ff', halo: '#0040ff' },
       { rim: '#3068ee', body: '#070b35', core: '#1450ee', halo: '#0038f0' },
@@ -2567,9 +2807,12 @@ export class WolfLakeCanvas {
     // y=0.70-0.83). Ahora 5 puntos cubriendo todo el rango de profundidad
     // y ancho — los peces empiezan repartidos y el wander los mantiene
     // distribuidos. Y range [0.50, 0.85] para aprovechar el área nueva.
+    // 4 glowFishes ambientales + 1 cursorFish = 5 peces total. El spawn
+    // top-center (0.50, 0.52) fue eliminado porque caía cerca del título
+    // del Hero — el pez tendía a quedarse "pegado" en una letra cuando el
+    // wander no encontraba mejor heading.
     const GLOW_SPAWN: Vec[] = [
       { x: 0.15, y: 0.55 }, // top-left  (lejos, chico)
-      { x: 0.50, y: 0.52 }, // top-center (muy lejos, frente a la ciudad)
       { x: 0.85, y: 0.62 }, // top-right (lejos)
       { x: 0.25, y: 0.82 }, // bottom-left (cerca, grande)
       { x: 0.70, y: 0.84 }, // bottom-right (cerca)
@@ -2631,6 +2874,13 @@ export class WolfLakeCanvas {
     // cabeza (igual que los ambientales). Esto garantiza que size y
     // position están SIEMPRE en sync: si la cabeza se mueve hacia el
     // fondo, el pez se hace chico en el mismo movimiento, no después.
+
+    // ─── Three.js fish handles — uno por pez (cursor + ambientales).
+    // Cada handle = group + mesh + material clonado con sus propios uniforms.
+    // Los handles persisten entre resize (no se recrean en buildGlowFishes
+    // porque solo contienen GPU resources, no estado del fish).
+    const cursorFishHandle = fishRenderer.addFish();
+    const glowFishHandles = glowFishes.map(() => fishRenderer.addFish());
 
     const ro = new ResizeObserver(() => {
       resize();
@@ -2919,49 +3169,22 @@ export class WolfLakeCanvas {
       const safeAnchor = imgUVToCanvasUV({ x: 0.40, y: 0.80 }, cw, ch, IMG_W, IMG_H);
       clampSpineToLake(cursorFish, mask, cw, ch, IMG_W, IMG_H, safeAnchor);
 
-      // ─── Render
-      ctx.clearRect(0, 0, cw, ch);
-      // Filtro "underwater color cast" — saturate + brightness reducidos.
-      // Sin blur (el usuario priorizó claridad y detalle anatómico sobre
-      // sensación submerged via edge softening). Estos dos LUTs por pixel
-      // son baratos y desaturan/oscurecen ligeramente para que el pez
-      // no compita cromáticamente con el lake.
-      ctx.save();
-      ctx.filter = 'saturate(0.78) brightness(0.92)';
-      for (const gf of glowFishes) {
+      // ─── Three.js render — mesh 3D real, swim wave en vertex shader.
+      // El underwater color cast vive en el lighting del scene (ambient
+      // tintado azul + key warm + fill cool) en wolf-fish-three.ts.
+      for (let i = 0; i < glowFishes.length; i++) {
+        const gf = glowFishes[i];
         const ghV = canvasUVToImgUV({ x: gf.spine[0].x / cw, y: gf.spine[0].y / ch }, cw, ch, IMG_W, IMG_H).y;
-        gf.render(ctx, depthScaleAt(ghV));
+        if (glowFishHandles[i]) {
+          fishRenderer.updateFish(glowFishHandles[i], gf, depthScaleAt(ghV));
+        }
       }
-      // El pez del cursor también deriva su size de la Y de su cabeza
-      // (igual lógica que ambientales). Como la cabeza se mueve con
-      // smoothing, el size cambia gradualmente y SIEMPRE en sync con
-      // la posición — no hay desfase entre "ya llegó" y "ya tiene su
-      // tamaño correcto".
       const cursorHeadV = canvasUVToImgUV(
         { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
         cw, ch, IMG_W, IMG_H,
       ).y;
-      cursorFish.render(ctx, depthScaleAt(cursorHeadV));
-      ctx.restore();
-
-      // ─── Underwater water-column tint pass ─────────────────────────
-      // Velo translúcido azul aplicado SOLO sobre los píxeles renderizados
-      // (source-atop: el source pinta donde el destination ya tiene alpha).
-      // Físicamente reproduce: cuando ves un pez bajo el agua desde arriba,
-      // la columna de agua entre el ojo y el pez agrega un cast cyan/azul
-      // a lo que vés (los rojos se absorben primero, queda el azul). Esto
-      // es lo que hace que algo lea como "sumergido" sin necesidad de
-      // difuminar el detalle anatómico — el detalle se preserva 100%, solo
-      // se pinta encima un velo.
-      //
-      // Color: rgba(35, 75, 145, 0.16) — azul medio del lake, 16% opacity.
-      // No afecta zonas transparentes del canvas (lake image abajo queda
-      // intacta).
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = 'rgba(35, 75, 145, 0.16)';
-      ctx.fillRect(0, 0, cw, ch);
-      ctx.restore();
+      fishRenderer.updateFish(cursorFishHandle, cursorFish, depthScaleAt(cursorHeadV));
+      fishRenderer.render();
 
       raf = requestAnimationFrame(tick);
     };
@@ -2975,6 +3198,7 @@ export class WolfLakeCanvas {
       document.removeEventListener('visibilitychange', onVis);
       io.disconnect();
       ro.disconnect();
+      fishRenderer.destroy();
     };
   }
 }
