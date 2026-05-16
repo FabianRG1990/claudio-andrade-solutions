@@ -260,22 +260,47 @@ export class FishThreeRenderer {
     );
     this.composer.addPass(this.bloomPass);
 
-    // ─── v26: Frosted Glass Blur ZONE-GATED (solo top, donde refleja luz) ──
-    // El user corrigio: "no a todo, arriba donde esta la luz". Vuelve
-    // a zone-gating con smoothstep ramp 0.30→0.65 (35% del viewport
-    // — transicion noble, no cortina). Max 2.5 px en el top zone.
+    // ─── v33: Dissolve into water — blur + alpha fade gradual ──────────
+    // El user pidio: "blur gradual que conforme el pez vaya mas para
+    // arriba o mas se acerque a la ciudad, mas se desvanezca, que parece
+    // que se sumergio dentro del agua o que ya no... hasta llegar al
+    // punto de que cuando llega el tope se desvanece en el agua".
     //
-    // vUv.y en Three.js EffectComposer: 0 bottom, 1 top. Top zone =
-    // 0.30 a 0.65. Falloff smoothstep → debajo de 0.30 = 0 (intacto),
-    // de 0.30 a 0.65 = ramp 0 → 1 (suave), arriba de 0.65 = 1 (max).
-    const zoneBlurShader = {
+    // Como los ambient fish ya estan restringidos a y_v >= 0.62 (linea
+    // roca), el unico pez que puede entrar a la zona alta es el cursor
+    // fish cazando. Asi un efecto screen-space en la zona alta SOLO
+    // afecta al cursor fish — exactamente lo que pidio el user.
+    //
+    // 2 efectos combinados en el mismo pass para "premium feel":
+    //
+    // (A) BLUR Gaussian separable (9-tap H + 9-tap V) — radio escala
+    //     con zoneAmt (smoothstep 0.40 → 0.62 en screen vUv.y). Max 6 px.
+    //     Curve smoothstep da gradient noble, no cortina.
+    //
+    // (B) ALPHA FADE — alpha multiplica por (1 - zoneAmt). En el tope
+    //     (vUv.y >= 0.62) alpha = 0 → pez completamente disuelto en el
+    //     agua, invisible. En el rock line (vUv.y = 0.40) alpha = 1.
+    //     Ramp suave entre los dos via smoothstep.
+    //
+    // uApplyFade: 0 en pass H (solo blur, evita fade x2), 1 en pass V
+    // (blur + fade final). Asi el fade aplica una sola vez.
+    //
+    // Coordenadas screen-UV: vUv.y=0 bottom, vUv.y=1 top. Ramp 0.40→0.62
+    // cubre el espacio entre la linea de roca (mapea aprox a screen vUv.y
+    // 0.40) y el tope del agua (screen vUv.y 0.62). Ajustables abajo si
+    // la calibracion visual no matchea.
+    const dissolveBlurShader = {
       uniforms: {
         tDiffuse: { value: null as THREE.Texture | null },
         uResolution: { value: new THREE.Vector2(width, height) },
         uBlurDirection: { value: new THREE.Vector2(1, 0) },
-        uMaxBlurPx: { value: 0.4 },
-        uRampStart: { value: 0.30 },
-        uRampEnd: { value: 0.65 },
+        uMaxBlurPx: { value: 6.0 },
+        // v34: ramp ANCHO (0.28→0.62 vs v33 0.40→0.62). Mas ancho =
+        // entrada del efecto MUCHO mas gradual (~55% mas tiempo de
+        // ramp = 1.5x mas suavidad percibida en la transicion).
+        uRampStart: { value: 0.28 },
+        uRampEnd: { value: 0.62 },
+        uApplyFade: { value: 0.0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -291,14 +316,26 @@ export class FishThreeRenderer {
         uniform float uMaxBlurPx;
         uniform float uRampStart;
         uniform float uRampEnd;
+        uniform float uApplyFade;
         varying vec2 vUv;
+        // SMOOTHERSTEP (Perlin 6t^5 - 15t^4 + 10t^3) — derivada Y
+        // segunda derivada = 0 en bordes. Premium: no hay "kink" en
+        // la curva en los extremos, transicion absolutamente imperceptible.
+        float smootherstep(float e0, float e1, float x) {
+          float t = clamp((x - e0) / (e1 - e0), 0.0, 1.0);
+          return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+        }
         void main() {
-          float zoneAmt = smoothstep(uRampStart, uRampEnd, vUv.y);
-          if (zoneAmt < 0.01) {
+          float zoneAmt = smootherstep(uRampStart, uRampEnd, vUv.y);
+          if (zoneAmt < 0.002) {
             gl_FragColor = texture2D(tDiffuse, vUv);
             return;
           }
-          float radiusPx = zoneAmt * uMaxBlurPx;
+          // Blur radius con pow(zoneAmt, 2.0) — quadratic ease-in,
+          // arranca a casi 0 (0.01 a zoneAmt=0.1) → invisible al entrar.
+          // Acelera hacia el top donde llega a max 6 px.
+          float blurT = pow(zoneAmt, 2.0);
+          float radiusPx = blurT * uMaxBlurPx;
           vec2 step = (uBlurDirection / uResolution) * radiusPx;
           vec4 c = vec4(0.0);
           c += texture2D(tDiffuse, vUv + step * -4.0) * 0.05;
@@ -310,15 +347,22 @@ export class FishThreeRenderer {
           c += texture2D(tDiffuse, vUv + step *  2.0) * 0.12;
           c += texture2D(tDiffuse, vUv + step *  3.0) * 0.09;
           c += texture2D(tDiffuse, vUv + step *  4.0) * 0.05;
+          // Alpha fade con pow(zoneAmt, 1.5) — ease-in mas suave que
+          // pow(0.85) del v33. Arranca a 0.03 a zoneAmt=0.1 (vs 0.14
+          // antes) → desvanecimiento imperceptible al entrar.
+          float fadeAmt = pow(zoneAmt, 1.5);
+          c.a *= mix(1.0, 1.0 - fadeAmt, uApplyFade);
           gl_FragColor = c;
         }
       `,
     };
-    const blurH = new ShaderPass(zoneBlurShader);
+    const blurH = new ShaderPass(dissolveBlurShader);
     blurH.material.uniforms['uBlurDirection'].value = new THREE.Vector2(1, 0);
+    blurH.material.uniforms['uApplyFade'].value = 0.0;
     this.composer.addPass(blurH);
-    const blurV = new ShaderPass(zoneBlurShader);
+    const blurV = new ShaderPass(dissolveBlurShader);
     blurV.material.uniforms['uBlurDirection'].value = new THREE.Vector2(0, 1);
+    blurV.material.uniforms['uApplyFade'].value = 1.0;
     this.composer.addPass(blurV);
 
     const copyPass = new ShaderPass(CopyShader);
@@ -449,7 +493,7 @@ export class FishThreeRenderer {
 
     material.onBeforeCompile = (shader) => {
       // eslint-disable-next-line no-console
-      console.log('[FishThree] shader compile v32-reflection-lit');
+      console.log('[FishThree] shader compile v34-premium-smootherstep');
       shader.uniforms['uSpine'] = uniforms.uSpine;
       shader.uniforms['uSegLen'] = uniforms.uSegLen;
       shader.uniforms['uSegN'] = uniforms.uSegN;
