@@ -2695,6 +2695,26 @@ export class WolfLakeCanvas {
           bestAngle = tryAngle;
         }
       }
+
+      // ─── Fallback: ninguna dirección tiene buena agua ──────────────────
+      // Cuando el pez quedó en una zona donde TODOS los lookaheads caen en
+      // cielo/orilla (típico cerca del horizonte después de un mal turn), el
+      // "best of bad" pickea una dirección con score ~0.3-0.5 y el pez sigue
+      // dando vueltas en la misma zona pequeña sin escapar — el bug "stuck
+      // loose" en la Y del título y a la par del card que reportó el usuario.
+      // Cuando ningún score llega a 0.6, dirigimos al pez hacia su orbit
+      // center, que está garantizado en agua segura por el spawn design.
+      if (bestScore < 0.6) {
+        const orbitCanvasUV = imgUVToCanvasUV(
+          { x: f.orbit.cx, y: f.orbit.cy },
+          cw, ch, IMG_W, IMG_H,
+        );
+        const tx = orbitCanvasUV.x * cw;
+        const ty = orbitCanvasUV.y * ch;
+        f.setTargetSmooth({ x: tx, y: ty }, 0.18);
+        return;
+      }
+
       // Target = punto lejano en bestAngle. Si bestAngle === heading,
       // pez sigue derecho. Si no, gira con maxTurnRate del kinematic.
       const tx = headX + Math.cos(bestAngle) * 600;
@@ -2803,17 +2823,21 @@ export class WolfLakeCanvas {
       { rim: '#2c5cdc', body: '#050828', core: '#1048d8', halo: '#0030e0' },
       { rim: '#5088ff', body: '#0a1040', core: '#2868ff', halo: '#0050ff' },
     ];
-    // Spawn points distribuidos por TODO el nuevo lago (era 4 todos en
-    // y=0.70-0.83). Ahora 5 puntos cubriendo todo el rango de profundidad
-    // y ancho — los peces empiezan repartidos y el wander los mantiene
-    // distribuidos. Y range [0.50, 0.85] para aprovechar el área nueva.
-    // 4 glowFishes ambientales + 1 cursorFish = 5 peces total. El spawn
-    // top-center (0.50, 0.52) fue eliminado porque caía cerca del título
-    // del Hero — el pez tendía a quedarse "pegado" en una letra cuando el
-    // wander no encontraba mejor heading.
+    // Spawn points repartidos por el lago. Importante: los spawns son TAMBIÉN
+    // los orbit centers que applyWander usa como fallback cuando ningún
+    // lookahead encuentra agua decente (peces atorados cerca del horizonte).
+    // Por eso TODOS deben estar suficientemente adentro del lago para ser
+    // safe-fallback válidos. Iteraciones previas:
+    //   • Top-center (0.50, 0.52) eliminado: caía sobre el título, pez "pegado a la I".
+    //   • Top-left (0.15, 0.55) y top-right (0.85, 0.62) movidos adentro:
+    //     y=0.55 está demasiado cerca del horizonte → lookahead 200+ px cae
+    //     mayormente en cielo/montañas → wander score colapsa → pez se queda
+    //     vagando en zona de ~80 px ("stuck loose") cerca de "Y" del título
+    //     y al lado del card del hero.
+    // 4 glowFishes ambientales + 1 cursorFish = 5 peces total.
     const GLOW_SPAWN: Vec[] = [
-      { x: 0.15, y: 0.55 }, // top-left  (lejos, chico)
-      { x: 0.85, y: 0.62 }, // top-right (lejos)
+      { x: 0.22, y: 0.68 }, // top-left  — adentro del lago, lejos del horizonte
+      { x: 0.78, y: 0.70 }, // top-right — adentro, evita zona detrás del card
       { x: 0.25, y: 0.82 }, // bottom-left (cerca, grande)
       { x: 0.70, y: 0.84 }, // bottom-right (cerca)
     ];

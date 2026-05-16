@@ -63,6 +63,15 @@ if (isBurst) {
     console.log(`[shot] burst ${i + 1}/6 → ${out}`);
     if (i < 5) await page.waitForTimeout(200);
   }
+} else if (args.includes('--stuck-detect')) {
+  // Modo stuck-detect: toma 3 screenshots con 8s entre medio para identificar
+  // visualmente que pez no se movio.
+  for (let i = 0; i < 3; i++) {
+    if (i > 0) await page.waitForTimeout(8000);
+    const out = join(outDir, `hero-${stamp}-stuck${i}.png`);
+    await page.screenshot({ path: out, fullPage: false });
+    console.log(`[shot] stuck-detect ${i + 1}/3 (t=${i * 8}s) → ${out}`);
+  }
 } else {
   const suffix = hover ? `-hover-${hover.x}x${hover.y}` : '';
   const out = join(outDir, `hero-${stamp}${suffix}.png`);
