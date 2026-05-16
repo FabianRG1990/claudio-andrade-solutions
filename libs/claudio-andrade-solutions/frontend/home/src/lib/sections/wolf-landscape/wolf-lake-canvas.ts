@@ -366,6 +366,16 @@ class GlowFish {
   hoverDriftTarget: Vec | null = null;
   hoverDriftTimer = 0;
 
+  // ─── Stuck-detector (anti-bug "pez pegado a la Y") ──────────────────
+  // Muestreamos position cada ~500ms; si no se movio >25 px en 3 sec
+  // total, asumimos que esta atascado y el tick loop fuerza un escape.
+  // Sin esto, una combinacion patologica de wander score + proximity
+  // brake + low energy puede dejar al pez en loop infinito en un punto
+  // visualmente molesto (bajo la "Y" del titulo o al lado del card).
+  stuckLastSampleTime = 0;
+  stuckLastPos: Vec = { x: 0, y: 0 };
+  stuckSeconds = 0;
+
   constructor(start: Vec, opts: {
     size: number;
     speedScale: number;
@@ -2697,21 +2707,28 @@ export class WolfLakeCanvas {
       }
 
       // ─── Fallback: ninguna dirección tiene buena agua ──────────────────
-      // Cuando el pez quedó en una zona donde TODOS los lookaheads caen en
-      // cielo/orilla (típico cerca del horizonte después de un mal turn), el
-      // "best of bad" pickea una dirección con score ~0.3-0.5 y el pez sigue
-      // dando vueltas en la misma zona pequeña sin escapar — el bug "stuck
-      // loose" en la Y del título y a la par del card que reportó el usuario.
-      // Cuando ningún score llega a 0.6, dirigimos al pez hacia su orbit
-      // center, que está garantizado en agua segura por el spawn design.
+      // Cuando el pez quedó en zona donde TODOS los lookaheads caen mal,
+      // mandar al LAKE CENTER (0.50, 0.85 — deep water garantizado por
+      // el diseño del lago, sin ningun risk de quedar atascado ahi).
+      //
+      // Antes mandabamos al orbit center, pero si el orbit center mismo
+      // estaba en zona con bad surroundings (top-left orbit cerca del
+      // titulo, top-right cerca del card), el pez quedaba pegado ahi.
+      //
+      // Cambios vs version previa:
+      //   • Target a LAKE_CENTER absoluto (siempre safe) en vez de orbit center
+      //   • OVERRIDE directo de f.target (no lerp 0.18) — emergencia, el
+      //     pez DEBE empezar a moverse para alla YA
+      //   • Force currentSpeed = max(current, 2.0) — evita que el proximity
+      //     brake cancele la fuga si el target queda cerca casualmente
       if (bestScore < 0.6) {
-        const orbitCanvasUV = imgUVToCanvasUV(
-          { x: f.orbit.cx, y: f.orbit.cy },
+        const refugeCanvasUV = imgUVToCanvasUV(
+          { x: 0.50, y: 0.85 },
           cw, ch, IMG_W, IMG_H,
         );
-        const tx = orbitCanvasUV.x * cw;
-        const ty = orbitCanvasUV.y * ch;
-        f.setTargetSmooth({ x: tx, y: ty }, 0.18);
+        f.target.x = refugeCanvasUV.x * cw;
+        f.target.y = refugeCanvasUV.y * ch;
+        f.currentSpeed = Math.max(f.currentSpeed, 2.0);
         return;
       }
 
@@ -2835,11 +2852,19 @@ export class WolfLakeCanvas {
     //     vagando en zona de ~80 px ("stuck loose") cerca de "Y" del título
     //     y al lado del card del hero.
     // 4 glowFishes ambientales + 1 cursorFish = 5 peces total.
+    // Spawns reubicados a zona segura del lago: y >= 0.78 (debajo del
+     // título y del card del hero, sin overlap de texto HTML). El bug
+     // "pez pegado a la Y" venia de que el top-left spawn (0.22, 0.68)
+     // visualmente quedaba bajo el texto del título "y Diseño", y el
+     // orbit center caia en zona donde el wander lookahead se confundia
+     // con el horizonte. Mover todos los spawns al banda inferior del
+     // lago les da orbit centers garantizadamente safe-water + lejos
+     // del texto HTML overlay.
     const GLOW_SPAWN: Vec[] = [
-      { x: 0.22, y: 0.68 }, // top-left  — adentro del lago, lejos del horizonte
-      { x: 0.78, y: 0.70 }, // top-right — adentro, evita zona detrás del card
-      { x: 0.25, y: 0.82 }, // bottom-left (cerca, grande)
-      { x: 0.70, y: 0.84 }, // bottom-right (cerca)
+      { x: 0.20, y: 0.80 }, // mid-left  (zona lago seguro, sin overlay)
+      { x: 0.82, y: 0.80 }, // mid-right (sin overlap con card)
+      { x: 0.35, y: 0.88 }, // bottom-left (cerca, grande)
+      { x: 0.65, y: 0.88 }, // bottom-right (cerca, grande)
     ];
     const glowFishes: GlowFish[] = [];
     const buildGlowFishes = (): void => {
@@ -3159,7 +3184,40 @@ export class WolfLakeCanvas {
       // GlowFish ambientales — wander libre por todo el lago. Cada pez
       // tiene su propio waypoint y reloj de burst-glide. Resultado:
       // movimiento desincronizado, sensación de instinto natural.
+      const nowMs = now;
+      const refugeCanvasUV = imgUVToCanvasUV(
+        { x: 0.50, y: 0.85 },
+        cw, ch, IMG_W, IMG_H,
+      );
+      const refugeX = refugeCanvasUV.x * cw;
+      const refugeY = refugeCanvasUV.y * ch;
       for (const gf of glowFishes) {
+        // ─── Stuck-detector (cada 500ms) ──────────────────────────────
+        // Si el pez no se movió >25 px en los últimos 3 sec → forzar
+        // target al refugio (lake center, deep water) + speed mínimo.
+        // Ultimo recurso si wander + wall avoidance fallaron.
+        if (nowMs - gf.stuckLastSampleTime > 500) {
+          const dx = gf.position.x - gf.stuckLastPos.x;
+          const dy = gf.position.y - gf.stuckLastPos.y;
+          const moved = Math.hypot(dx, dy);
+          if (gf.stuckLastSampleTime > 0 && moved < 25) {
+            gf.stuckSeconds += 0.5;
+          } else {
+            gf.stuckSeconds = 0;
+          }
+          gf.stuckLastSampleTime = nowMs;
+          gf.stuckLastPos.x = gf.position.x;
+          gf.stuckLastPos.y = gf.position.y;
+        }
+        if (gf.stuckSeconds >= 3) {
+          // Force escape — target absoluto al refugio + speed boost.
+          gf.target.x = refugeX;
+          gf.target.y = refugeY;
+          gf.currentSpeed = Math.max(gf.currentSpeed, 2.5);
+          gf.stuckSeconds = 0;
+          continue; // skip wander/avoidance este frame, el escape manda
+        }
+
         // Wall avoidance reactivo PRIMERO. Si hay pared a < 50 px, override
         // target hacia el lado libre y skip wander. Esto evita el bug del
         // pez atorado contra la orilla brincando frame tras frame.
