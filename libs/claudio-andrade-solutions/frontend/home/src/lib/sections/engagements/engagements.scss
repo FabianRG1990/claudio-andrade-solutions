@@ -1,17 +1,17 @@
 .engagements {
   position: relative;
-  padding-block: 8rem;
-
-  @media (min-width: 1024px) {
-    padding-block: 10rem;
-  }
+  // Padding fluido: 4rem en phones → 10rem en desktop. Mobile-first; el step
+  // 8rem fijo era asfixiante en phones.
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
 }
 
 .engagements__container {
   position: relative;
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 }
 
 .engagements__head {
@@ -56,7 +56,10 @@
 }
 
 .engagements__grid {
-  margin-top: 4rem;
+  // Margin-top fluido — 2rem en phones, 4rem en desktop. Sin esto el head y
+  // el grid quedaban con un gap de 64px constante que se sentía hueco en
+  // phones donde el head ya ocupa medio viewport.
+  margin-top: clamp(2rem, 3vw + 1rem, 4rem);
   display: grid;
   gap: 1.25rem;
 
@@ -226,7 +229,9 @@
 
 .engagement-card__name {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  // 1.125rem (18px) en phones → 1.25rem (20px) en desktop. Antes 1.25rem
+  // constante competía con el tag pill al lado en phones angostos.
+  font-size: clamp(1.125rem, 1rem + 0.4vw, 1.25rem);
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
 }
@@ -351,10 +356,21 @@
   padding: 0.375rem 0.375rem 0.375rem 1.25rem;
   font-family: var(--font-button);
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: var(--tracking-button);
+  // Mínimo 44px alto del CTA completo — touch target AAA (WCAG 2.5.5 +
+  // Apple HIG). Antes el padding-block 0.375rem + label 0.375rem + font 13px
+  // sumaban ~36px = bajo AAA. min-height garantiza el hit-box sin tocar
+  // visual (el icono al fondo es el que define la altura natural).
+  min-height: 44px;
 
   &:hover .engagement-card__cta-icon {
+    transform: translate(2px, -2px);
+  }
+
+  // Fallback táctil: en pointer:coarse (phones, tablets) el :hover no
+  // dispara consistentemente. :active sí. Replicamos el shift del icono.
+  &:active .engagement-card__cta-icon {
     transform: translate(2px, -2px);
   }
 }

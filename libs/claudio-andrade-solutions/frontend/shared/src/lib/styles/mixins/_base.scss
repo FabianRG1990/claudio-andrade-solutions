@@ -34,6 +34,12 @@ html {
   // marquees) debe contenerlo en su propio wrapper con overflow:hidden.
   overflow-x: hidden;
   overflow-x: clip;
+  // Anti-zoom global de iOS al rotar entre portrait/landscape. Apple aplica
+  // un boost de tamaño de texto en landscape (text-size-adjust:auto) que
+  // rompe el layout fluido cuidadosamente calibrado con clamp(). Forzarlo a
+  // 100% mantiene la escala que diseñamos en ambas orientaciones.
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -95,6 +101,16 @@ button {
   cursor: pointer;
   border: none;
   color: inherit;
+  // `tap-highlight-color: transparent` desactiva el flash gris que iOS pinta
+  // sobre cualquier <button>/<a> al tocar. Da look cheap. Cada elemento
+  // interactivo debe declarar su propio :active explícito para que el feedback
+  // táctil siga existiendo — no es "quitar feedback", es controlarlo nosotros.
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  // Mismo razonamiento que en `button` — sin esto, iOS pinta un flash gris.
+  -webkit-tap-highlight-color: transparent;
 }
 
 input,
@@ -103,4 +119,10 @@ textarea {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
+  // CRÍTICO: iOS hace zoom automático en cualquier input/textarea con
+  // font-size < 16px al recibir focus. Aplicar 16px mínimo lo desactiva sin
+  // necesidad de `user-scalable=no` (que rompe accesibilidad). Los componentes
+  // que quieran texto visual más chico deben hacerlo con `transform: scale()`
+  // o respetar el mínimo de 16px en el computed style.
+  font-size: max(16px, 1rem);
 }

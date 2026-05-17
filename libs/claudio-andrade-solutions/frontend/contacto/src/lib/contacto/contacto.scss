@@ -22,7 +22,13 @@
   padding-block: clamp(6rem, 4rem + 6vw, 7rem) clamp(2.5rem, 2rem + 1vw, 3rem);
 
   @media (min-width: 1024px) {
-    height: 100dvh;
+    // 100svh en lugar de 100dvh — `dvh` refleja URL-bar collapse de iOS
+    // Safari, lo que en una página single-screen como contacto se ve como
+    // "la card se estira" al primer scroll y el form salta. svh es estable.
+    // En desktop con barra del browser fija no hay diferencia, pero deja
+    // el comportamiento consistente con mobile cuando el ancho cae a tablet
+    // landscape (1024-1200px en iPad Pro).
+    height: 100svh;
     min-height: 640px;
     display: flex;
     align-items: center;
@@ -63,7 +69,9 @@
   margin-inline: auto;
   width: 100%;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -208,7 +216,11 @@
   background: rgb(var(--foam) / 0.04);
   color: rgb(var(--foam));
   font-family: inherit;
-  font-size: 1rem;
+  // `max(16px, 1rem)` previene zoom automático de iOS al focus en
+  // inputs/textareas con font-size <16px. Reglar lo ponemos en el reset
+  // global (`mixins/_base.scss`), pero acá lo afirmamos como guardia local
+  // para que tweaks futuros del rem-base no lo rompan.
+  font-size: max(16px, 1rem);
   letter-spacing: 0.018em;
   outline: none;
   transition:
@@ -228,6 +240,11 @@
   &--pill {
     border-radius: 9999px;
     padding: 0.625rem 1.125rem;
+    // Touch target — el input es un control interactivo. AAA = 44px,
+    // padding-block 0.625rem + line-height ~1.5 sobre 16px = ~44px exactos,
+    // pero forzamos min-height para el caso safari donde el line-height del
+    // input puede compactar.
+    min-height: 44px;
   }
 
   &--block {
@@ -266,12 +283,13 @@
   border-radius: 9999px;
   font-family: var(--font-button);
   font-size: 14px;
-  font-weight: 600;
-  // Roboto botón bold a 14px con tracking negativo se ve apretado. +0.018em
-  // es el rango "Label Large" de Material para Roboto en botones.
-  letter-spacing: 0.018em;
+  font-weight: 700;
+  letter-spacing: var(--tracking-button);
   cursor: pointer;
   color: rgb(var(--foam));
+  // Touch target AAA — el submit es el CTA principal de la página, debe
+  // ser >=44 alto sin negociación.
+  min-height: 44px;
 }
 
 .contacto__submit-label {
@@ -287,7 +305,10 @@
   border-radius: 9999px;
   transition: transform 700ms var(--ease-fluid);
 
-  .contacto__submit:hover & {
+  // Hover + active (mobile) — sin :active el feedback táctil desaparece
+  // en pointer:coarse, donde :hover no dispara consistente.
+  .contacto__submit:hover &,
+  .contacto__submit:active & {
     transform: translate(2px, -2px);
   }
 }

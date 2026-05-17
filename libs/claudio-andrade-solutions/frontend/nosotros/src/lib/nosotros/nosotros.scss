@@ -5,17 +5,15 @@
 %container {
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 }
 
 // ─── Programas ─────────────────────────────────────────────────────────────
 .nosotros-cases {
   position: relative;
-  padding-bottom: 5rem;
-
-  @media (min-width: 1024px) {
-    padding-bottom: 7rem;
-  }
+  padding-bottom: clamp(4rem, 3rem + 3vw, 7rem);
 }
 
 .nosotros-cases__container {
@@ -42,7 +40,7 @@
 .nosotros-cases__grid {
   display: grid;
   gap: 1.25rem;
-  margin-top: 3.5rem;
+  margin-top: clamp(2rem, 2rem + 1.5vw, 3.5rem);
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
@@ -189,7 +187,9 @@
 }
 
 .program-card__body {
-  padding: 1.75rem;
+  // Padding inner fluido — 1.25rem en phones angostos para que el card no
+  // se sienta cramped en 320-380px de viewport.
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
 }
 
 .program-card__region {
@@ -202,13 +202,11 @@
 .program-card__title {
   margin-top: 0.75rem;
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  // Fluid 22→30px sin step en 768. La jerarquía se mantiene legible en
+  // todos los anchos.
+  font-size: clamp(1.375rem, 1.15rem + 1vw, 1.875rem);
   line-height: 1.15;
   letter-spacing: var(--tracking-tight);
-
-  @media (min-width: 768px) {
-    font-size: 1.875rem;
-  }
 }
 
 .program-card__copy {

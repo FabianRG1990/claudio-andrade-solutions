@@ -6,25 +6,21 @@
 
 .timeline {
   position: relative;
-  padding-block: 8rem;
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
   border-top: 1px solid rgb(var(--foam) / 0.05);
-
-  @media (min-width: 1024px) {
-    padding-block: 10rem;
-  }
 }
 
 .timeline__container {
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
-  gap: 5rem;
-
-  @media (min-width: 1024px) {
-    gap: 7rem;
-  }
+  // Gap entre zonas (head / stats / hitos / stack) fluido. 5rem en mobile
+  // se sentía hueco; 3rem es premium y cohesionado.
+  gap: clamp(3rem, 2rem + 3vw, 7rem);
 }
 
 // ─── Header editorial ────────────────────────────────────────────────────────

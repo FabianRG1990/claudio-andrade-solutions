@@ -1,21 +1,22 @@
 .availability {
   position: relative;
-  padding-block: 8rem;
-
-  @media (min-width: 1024px) {
-    padding-block: 10rem;
-  }
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
 }
 
 .availability__container {
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 }
 
 .availability__grid {
   display: grid;
-  gap: 4rem;
+  // Gap entre las dos columnas (lead + info): 2.5rem en phones, 4rem en
+  // desktop. Antes 4rem constante creaba un hueco vertical excesivo en
+  // mobile entre el title-lead y la primera info-row.
+  gap: clamp(2.5rem, 2rem + 2vw, 4rem);
 
   @media (min-width: 1024px) {
     grid-template-columns: 1fr 1.1fr;
@@ -82,10 +83,13 @@
   padding: 0.375rem 0.375rem 0.375rem 1.5rem;
   font-family: var(--font-button);
   font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: var(--tracking-button);
+  // Touch target AAA — pill completo ≥44px alto.
+  min-height: 44px;
 
-  &:hover .availability__cta-icon {
+  &:hover .availability__cta-icon,
+  &:active .availability__cta-icon {
     transform: translate(2px, -2px);
   }
 }
@@ -123,7 +127,9 @@
 .info-row__inner {
   position: relative;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
-  padding: 1.75rem;
+  // Padding inner fluido — 1.25rem en phones (más aire entre contenido y
+  // borde sin gastar mucho), 1.75rem en desktop.
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
 }
 
 // ─── Halo de color por accent ────────────────────────────────────────────────
@@ -220,7 +226,9 @@
 
 .info-row__title {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  // Fluid 18→20px — en phones angostos ese 1px ahorra spillover al lado del
+  // helper-text de la derecha del head.
+  font-size: clamp(1.125rem, 1rem + 0.4vw, 1.25rem);
   letter-spacing: var(--tracking-tight);
 }
 
@@ -233,7 +241,15 @@
 
 .info-row__body {
   margin-top: 0.5rem;
-  padding-left: 3rem; // pl-12
+  // En phones angostos el padding-left de 3rem (48px) come ~17% del ancho
+  // del card y sumado al padding del inner deja muy poca canvas para el
+  // contenido. Reducimos a 0 en phones — la alineación visual con el icono
+  // queda fea pero el contenido respira. ≥768px restauramos el inset.
+  padding-left: 0;
+
+  @media (min-width: 768px) {
+    padding-left: 3rem; // pl-12
+  }
 }
 
 // ─── Horarios specifics ──────────────────────────────────────────────────────
@@ -284,7 +300,10 @@
 .info-row__transport {
   margin-top: 1.25rem;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  // Phones angostos (<480): cae a 1 columna — cada transporte se lee
+  // limpio. ≥480: 3 columnas en grid uniforme. Antes el repeat(3,1fr) en
+  // 360 daba ~90px por celda y el value 14px se cortaba.
+  grid-template-columns: 1fr;
   gap: 0.75rem;
   border-top: 1px solid rgb(var(--foam) / 0.08);
   padding-top: 1.25rem;
@@ -292,6 +311,10 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
   color: rgb(var(--foam) / 0.55);
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .info-row__transport-label {
@@ -317,7 +340,10 @@
 
 .info-row__price {
   font-family: var(--font-mono);
-  font-size: 2.25rem; // text-4xl
+  // Fluid 28→36px en lugar del 36px fijo. En phones 320-400 el 36px hardcoded
+  // hacía que el precio (4-5 dígitos) compitiera con el `info-row__price-note`
+  // por ancho.
+  font-size: clamp(1.75rem, 1.5rem + 1vw, 2.25rem);
   letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
 }

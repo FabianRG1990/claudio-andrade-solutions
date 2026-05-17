@@ -7,24 +7,24 @@
   // Padding-top muy reducido — el header ocupa 100dvh así que esta
   // sección está debajo del fold inicial. Apenas el usuario scrollea
   // empieza a verse el primer producto sin tener que cruzar un valle de
-  // espacio muerto.
-  padding-block: 2rem 4rem;
-
-  @media (min-width: 1024px) {
-    padding-block: 3rem 6rem;
-  }
+  // espacio muerto. Padding fluido para mantener relación 2/4 → 3/6.
+  padding-block: clamp(2rem, 1.5rem + 1vw, 3rem) clamp(4rem, 3rem + 2vw, 6rem);
 }
 
 .productos__container {
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 }
 
 .productos__list {
   display: flex;
   flex-direction: column;
-  gap: 6rem;
+  // Gap entre productos fluido — 4rem en phones, 6rem en desktop. El gap
+  // grande en mobile creaba la sensación de "página vacía entre cards".
+  gap: clamp(4rem, 3rem + 2vw, 6rem);
 }
 
 // ─── Card por producto ─────────────────────────────────────────────────────
@@ -110,11 +110,18 @@
 
 .product-row__stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  // Phones <480: cae a 1 columna (cada stat con value mono lg = 24-36px se
+  // lee limpio sin recortar). 480-1023: 3 columnas. ≥1024: 3 columnas también
+  // pero ya con más ancho de container.
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   margin-top: 2.5rem;
   padding-top: 2rem;
   border-top: 1px solid rgb(var(--foam) / 0.1);
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .product-row__stat-label {
@@ -149,9 +156,12 @@
   border-radius: 9999px;
   font-family: var(--font-button);
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: var(--tracking-button);
   cursor: pointer;
+  // Touch target AAA — el cta-icon vive en 2rem (32px). Forzamos 44px en
+  // el pill para que el hit-box sea cómodo en mobile.
+  min-height: 44px;
 }
 
 .product-row__cta-label {
@@ -167,7 +177,8 @@
   border-radius: 9999px;
   transition: transform 700ms var(--ease-fluid);
 
-  .product-row__cta:hover & {
+  .product-row__cta:hover &,
+  .product-row__cta:active & {
     transform: translate(2px, -2px);
   }
 }

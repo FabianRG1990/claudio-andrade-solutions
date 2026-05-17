@@ -27,17 +27,15 @@
 
 .case-studies {
   position: relative;
-  padding-block: 8rem;
-
-  @media (min-width: 1024px) {
-    padding-block: 10rem;
-  }
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
 }
 
 .case-studies__container {
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 }
 
 .case-studies__head {
@@ -54,14 +52,12 @@
 }
 
 .case-studies__cases {
-  margin-top: 4rem;
+  margin-top: clamp(2rem, 3vw + 1rem, 4rem);
   display: flex;
   flex-direction: column;
-  gap: 4.5rem;
-
-  @media (min-width: 1024px) {
-    gap: 5.5rem;
-  }
+  // Gap entre cases fluido — phones obtienen 3rem (caso a caso bien separados
+  // pero sin huecos vacíos), desktop 5.5rem.
+  gap: clamp(3rem, 2rem + 3vw, 5.5rem);
 }
 
 // ─── Case row · grid 2-col con alternancia ─────────────────────────────────
@@ -285,19 +281,13 @@
   font-family: var(--font-display);
   // Tamaños teaser-card · NO h2-lg (ese es para encabezados de página).
   // Referencia: Stripe customer story cards 22-26 px / Linear changelog 20 px.
-  font-size: 1.375rem;
+  // Fluid clamp 22→26px sin step — la jerarquía teaser se mantiene en todos
+  // los anchos sin saltos visibles en breakpoints.
+  font-size: clamp(1.375rem, 1.25rem + 0.6vw, 1.625rem);
   font-weight: 500;
   line-height: 1.15;
   letter-spacing: var(--tracking-tight);
   text-wrap: balance;
-
-  @media (min-width: 768px) {
-    font-size: 1.5rem;
-  }
-
-  @media (min-width: 1280px) {
-    font-size: 1.625rem;
-  }
 }
 
 .case-row__copy {
@@ -309,17 +299,25 @@
   font-size: 0.9375rem;
 }
 
-// 3 stats inline en una grid horizontal 3-col en desktop, 3-col también en
-// mobile (el contenido es corto, cabe). Es la unidad de "callout" del card —
-// pequeña pero destacada visualmente con value en mono.
+// 3 stats inline. En desktop grid horizontal 3-col. En phones angostos
+// (<400px) cae a 2-col con el tercer stat ocupando ancho completo en la
+// segunda fila — antes el repeat(3, 1fr) en 360px daba ~95px por celda, los
+// values mono 1.25rem cortaban el último dígito y los labels eyebrow
+// envolvían a 2 líneas.
 .case-row__stats {
   margin: 1.75rem 0 0;
   padding-top: 1.25rem;
   border-top: 1px solid rgb(var(--foam) / 0.12);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
   column-gap: 1rem;
   row-gap: 1rem;
+
+  // ≥480px: forzamos las 3 columnas — auto-fit podría dar 4 en cards
+  // anchas y romper la rítmica de stats.
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .case-row__stat-label {
@@ -333,17 +331,11 @@
 .case-row__stat-value {
   margin: 0.4rem 0 0;
   font-family: var(--font-mono);
-  font-size: 1.25rem;
+  // Fluid 20→24px en lugar del step 20/22/24. Curva más suave en todos los
+  // anchos; en phones angostos 20px es legible sin recortar.
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
   line-height: 1;
   letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
   color: rgb(var(--foam));
-
-  @media (min-width: 768px) {
-    font-size: 1.375rem;
-  }
-
-  @media (min-width: 1280px) {
-    font-size: 1.5rem;
-  }
 }

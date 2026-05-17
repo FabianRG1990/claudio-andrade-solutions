@@ -8,12 +8,12 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  // `min-height: 100dvh` ancla el header a la viewport completa en la
-  // carga inicial: el siguiente segmento de la página queda debajo del
-  // fold, sin "intrusión" sobre el encabezado. Cuando el usuario scrollea
-  // arriba devuelve naturalmente al estado inicial — el segmento siguiente
-  // queda fuera de pantalla porque está debajo del fold del header.
-  min-height: 100dvh;
+  // `min-height: 100svh` — el header debe verse "limpio" en la carga inicial
+  // sin jitter cuando la URL bar de iOS Safari colapsa al primer scroll. dvh
+  // hace que el header se "estire" al ocultar la URL bar y se sienten saltos
+  // visuales en el caustic + bubbles. svh es estable, garantiza altura
+  // mínima del viewport pequeño (con URL bar visible).
+  min-height: 100svh;
   // Padding fluido sin step-functions: phone (~360px) → 8rem top, desktop
   // (1440px) → 14rem. Bottom escala 4→7rem. El nav respira sin dejar huecos.
   padding-top: clamp(8rem, 5rem + 9vw, 14rem);
@@ -79,12 +79,17 @@
   z-index: 10;
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 }
 
 .page-header__grid {
   display: grid;
-  gap: 3rem;
+  // Gap entre las 2 columnas (capítulo eyebrow / título): fluido 1.5rem en
+  // phones → 3rem en desktop. Antes 3rem fijo creaba aire excesivo entre
+  // el chip "Productos / Nosotros / Contacto" y el título en mobile.
+  gap: clamp(1.5rem, 1rem + 2vw, 3rem);
 
   @media (min-width: 1024px) {
     grid-template-columns: 0.45fr 1fr;

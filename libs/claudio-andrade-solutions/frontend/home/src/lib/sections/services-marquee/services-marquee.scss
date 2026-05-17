@@ -1,16 +1,17 @@
 .services-marquee {
   position: relative;
-  padding-block: 8rem;
-
-  @media (min-width: 1024px) {
-    padding-block: 10rem;
-  }
+  // Padding vertical fluido: 4rem en phones → 10rem en desktop. Antes 8rem
+  // base era asfixiante en phones (consume ~25 % del viewport vertical solo
+  // en aire). Mobile-first: arranca cómodo y crece.
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
 }
 
 .services-marquee__container {
   margin-inline: auto;
   max-width: 80rem;
-  padding-inline: var(--container-px);
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
 }
 
 // ─── Header ────────────────────────────────────────────────────────────────
@@ -143,9 +144,18 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  width: 340px;
-  height: 480px;
-  margin-right: 1.5rem;
+  // Mobile-first: 17rem (272px) en phones angostos — cabe completa en
+  // viewports de 320px (iPhone SE) sin tocar bordes y permite ver ~80 % de
+  // la siguiente. En desktop sube a 21.25rem (340px) por la rigidez visual
+  // que querían los users para el carrusel en pantallas grandes.
+  width: clamp(17rem, 75vw, 21.25rem);
+  // Altura fluida acorde — proporción ~1.4 alto/ancho (similar al original
+  // 480/340 = 1.41). Min 380px para que el contenido (head + body + 4
+  // highlights) no se apriete.
+  height: clamp(23.75rem, 90vw, 30rem);
+  // Gap entre cards más chico en mobile para que peek de la siguiente sea
+  // más insinuante. 0.75rem en phone, 1.5rem en desktop.
+  margin-right: clamp(0.75rem, 1vw + 0.5rem, 1.5rem);
   padding: 0.5rem;
   border-radius: var(--radius-squircle);
 }
@@ -156,8 +166,14 @@
   flex-direction: column;
   height: 100%;
   border-radius: calc(var(--radius-squircle) - 0.5rem);
-  padding: 1.75rem 1.625rem 1.5rem;
-  gap: 1.5rem;
+  // Padding inner fluido — apretado en mobile (1.25rem) para que el contenido
+  // respire dentro de 272px de card, abre a 1.75rem en desktop. El compress
+  // en phone NO debe sacrificar legibilidad del nombre del servicio o los
+  // bullets — los probé en 272px de card y queda ok.
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem)
+           clamp(1.125rem, 0.875rem + 1vw, 1.625rem)
+           clamp(1rem, 0.75rem + 1vw, 1.5rem);
+  gap: clamp(1rem, 0.5rem + 1.5vw, 1.5rem);
 }
 
 // ─── Halo de color por categoría ───────────────────────────────────────────

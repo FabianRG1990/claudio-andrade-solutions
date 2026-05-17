@@ -118,6 +118,9 @@
   letter-spacing: -0.005em;
   color: rgb(var(--foam) / 0.85);
   white-space: nowrap;
+  // Touch target AAA — la pill total medía 34px alto (icon 1.5rem + padding
+  // 0.3125rem×2). Forzamos 44px para que sea cómodo de tappear en phones.
+  min-height: 44px;
   transition:
     background 400ms var(--ease-fluid),
     box-shadow 400ms var(--ease-fluid),

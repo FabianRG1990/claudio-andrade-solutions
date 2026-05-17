@@ -306,7 +306,13 @@
 
 .mobile-menu__container {
   display: flex;
-  min-height: 100dvh;
+  // `100svh` (small viewport height) en lugar de `100dvh`: dvh refleja el alto
+  // dinámico — al scrollear en iOS la barra de URL colapsa y el sheet "se
+  // estira", lo que provoca jitter visible en los items con stagger. svh es
+  // el alto del viewport "chico" (URL bar visible), estable, sin saltos. Da
+  // un par de px de menos pero el patrón premium (Stripe, Linear) usa svh
+  // para overlays fijos por esta razón.
+  min-height: 100svh;
   flex-direction: column;
   justify-content: flex-end;
   // Safe-area: el home indicator de iPhone vive en la franja inferior;

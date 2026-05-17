@@ -33,8 +33,16 @@
 
   // Desktop / wide: el hero ocupa el viewport entero porque el `.hero__scene`
   // se vuelve absoluto y el contenido flota sobre la imagen.
+  //
+  // 100svh (small viewport height) en lugar de 100dvh: dvh refleja la URL bar
+  // de iOS Safari colapsándose — el hero "salta" en el primer scroll porque
+  // el viewport cambia de altura. svh es el alto estable (URL bar visible),
+  // sin saltos, y deja un par de px de margen útil donde el contenido respira
+  // cuando la URL bar se oculta. Patrón usado por Stripe / Linear en heroes
+  // full-viewport. Para landscape-phone preservamos el contenido sin forzar
+  // el viewport entero (ver landscape-phone más abajo).
   @media (min-width: 1024px) {
-    min-height: 100dvh;
+    min-height: 100svh;
   }
 }
 
@@ -209,7 +217,7 @@
   padding-bottom: clamp(3rem, 2rem + 4vw, 8rem);
 
   @media (min-width: 1024px) {
-    min-height: 100dvh;
+    min-height: 100svh;
     justify-content: center;
     padding-top: clamp(8rem, 4rem + 12vw, 14rem);
   }
@@ -466,10 +474,21 @@
 .hero__wave-stats {
   margin-top: 1.5rem;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  // Mobile-first: en phones angostos (<400px) los 3 stats con `repeat(3,1fr)`
+  // quedan en ~85-90px cada uno — el valor (1.25rem mono) cabe pero el label
+  // `tracking-eyebrow` (11px uppercase + tracking 0.22em) corta palabras o
+  // genera ellipses. Reflow a 3 columnas con `auto-fit minmax` que cae a 2
+  // columnas en phones muy angostos. ≥400px se logran las 3 cómodas.
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
   gap: 0.75rem;
   border-top: 1px solid rgb(var(--foam) / 0.12);
   padding-top: 1.25rem;
+
+  // ≥480px (phones medianos a desktop): garantizamos las 3 columnas. El
+  // auto-fit puede dar 4 en cards muy anchas, lo fijamos.
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .hero__stat-label {
@@ -550,5 +569,81 @@
 
   .hero__copy {
     max-width: 32ch;
+  }
+}
+
+// ─── Landscape phone (≤540px alto + orientación landscape) ──────────────────
+// Caso ignorado: el usuario gira el teléfono (iPhone 14 = 844×390 → 390 alto;
+// iPhone 14 Pro Max = 932×430 → 430 alto). El layout mobile estándar pone la
+// escena con `aspect-ratio: 1672/941` — en 844px de ancho, la escena ocupa
+// 844 × 475px de alto, **más** alto que el viewport. El usuario aterriza
+// viendo solo la imagen, sin texto ni CTA, y debe scrollear para descubrir
+// que hay contenido editorial debajo. Es el peor first-impression posible.
+//
+// Solución: en landscape phone tratamos la escena como background full-bleed
+// (igual que desktop), pero sin forzar 100svh (que dejaría título +
+// wave-card cortados). El contenido fluye en un layout compacto, el hero
+// queda con altura natural ~600-700px y el texto se lee sobre la imagen.
+@include m.landscape-phone {
+  .hero {
+    // Sin 100svh — el viewport en landscape es bajo. Mejor que el hero
+    // mida lo que necesita su contenido (~650px) y el usuario scrollea
+    // un toque para ver el resto. Más natural que un hero comprimido.
+    min-height: auto;
+  }
+
+  .hero__scene {
+    // Background full-bleed — la escena ya no manda el alto del hero.
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+    z-index: 0;
+  }
+
+  .hero__seam {
+    // Seam más amplio en landscape para fundir suavemente con el footer
+    // de la sección (engagements/case-studies abajo).
+    height: 5rem;
+  }
+
+  .hero__telemetry {
+    // Telemetría más cerca del top — el alto del viewport es escaso.
+    top: max(3.5rem, calc(env(safe-area-inset-top) + 2.75rem));
+  }
+
+  .hero__container {
+    // Padding-top reducido para que el título esté visible above-the-fold
+    // sin scrollear (≥landscape el usuario espera densidad).
+    padding-top: clamp(5rem, 4rem + 4vw, 7rem);
+    padding-bottom: clamp(3rem, 2rem + 3vw, 5rem);
+  }
+
+  .hero__title {
+    // Título escala más conservador en landscape: el ancho es generoso
+    // (800px+) pero el alto no. Tope en 3.5rem (~56px) en lugar de 5.5rem
+    // para que título + copy + CTA quepan en ~500px de scroll.
+    font-size: clamp(2rem, 1.5rem + 3vw, 3.5rem);
+    margin-top: 1rem;
+  }
+
+  .hero__copy {
+    margin-top: 1.25rem;
+    // En landscape, el copy puede usar más chars por línea — ancho amplio.
+    max-width: 55ch;
+  }
+
+  .hero__cta {
+    margin-top: 1.5rem;
+  }
+
+  // El aside (wave-card) se oculta en landscape phone — duplica info que
+  // el copy ya transmite y come altura crítica. La columna principal toma
+  // todo el ancho del container.
+  .hero__aside {
+    display: none;
+  }
+
+  .hero__grid {
+    grid-template-columns: 1fr;
   }
 }
