@@ -9,7 +9,11 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
+  // z-index 4 — encima del flow shader (z=3, ahora compone lago+peces).
+  // El flow es opaco fuera de la máscara también (outputs la imagen del
+  // lago), así que si las estrellas quedaran debajo del flow, no se
+  // verían. Las estrellas siempre van arriba de todo lo que sea agua.
+  z-index: 4;
   overflow: hidden;
 }
 

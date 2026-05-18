@@ -93,7 +93,10 @@
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  z-index: 3;
+  // z-index 5 — encima del flow shader (z=3) y del sky (z=4). El seam
+  // es el cierre visual final del banner antes del contenido editorial,
+  // tiene que poder oscurecer todo el stack visual de la escena.
+  z-index: 5;
   // Mobile: el banner es corto (~200px en phone 360px), así que un seam de
   // 5rem comería el 40 % de la imagen — perderíamos parte del lago donde
   // nadan los peces. Lo bajamos a 2.5rem para que solo el último ~20 % de

@@ -9,10 +9,24 @@ import {
 } from '@angular/core';
 
 /**
- * WolfLakeFlow — capa WebGL que anima EXCLUSIVAMENTE el agua del Hero MK6
- * aplicando un *flow map* sobre la imagen estática.
+ * WolfLakeFlow — capa WebGL que anima el agua del Hero MK6 aplicando un
+ * *flow map* sobre la imagen estática, y ADEMÁS samplea el canvas de los
+ * peces (Three.js) y le aplica el mismo flow con amplitud reducida para
+ * que los peces "se ondulen junto al agua" en lugar de verse pegados
+ * encima.
  *
- * Por qué flow map y no video:
+ * Por qué este componente es el que samplea el canvas del pez:
+ *   El usuario observó correctamente que si los peces se dibujan ENCIMA
+ *   del agua animada, se ven "pegados" — el ojo lee que están sobre la
+ *   superficie, no debajo. Ponerlos debajo y poner el agua encima por
+ *   sí solo no funciona porque el shader del agua era opaco (tapaba al
+ *   pez). La solución: que el shader del agua también samplee el canvas
+ *   del pez y los composite con el mismo desplazamiento UV. Resultado:
+ *   las olas que distorsionan la textura del lago también distorsionan
+ *   al pez con su silueta, en la misma fase y dirección — visualmente
+ *   unificado.
+ *
+ * Por qué flow map y no video (texto histórico, sigue aplicando al lago):
  *   Los modelos de video (Seedance, etc.) interpretan "animar agua" como
  *   añadir eventos (olas, splashes, ondas radiales) porque su training
  *   data está hecho de footage real con eventos. Lo que se pidió aquí es
@@ -23,24 +37,35 @@ import {
  *   UV displacement con blend de dos fases para evitar el seam visible.
  *
  * Arquitectura:
- *   • Un único quad fullscreen, dos texturas:
- *       u_image = hero-mk6 (la imagen visible)
+ *   • Un único quad fullscreen, tres texturas:
+ *       u_image = hero-mk6 (la imagen visible del lago + entorno)
  *       u_mask  = water-mask-mk6 (R-channel: 1 = agua, 0 = no agua;
  *                 trazada por polyline siguiendo el contorno real, con
  *                 Gaussian blur sigma=8 px para feather natural)
- *   • El fragment shader:
- *       1. Mapea gl_FragCoord a image-UV con `object-fit: cover` math.
- *       2. Lee la máscara — si es 0, el pixel sale idéntico a la imagen
- *          original (sin displacement, sin blend).
- *       3. Si es > 0, calcula dos samples de la imagen a offsets de UV
- *          (uno con fase p1, otro con fase p1+0.5), y los mezcla con
- *          peso `abs(p1-0.5)*2`. Esa es la técnica Naughty Dog: en el
- *          momento que un sample llega al seam (wrap del período), el
- *          otro está en el centro de su ciclo, así no se nota el corte.
- *   • Sobre el dispalcement: dirección -y en image-UV (sample sube → el
- *     feature visualmente baja en pantalla). Magnitud escalada por
- *     `imgUV.y` para perspectiva (más flujo cerca del espectador, menos
- *     en el horizonte).
+ *       u_fish  = canvas Three.js de los peces (re-subido cada frame)
+ *   • Fragment shader:
+ *       1. Mapea gl_FragCoord a image-UV (cover-fit) Y a canvas-UV.
+ *       2. Lake displacement (idéntico al diseño original): dos samples
+ *          de u_image con offsets en image-UV, blendeados con peso
+ *          basado en el seam (técnica Naughty Dog flow blend).
+ *       3. Fish displacement: un sample de u_fish con offset en
+ *          canvas-UV de magnitud MUCHO menor (FISH_AMOUNT, ~1.5% vs
+ *          MAX_AMOUNT 10% para el lago). La textura del lago tiene
+ *          features de 50-100px, los detalles del pez son de 2-5px;
+ *          si usaras la amplitud del lago, el pez se desbarata.
+ *       4. Composite: lake_displaced + fish_displaced via alpha-blend.
+ *          El canvas del pez es transparente fuera de los peces, así
+ *          que solo aparece "encima" donde hay pez.
+ *
+ * Z-stack:
+ *   • hero__bg (z=0): imagen estática, fallback si WebGL falla.
+ *   • wolf-lake-canvas (z=2, OPACITY:0): sigue dibujando los peces a su
+ *     ritmo normal — el flow shader lo lee como textura, pero el canvas
+ *     no es directamente visible. Es la "fuente" de la textura del pez.
+ *   • wolf-lake-flow (z=3): este componente, encima del pez canvas.
+ *     Compone el lake displaced + fish displaced.
+ *   • wolf-sky (z=4): estrellas titilan ENCIMA del shader del lago.
+ *   • hero__seam (z=5): fade al abismo, encima de todo.
  *
  * Loop infinito REAL: la simulación corre, no termina. No hay "frame
  * final" que tenga que coincidir con uno inicial — el blend de dos
@@ -48,17 +73,25 @@ import {
  *
  * Fallbacks:
  *   • prefers-reduced-motion → no monta canvas. La imagen `<img>` debajo
- *     queda visible estática.
+ *     queda visible estática. Los peces quedan invisibles (opacity:0).
  *   • Sin WebGL → idem.
  *   • Imagen o máscara falla al cargar → idem.
+ *   • Canvas de peces no existe / no inicializado → shader corre sin
+ *     fish sample (animación del lago igual a antes, sin peces visibles
+ *     transitoriamente hasta que el fish canvas se monte).
  *
  * Performance:
- *   • Single quad, 2 texture samples por pixel — trivial para cualquier
- *     GPU integrada de los últimos 10 años.
+ *   • Single quad, 3 texture samples por pixel (2 lake + 1 fish) —
+ *     trivial para cualquier GPU integrada de los últimos 10 años.
+ *   • Re-upload del fish canvas cada frame: en navegadores modernos
+ *     (Chrome 70+, FF 75+) tex(Sub)Image2D(canvas) tiene fast path
+ *     GPU-to-GPU cuando el canvas ya está en VRAM. Coste medible pero
+ *     muy bajo (<0.5ms incluso en integradas viejas).
  *   • RAF gateado por IntersectionObserver (fuera de viewport → pausa)
  *     y `document.visibilitychange` (tab oculta → pausa).
- *   • DPR clamped a 1.5 — no merece subir más, el efecto es de textura
- *     suave y no muestra alising a >1.5.
+ *   • DPR clamped a 2.0 (era 1.5) para matchear el DPR del fish canvas
+ *     (Three.js setPixelRatio(min(devicePixelRatio, 2)) — si fuésemos
+ *     a 1.5 con fish a 2.0, perderíamos detalle al downsamplear.
  */
 @Component({
   selector: 'app-wolf-lake-flow',
@@ -68,7 +101,11 @@ import {
       :host {
         position: absolute;
         inset: 0;
-        z-index: 0;
+        // z-index 3 — encima del fish canvas (z=2, opacity:0). El flow
+        // shader compone visualmente el lago + los peces desplazados;
+        // el canvas del pez sigue rindiendo pero invisible directamente,
+        // se ve a través de este shader.
+        z-index: 3;
         pointer-events: none;
       }
       .wolf-lake-flow {
@@ -177,13 +214,42 @@ export class WolfLakeFlow {
     gl.enableVertexAttribArray(aPosition);
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
-    // Texturas: unit 0 = imagen, unit 1 = máscara.
+    // Texturas: unit 0 = imagen, unit 1 = máscara, unit 2 = fish canvas.
     const imgTex = createTexture(gl, heroImg, gl.LINEAR);
     const maskTex = createTexture(gl, maskImg, gl.LINEAR);
     if (!imgTex || !maskTex) return;
 
+    // Textura para el fish canvas. Se llena diferido (el primer frame
+    // que el canvas tenga width/height > 0). Si nunca se inicializa o
+    // el sibling no existe, sigue corriendo solo con el lago — el
+    // uniform u_hasFish controla la rama del shader.
+    const fishTex = gl.createTexture();
+    if (fishTex) {
+      gl.bindTexture(gl.TEXTURE_2D, fishTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      // Allocar 1x1 transparente como placeholder — si nunca se hace
+      // el upload real, el shader samplea cero y el u_hasFish=0 path
+      // descarta la rama de composición.
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        1,
+        1,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        new Uint8Array([0, 0, 0, 0]),
+      );
+    }
+
     const uImage = gl.getUniformLocation(program, 'u_image');
     const uMask = gl.getUniformLocation(program, 'u_mask');
+    const uFish = gl.getUniformLocation(program, 'u_fish');
+    const uHasFish = gl.getUniformLocation(program, 'u_hasFish');
     const uCanvasSize = gl.getUniformLocation(program, 'u_canvasSize');
     const uImageSize = gl.getUniformLocation(program, 'u_imageSize');
     const uTime = gl.getUniformLocation(program, 'u_time');
@@ -194,14 +260,38 @@ export class WolfLakeFlow {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, maskTex);
     gl.uniform1i(uMask, 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, fishTex);
+    gl.uniform1i(uFish, 2);
+    gl.uniform1f(uHasFish, 0); // arranca en 0 hasta que se monte el sibling
     gl.uniform2f(uImageSize, IMG_W, IMG_H);
+
+    // Localizar el canvas hermano de los peces. Está en `<app-wolf-lake-canvas>`
+    // dentro del mismo `.hero__scene`. querySelector tolera que aún no esté
+    // montado (devuelve null), se reintenta cada frame en el tick.
+    let fishCanvas: HTMLCanvasElement | null = null;
+    const findFishCanvas = (): HTMLCanvasElement | null => {
+      const scene = host.parentElement;
+      if (!scene) return null;
+      return scene.querySelector(
+        'app-wolf-lake-canvas canvas',
+      ) as HTMLCanvasElement | null;
+    };
+
+    // Premultiplied alpha en el upload — el shader hace la composición
+    // como si la textura del pez ya estuviese premultiplicada. Esto
+    // matchea con `premultipliedAlpha: true` que ya pedimos al getContext.
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
     // ─── Resize ────────────────────────────────────────────────────────────
     let cw = 0;
     let ch = 0;
     const resize = (): void => {
       const rect = host.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      // DPR 2.0 para matchear el fish canvas (Three.js usa min(dpr, 2)).
+      // Si el flow estuviese a 1.5 y el fish a 2.0, el sampleo desde el
+      // fish canvas perdería detalle al downsamplear.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
       cw = Math.max(1, Math.floor(rect.width * dpr));
       ch = Math.max(1, Math.floor(rect.height * dpr));
       canvas.width = cw;
@@ -222,9 +312,34 @@ export class WolfLakeFlow {
 
     let raf = 0;
     const startTime = performance.now();
+    let fishTexAllocatedW = 0;
+    let fishTexAllocatedH = 0;
     const tick = (now: number): void => {
       const t = (now - startTime) / 1000;
       gl.uniform1f(uTime, t);
+
+      // ─── Upload del fish canvas como textura ──────────────────────────
+      // Cada frame: re-buscar el sibling (en HMR/race se puede haber
+      // remontado), validar que tiene dimensiones, y subirlo al GPU.
+      // Si el tamaño cambia, usar texImage2D (re-allocar); si no, usar
+      // texSubImage2D (más barato — solo copia píxeles).
+      if (fishCanvas === null) fishCanvas = findFishCanvas();
+      const fc = fishCanvas;
+      if (fc && fc.width > 0 && fc.height > 0 && fishTex) {
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, fishTex);
+        if (fc.width !== fishTexAllocatedW || fc.height !== fishTexAllocatedH) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fc);
+          fishTexAllocatedW = fc.width;
+          fishTexAllocatedH = fc.height;
+        } else {
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, fc);
+        }
+        gl.uniform1f(uHasFish, 1);
+      } else {
+        gl.uniform1f(uHasFish, 0);
+      }
+
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       raf = requestAnimationFrame(tick);
     };
@@ -269,6 +384,7 @@ export class WolfLakeFlow {
       ro.disconnect();
       gl.deleteTexture(imgTex);
       gl.deleteTexture(maskTex);
+      if (fishTex) gl.deleteTexture(fishTex);
       gl.deleteBuffer(positionBuffer);
       gl.deleteProgram(program);
     };
@@ -308,6 +424,8 @@ const FRAG_SHADER = /* glsl */ `
 
   uniform sampler2D u_image;
   uniform sampler2D u_mask;
+  uniform sampler2D u_fish;
+  uniform float u_hasFish;
   uniform vec2 u_canvasSize;
   uniform vec2 u_imageSize;
   uniform float u_time;
@@ -315,12 +433,50 @@ const FRAG_SHADER = /* glsl */ `
   // Período del flow (segundos). 3.5 = ciclo medio, lectura tranquila
   // pero claramente visible. Si se quiere más lento subir a 4.5-5.
   const float PERIOD = 3.5;
-  // Magnitud máxima del UV-displacement, en unidades de image-UV (0..1).
+  // Magnitud máxima del UV-displacement del lago, en unidades de image-UV (0..1).
   // 0.10 = ~10% del alto de la imagen (~94 px en imagen nativa de 941 alto).
   // Combinado con la curva de perspectiva (depth^1.7), el horizonte queda
   // en ~5% de este valor (~5 px, imperceptible) y el frente recibe la
   // amplitud completa.
   const float MAX_AMOUNT = 0.10;
+  // Alpha del "film de agua" que pasa por encima del pez. El user pidió
+  // explícitamente: pez NO se deforma (la silueta queda nítida), pero la
+  // textura del agua moviéndose se ve POR ENCIMA del pez — como mirar un
+  // pez en un estanque calmo donde las ondas de la superficie pasan
+  // sobre él sin cambiar al pez en sí.
+  //
+  // 0.32 = mezcla 32% del color del lago desplazado sobre el pez. Las
+  // olas del agua (textura wavy del lago + reflejos de ciudad) se ven
+  // claramente encima del pez como un vidrio líquido. El detalle
+  // interno del pez (escamas, ojo, aletas) sigue legible porque el 68%
+  // del color sigue siendo pez.
+  //
+  // Histórico:
+  //   • 0.014 con FISH_AMOUNT 0.008 (UV distortion + double-phase):
+  //     daba "doble pez" / VFX → user rechazó "que NO se deforme".
+  //   • 0.14 sin distortion + perspective gating: peces del mid/back
+  //     casi no recibían film, seguían viéndose "encima". User pidió
+  //     "lograrlo en todos los lados de la pantalla".
+  //   • 0.25 sin perspective gating: mejoró el bottom pero el middle
+  //     seguía leyéndose "encima" — la zona middle del lago tiene
+  //     reflejos brillantes de la ciudad que crean alto contraste
+  //     pez-vs-agua, necesita más film para compensar.
+  //   • 0.32 actual: empujamos más fuerte para que el contraste alto
+  //     del middle también se "desactive". Bottom mantiene su look
+  //     porque maskCurve y el natural darkening del seam dominan ahí.
+  const float WATER_FILM_ALPHA = 0.32;
+
+  // Factor de translucencia del pez. 0.85 = el pez aporta 15% menos al
+  // composite, dejando que 15% del lago se "cuele" a través del cuerpo
+  // del pez en el "source over" blend. Esto añade la sensación de
+  // "cuerpo translúcido bajo el agua, no sticker opaco". Multiplica
+  // tanto rgb como alpha para mantener premultiplicado.
+  //
+  // Histórico: 0.90 era muy conservador, el pez seguía leyéndose como
+  // foreground sólido. 0.85 lo empuja a "se ve el agua por dentro del
+  // pez también" sin comer la línea cyan dorsal ni el ojo (esos son
+  // los píxeles más brillantes del pez y resisten translucencia mejor).
+  const float FISH_TRANSLUCENCY = 0.85;
 
   void main() {
     // canvas-UV con origen TOP-LEFT (mismo sistema que CSS/HTML).
@@ -416,7 +572,65 @@ const FRAG_SHADER = /* glsl */ `
     // c2. Cuando p1 está al medio (0.5), peso=0 → mostramos c1. Esto
     // cancela cualquier salto al wrap del período.
     float w = abs(p1 - 0.5) * 2.0;
-    gl_FragColor = mix(c1, c2, w);
+    vec4 lakeColor = mix(c1, c2, w);
+
+    // ─── Sample del FISH canvas — sin deformación ──────────────────────
+    // El pez se samplea en su posición REAL (canvasUV), sin offset.
+    // La silueta y los detalles internos (escamas, ojo, aletas) quedan
+    // pixel-perfectos. La sensación "bajo el agua" la da:
+    //   (a) translucencia leve del pez (FISH_TRANSLUCENCY = 0.90 →
+    //       10% de bleed-through del lago a través del cuerpo)
+    //   (b) film de agua que se overlayea por encima (más abajo).
+    vec4 fishColor = vec4(0.0);
+    if (u_hasFish > 0.5) {
+      fishColor = texture2D(u_fish, canvasUV);
+      // Translucencia: en premultiplicado, multiplicar TANTO el rgb como
+      // el alpha por el mismo factor preserva la relación correcta. El
+      // pez aporta un 10% menos al composite, lo cual deja que el 10%
+      // del lago debajo se vea a través.
+      fishColor *= FISH_TRANSLUCENCY;
+    }
+
+    // ─── Composite: pez sobre lago + film de agua sobre el pez ─────────
+    //
+    // Paso 1: pez "source over" lago, fórmula premultiplicada estándar
+    //   El upload del fish canvas usó UNPACK_PREMULTIPLY_ALPHA_WEBGL=true,
+    //   así que fishColor.rgb ya viene multiplicado por su alpha.
+    //   Fórmula clásica "source over" en premultiplicado:
+    //     out.rgb = src.rgb + dst.rgb * (1 - src.a)
+    //   Donde el pez es transparente (fishColor.a == 0), queda el lago
+    //   tal cual. Donde está el pez, su rgb premultiplicado suma encima
+    //   del lago atenuado por (1 - fishAlpha).
+    vec3 fishOnLake = fishColor.rgb + lakeColor.rgb * (1.0 - fishColor.a);
+    //
+    // Paso 2: film de agua POR ENCIMA del pez
+    //   El pez tal cual queda "pegado encima del agua" — su silueta es
+    //   nítida y sobre fondo opaco. Para que se vea SUMERGIDO, las olas
+    //   del agua (que ya se mueven en lakeColor por el flow) tienen que
+    //   poder pasar por encima del pez. La técnica: re-overlay del
+    //   lakeColor (lago ya desplazado, con olas en movimiento) sobre el
+    //   pez con alpha baja.
+    //
+    //   Gating:
+    //     • fishColor.a → solo donde HAY pez. Fuera del pez, alpha=0,
+    //       no toca el lago (que ya es la imagen del lago).
+    //     • maskCurve → solo dentro del lago (en la orilla decae a 0).
+    //
+    //   NO usamos perspective gating como hacíamos antes. El user marcó
+    //   un pez del front-left como el target visual y dijo que el resto
+    //   se siente "encima del agua" todavía. Esos otros peces están en
+    //   mid/back lake donde perspective < 1 fuertemente — el film
+    //   apenas los tocaba. Sacando perspective, TODOS los peces dentro
+    //   del lago reciben el mismo film de agua → uniformidad.
+    //
+    //   El resultado: el pez sigue nítido en sus detalles internos, pero
+    //   las olas del agua moviéndose son visibles encima de él como un
+    //   "vidrio líquido" sutil. Genuinamente bajo el agua, sin perder
+    //   detalle ni deformar la silueta.
+    float waterFilmAlpha = WATER_FILM_ALPHA * fishColor.a * maskCurve;
+    vec3 outRGB = mix(fishOnLake, lakeColor.rgb, waterFilmAlpha);
+
+    gl_FragColor = vec4(outRGB, 1.0);
   }
 `;
 

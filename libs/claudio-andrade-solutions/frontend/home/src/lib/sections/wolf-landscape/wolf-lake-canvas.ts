@@ -2537,7 +2537,14 @@ const sampleMask = (
   selector: 'app-wolf-lake-canvas',
   template: '<canvas #canvas class="wolf-lake-canvas" aria-hidden="true"></canvas>',
   styles: [`
-    :host { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+    /* z-index 2 — debajo del shader del flow (z=3) que lee este canvas
+       como textura y compone los peces ondulados encima del lago.
+       opacity:0 — el canvas SIGUE rindiendo (Three.js dibuja cada frame),
+       pero no es visualmente directo: lo que ve el usuario es la salida
+       del flow shader, que toma este canvas como fuente. Sin opacity:0
+       veríamos los peces dos veces: la versión "cruda" aquí + la versión
+       ondulada en el flow. */
+    :host { position: absolute; inset: 0; pointer-events: none; z-index: 2; opacity: 0; }
     .wolf-lake-canvas { display: block; width: 100%; height: 100%; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
