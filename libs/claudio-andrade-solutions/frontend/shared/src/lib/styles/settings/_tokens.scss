@@ -52,11 +52,11 @@
   --tracking-tight: 0em;
   --tracking-normal: 0.01em;
   --tracking-eyebrow: 0.22em;
-  // Roboto botón bold/semibold a 13-14px con tracking 0 o negativo se ve
-  // apretado y cuesta leer. +0.018em es el rango "Label Large" de Material 3
-  // para Roboto en botones — abre los huecos entre letras sin que se vea
-  // espaciado/decorativo. Usar en todos los CTAs pill.
-  --tracking-button: 0.018em;
+  // Roboto bold a 13-14px sobre cristal translúcido sigue apretado con el
+  // tracking estándar de Material (0.018em); con +0.04em los huecos entre
+  // letras son perceptibles a primera vista en mobile sin que el label se
+  // vea decorativo/spacing-out. Usar en todos los CTAs pill.
+  --tracking-button: 0.04em;
 
   // ---- Radios -------------------------------------------------------------
   --radius-sm: 0.125rem;

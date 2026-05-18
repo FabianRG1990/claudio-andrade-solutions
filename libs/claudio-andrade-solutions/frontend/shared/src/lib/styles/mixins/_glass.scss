@@ -225,7 +225,18 @@
     );
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
-  color: rgb(245 241 232 / 0.97);
+  // Foam macizo (sin alpha) — el 0.97 anterior dejaba el texto del label
+  // ligeramente translúcido sobre el blur del backdrop, lo que se leía como
+  // "difuminado". A foam sólido las letras quedan nítidas sin tocar el
+  // cristal de fondo.
+  color: rgb(245 241 232);
+  // Forzar antialiasing limpio: por defecto Chrome usa subpixel rendering
+  // para texto pequeño bold sobre fondos translúcidos, y se ve "fuzzy" en
+  // los bordes de cada letra. `antialiased` lo cambia a escala de grises,
+  // bordes más definidos. `optimizeLegibility` activa kerning/ligaturas.
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   box-shadow:
     // Drop atmosférico (mismo lenguaje que `glass-nav-shell`, escalado).
     0 24px 48px -16px rgb(0 0 0 / 0.55),
