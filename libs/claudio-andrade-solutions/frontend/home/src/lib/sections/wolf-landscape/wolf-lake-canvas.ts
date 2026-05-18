@@ -635,7 +635,12 @@ class GlowFish {
         let diff = targetAngle - this.heading;
         while (diff > Math.PI) diff -= 2 * Math.PI;
         while (diff < -Math.PI) diff += 2 * Math.PI;
-        const rate = 0.4 * Math.min(1, lookDist / 30);
+        // Rate escala con angDiffMag — cuando cursor pasa muy atras del
+        // pez (diff cercano a π), rate sube para que 180° tarde ~0.7s
+        // en lugar de 8s. Permite que la cabeza voltee agil sin salir
+        // del hover.
+        const angDiffMag = Math.abs(diff);
+        const rate = Math.max(0.4 * Math.min(1, lookDist / 30), angDiffMag * 1.5);
         const turn = Math.sign(diff) * Math.min(Math.abs(diff), rate * _dt);
         this.heading += turn;
       }
@@ -883,7 +888,13 @@ class GlowFish {
     //     curvatura sea visualmente DOMINANTE durante el giro y enmascare
     //     el Y-flip. Smoothed con k=3 (tau ~330ms) para persistir un
     //     instante después del giro y luego relajarse.
-    const targetTurnBend = Math.max(-1, Math.min(1, this.angularVel * 0.85));
+    // En hover el body esta anchored — si turnBend tiene valor del
+    // head tracking del cursor, el cuerpo queda CURVADO en C congelado
+    // ("media luna tieso" bug). Target=0 en hover → bend decae a 0 en
+    // ~333ms con el lerp k=3, cuerpo se ve recto.
+    const targetTurnBend = this.isHovering
+      ? 0
+      : Math.max(-1, Math.min(1, this.angularVel * 0.85));
     this.turnBend += (targetTurnBend - this.turnBend) * Math.min(1, _dt * 3);
     // delayedTurnBend lerps MUY LENTO (k=1.0, tau ~1000ms). En la cola
     // este bend es lo que se aplica → durante turns rápidos, tail mantiene
@@ -3154,31 +3165,19 @@ export class WolfLakeCanvas {
           );
           const hoverRadiusEnter = 14 + cursorFish.size * 1.4;
           const hoverRadiusExit = hoverRadiusEnter * 1.6;
-          // ¿El cursor está claramente DETRÁS del pez? Si pasa al
-          // hemisferio trasero (|ang| > ~99° del heading), rompemos el
-          // hover. Sin este check, cuando el usuario movía el cursor
-          // LENTO hacia atrás del pez en hover, el position-lerp arrastraba
-          // al pez hacia atrás mientras la cabeza rotaba despacio → look
-          // "camarón en C arrastrado". Al romper hover, kinematic toma
-          // over y con el gating de speed (max(0, alignment)) el pez
-          // decelera a 0, pivota tranquilo, y solo reanuda chase cuando
-          // está alineado.
-          const angToCursor = Math.atan2(
-            pointer.y - cursorFish.position.y,
-            pointer.x - cursorFish.position.x,
-          );
-          let headingDiffToCursor = angToCursor - cursorFish.heading;
-          while (headingDiffToCursor > Math.PI) headingDiffToCursor -= 2 * Math.PI;
-          while (headingDiffToCursor < -Math.PI) headingDiffToCursor += 2 * Math.PI;
-          const cursorBehindFish = Math.abs(headingDiffToCursor) > Math.PI * 0.55;
-
           // Hover detection con HYSTERESIS — el pez entra al hover a ≈45 px,
           // pero solo sale cuando el cursor se aleja a 1.6× ese radio (≈72 px).
           // Sin la hysteresis, microvibraciones del cursor hacían parpadear
           // isHovering entre frames y el pez entraba/salía del station-keeping
           // varias veces por segundo.
+          //
+          // cursorBehindFish check REMOVIDO — causaba flap hover↔cruising
+          // cuando user movia cursor cerca y por atras del pez. Ahora la
+          // cabeza rota agil (rate escala con angDiff en hover branch del
+          // update) y turnBend=0 forzado en hover evita el "camaron en C
+          // arrastrado" que motivo el check original.
           cursorFish.isHovering = cursorFish.isHovering
-            ? (dToCursor < hoverRadiusExit && !cursorBehindFish)
+            ? dToCursor < hoverRadiusExit
             : dToCursor < hoverRadiusEnter;
 
           // ─── Body / head decoupling (fix de "target chatter") ─────
