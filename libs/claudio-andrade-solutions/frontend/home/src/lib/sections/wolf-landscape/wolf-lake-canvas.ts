@@ -2632,6 +2632,20 @@ export class WolfLakeCanvas {
     let prevPointerX = 0;
     let prevPointerY = 0;
     let cursorSpeedSmoothed = 0;
+    // Velocidad vector smoothed del cursor (no solo magnitud). Necesario
+    // para detectar APROXIMACION (dot(cursorVel, fish-cursor) > 0). Se
+    // usa para trigger el "flee animation" — cuando el cursor se acerca
+    // lento al pez, el pez se voltea y nada hacia el lado contrario.
+    let cursorVelX = 0;
+    let cursorVelY = 0;
+    // Flee state — cuando el pez detecta aproximacion LENTA del cursor,
+    // hace una animacion BREVE de dodge (~0.6s): paso al lado + heading
+    // matchea direccion del cursor. Cooldown previene re-trigger inmediato.
+    // El TARGET de dodge se captura al trigger time (locked, no moving).
+    let cursorFishFleeUntil = 0;
+    let cursorFishFleeCooldown = 0;
+    let fleeTargetX = 0;
+    let fleeTargetY = 0;
     // Engagement timeout — si el pez ya alcanzó el cursor (hovering) y
     // este se queda quieto 3 segundos, el pez "pierde interés" y vuelve
     // a patrullaje. El flag persiste hasta que el cursor se mueva de
@@ -3129,8 +3143,15 @@ export class WolfLakeCanvas {
         const cdy = pointer.y - prevPointerY;
         const rawCursorSpeed = Math.hypot(cdx, cdy) / Math.max(dt, 1e-6);
         cursorSpeedSmoothed = cursorSpeedSmoothed * 0.7 + rawCursorSpeed * 0.3;
+        // Velocity vector (px/s) — separa direccion del speed magnitude.
+        const cvxRaw = cdx / Math.max(dt, 1e-6);
+        const cvyRaw = cdy / Math.max(dt, 1e-6);
+        cursorVelX = cursorVelX * 0.7 + cvxRaw * 0.3;
+        cursorVelY = cursorVelY * 0.7 + cvyRaw * 0.3;
       } else {
         cursorSpeedSmoothed *= 0.85;
+        cursorVelX *= 0.85;
+        cursorVelY *= 0.85;
       }
       prevPointerX = pointer.x;
       prevPointerY = pointer.y;
@@ -3165,20 +3186,78 @@ export class WolfLakeCanvas {
           );
           const hoverRadiusEnter = 14 + cursorFish.size * 1.4;
           const hoverRadiusExit = hoverRadiusEnter * 1.6;
-          // Hover detection con HYSTERESIS — el pez entra al hover a ≈45 px,
-          // pero solo sale cuando el cursor se aleja a 1.6× ese radio (≈72 px).
-          // Sin la hysteresis, microvibraciones del cursor hacían parpadear
-          // isHovering entre frames y el pez entraba/salía del station-keeping
-          // varias veces por segundo.
+          // ─── DODGE on slow approach ───────────────────────────────────
+          // El user pidio: si el cursor se acerca LENTO al pez, el pez
+          // da un PASO al lado y queda viendo en la misma direccion del
+          // cursor. Movimiento BREVE (~50 px), no maraton.
           //
-          // cursorBehindFish check REMOVIDO — causaba flap hover↔cruising
-          // cuando user movia cursor cerca y por atras del pez. Ahora la
-          // cabeza rota agil (rate escala con angDiff en hover branch del
-          // update) y turnBend=0 forzado en hover evita el "camaron en C
-          // arrastrado" que motivo el check original.
-          cursorFish.isHovering = cursorFish.isHovering
-            ? dToCursor < hoverRadiusExit
-            : dToCursor < hoverRadiusEnter;
+          // Geometria del dodge: target = position + perp * 30 + cvDir * 60
+          //   • perp = perpendicular a cursor velocity, lado donde el
+          //     pez ya esta relativo al cursor → dodge fuera del path
+          //   • cvDir = direccion del cursor → fish heading queda
+          //     alineado con cursor direction (~63° aligned con cv,
+          //     ~27° offset por el perp)
+          //   • Total ~67 px de displacement target (corto)
+          //
+          // Trigger SOLO en speed range estrecho [15, 200] px/s — excluye
+          // pass-overs rapidos, movimientos normales, y cursor quieto.
+          const nowSec = performance.now() / 1000;
+          const fleeActive = nowSec < cursorFishFleeUntil;
+          const fleeCooldownActive = nowSec < cursorFishFleeCooldown;
+          if (!fleeActive && !fleeCooldownActive) {
+            const dxFromCursor = cursorFish.position.x - pointer.x;
+            const dyFromCursor = cursorFish.position.y - pointer.y;
+            const approachDot = cursorVelX * dxFromCursor + cursorVelY * dyFromCursor;
+            const cursorIsSlow = cursorSpeedSmoothed > 15 && cursorSpeedSmoothed < 200;
+            const cursorIsClose = dToCursor > 30 && dToCursor < 180;
+            const cursorIsApproaching = approachDot > 0;
+            if (cursorIsSlow && cursorIsClose && cursorIsApproaching) {
+              // Compute dodge target ONCE at trigger time (locked).
+              const cvMag = Math.hypot(cursorVelX, cursorVelY) || 1;
+              const cvxN = cursorVelX / cvMag;
+              const cvyN = cursorVelY / cvMag;
+              // Dos perpendiculares posibles a cv; elegir la que apunta
+              // hacia donde el pez ya esta relativo al cursor (= dodge
+              // por el lado del path donde el pez ya esta).
+              const perpLx = -cvyN;
+              const perpLy = cvxN;
+              const perpRx = cvyN;
+              const perpRy = -cvxN;
+              const dotL = perpLx * dxFromCursor + perpLy * dyFromCursor;
+              const perpX = dotL > 0 ? perpLx : perpRx;
+              const perpY = dotL > 0 ? perpLy : perpRy;
+              fleeTargetX = cursorFish.position.x + perpX * 30 + cvxN * 60;
+              fleeTargetY = cursorFish.position.y + perpY * 30 + cvyN * 60;
+              cursorFishFleeUntil = nowSec + 0.6;
+              cursorFishFleeCooldown = nowSec + 1.5;
+            }
+          }
+
+          if (fleeActive) {
+            // DODGE corto: target locked (capturado en trigger). Body y
+            // heading van hacia el dodge point. huntingBoost moderado
+            // (4.0) — rapido pero no extremo, mejor lectura visual.
+            cursorFish.target.x = fleeTargetX;
+            cursorFish.target.y = fleeTargetY;
+            cursorFish.lookTarget.x = fleeTargetX;
+            cursorFish.lookTarget.y = fleeTargetY;
+            cursorFish.isHovering = false;
+            cursorFish.huntingBoost = 4.0;
+          } else {
+            // Hover detection con HYSTERESIS — el pez entra al hover a ≈45 px,
+            // pero solo sale cuando el cursor se aleja a 1.6× ese radio (≈72 px).
+            // Sin la hysteresis, microvibraciones del cursor hacían parpadear
+            // isHovering entre frames y el pez entraba/salía del station-keeping
+            // varias veces por segundo.
+            //
+            // cursorBehindFish check REMOVIDO — causaba flap hover↔cruising
+            // cuando user movia cursor cerca y por atras del pez. Ahora la
+            // cabeza rota agil (rate escala con angDiff en hover branch del
+            // update) y turnBend=0 forzado en hover evita el "camaron en C
+            // arrastrado" que motivo el check original.
+            cursorFish.isHovering = cursorFish.isHovering
+              ? dToCursor < hoverRadiusExit
+              : dToCursor < hoverRadiusEnter;
 
           // ─── Body / head decoupling (fix de "target chatter") ─────
           // Cuando el cursor wigglea sobre el pez en hover, el chain del
@@ -3286,6 +3365,7 @@ export class WolfLakeCanvas {
           }
 
           cursorFish.huntingBoost = huntingBoost;
+          } // end else (flee not active)
         }
       } else {
         cursorFish.glowBoostTarget = 0.4;
