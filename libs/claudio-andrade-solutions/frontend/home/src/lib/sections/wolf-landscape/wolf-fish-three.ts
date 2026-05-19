@@ -361,10 +361,11 @@ export class FishThreeRenderer {
           c += texture2D(tDiffuse, vUv + step *  2.0) * 0.12;
           c += texture2D(tDiffuse, vUv + step *  3.0) * 0.09;
           c += texture2D(tDiffuse, vUv + step *  4.0) * 0.05;
-          // Alpha fade con pow(effectAmt, 1.5) — usa effectAmt asi el
-          // fade tambien respeta el oval horizontal (no fade fuera del
-          // centro brillante).
-          float fadeAmt = pow(effectAmt, 1.5);
+          // Alpha fade con pow(effectAmt, 1.5) capeado a 0.65 max → en
+          // el centro maximo el pez queda con alpha minimo 0.35 (no se
+          // desvanece a 0). User pidio "aumentemos un poquito mas la
+          // opacidad del pez cuando esta en el centro del agua".
+          float fadeAmt = pow(effectAmt, 1.5) * 0.65;
           c.a *= mix(1.0, 1.0 - fadeAmt, uApplyFade);
           gl_FragColor = c;
         }
