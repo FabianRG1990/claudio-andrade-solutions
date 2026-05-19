@@ -63,20 +63,32 @@
   display: grid;
   gap: 1.25rem;
 
-  // Tablet portrait (iPad 768px): 3 cards apiladas dejaban media página
-  // muerta. Pasamos a 2-col con la card highlight ocupando el ancho completo
-  // como banda inferior — patrón de pricing tables de Stripe/Linear cuando
-  // hay un plan destacado.
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-
-    .engagement-card--highlight {
-      grid-column: 1 / -1;
+  // Tablet (640-1023): single column con max-width centrado. La versión
+  // previa hacía 2-col + highlight-full-width, lo que producía un
+  // desalineado visual (la card "Recomendado" se anchaba al doble que las
+  // hermanas y rompía el ritmo, feedback explícito del usuario sobre
+  // captura en viewport ~870px). Patrón premium para pricing tables en
+  // tablet: stack vertical centrado, todas las cards mismo ancho, la
+  // highlight gana por glow/sombra/badge, no por dimensión. Mismo enfoque
+  // que Stripe pricing en tablet (https://stripe.com/pricing).
+  @media (min-width: 640px) {
+    > .engagement-card {
+      max-width: 32rem;
+      width: 100%;
+      margin-inline: auto;
     }
   }
 
+  // Desktop (≥1024): tres columnas. La highlight vuelve a flujo natural
+  // (sin span), todas las cards mismo ancho, la highlight visualmente
+  // distinta por su glow / outline / "Recomendado" badge.
   @media (min-width: 1024px) {
     grid-template-columns: repeat(3, 1fr);
+
+    > .engagement-card {
+      max-width: none;
+      margin-inline: 0;
+    }
 
     .engagement-card--highlight {
       grid-column: auto;

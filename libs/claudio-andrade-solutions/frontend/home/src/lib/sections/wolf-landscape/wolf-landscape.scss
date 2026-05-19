@@ -3,24 +3,27 @@
 @use 'mixins' as m;
 
 // =============================================================================
-// Hero — capítulo de apertura. La arquitectura responsive vive en dos modos:
+// Hero — capítulo de apertura.
 //
-//   • Mobile / narrow tablet (< 1024px): el hero es un flex column. El
-//     `.hero__scene` toma su aspect-ratio del hero-mk6 (1672/941), así la
-//     imagen se muestra COMPLETA (sin recorte, con lobo, lago, ciudad y
-//     cielo visibles). Debajo fluye el contenido editorial — título, copy,
-//     CTA, wave card. El usuario ve la escena entera + scrollea al texto.
+// Iteración 2026-05 (post-feedback fase 1):
+// El approach "aspect-ratio nativo en mobile" producía una franja de ~200px
+// alta donde el lobo + peces + estrellas se renderizaban sobre un canvas
+// 360×200 que los desproporcionaba (peces enormes, estrellas como puntos sin
+// brillo perceptible). El resultado: amateur, no premium. Patrón confirmado
+// por referencia en Apple Vision Pro / Lusion / Active Theory mobile: no
+// se MINIATURIZA la experiencia desktop — se REEMPLAZA por una experiencia
+// phone-nativa. Imagen full-bleed con crop hacia el lobo, animaciones
+// canvas apagadas (no tienen escala para leerse), texto editorial al
+// frente.
 //
-//   • Desktop / wide laptop (≥ 1024px): comportamiento original. El hero
-//     ocupa 100dvh, `.hero__scene` se vuelve `position: absolute; inset: 0;`
-//     y la imagen se hace cover. El contenido editorial flota sobre la
-//     imagen.
-//
-// El usuario pidió explícitamente: "la imagen del hero tiene que estar
-// presente en el teléfono. O sea, ocupo que la imagen del hero se haga más
-// pequeña, no que la recortes, sino que la reduzcas el tamaño y la acoples
-// a diferentes dispositivos." — el wrapper con aspect-ratio resuelve esto
-// sin necesidad de un crop portrait separado.
+// Arquitectura nueva:
+//   • Phone (< 1024px): igual que desktop — `.hero__scene` es absoluto e
+//     inset:0, imagen `object-fit: cover` con `object-position` hacia la
+//     cara del lobo (right side de la imagen), hero ocupa `100svh`,
+//     contenido editorial flota sobre la imagen. Animaciones canvas
+//     ocultas (`display: none`) para que no se renderizen.
+//   • Desktop (≥ 1024px): comportamiento original — imagen full-bleed
+//     centrada, todas las animaciones activas.
 // =============================================================================
 
 .hero {
@@ -30,57 +33,76 @@
   background: #06091A;
   display: flex;
   flex-direction: column;
-
-  // Desktop / wide: el hero ocupa el viewport entero porque el `.hero__scene`
-  // se vuelve absoluto y el contenido flota sobre la imagen.
-  //
-  // 100svh (small viewport height) en lugar de 100dvh: dvh refleja la URL bar
-  // de iOS Safari colapsándose — el hero "salta" en el primer scroll porque
-  // el viewport cambia de altura. svh es el alto estable (URL bar visible),
-  // sin saltos, y deja un par de px de margen útil donde el contenido respira
-  // cuando la URL bar se oculta. Patrón usado por Stripe / Linear en heroes
-  // full-viewport. Para landscape-phone preservamos el contenido sin forzar
-  // el viewport entero (ver landscape-phone más abajo).
-  @media (min-width: 1024px) {
-    min-height: 100svh;
-  }
+  // Mobile + desktop: el hero ocupa el viewport entero. svh (small viewport
+  // height) en lugar de dvh para que el hero no salte cuando la URL bar de
+  // iOS Safari colapsa al scroll. Patrón usado por Stripe / Linear.
+  // El landscape-phone override más abajo libera esto cuando el alto del
+  // viewport es < 540px.
+  min-height: 100svh;
 }
 
-// ─── Escena (imagen + capas animadas) ────────────────────────────────────────
-// Wrapper con aspect-ratio que mantiene la imagen completa visible en mobile
-// y se transforma en background full-bleed en desktop.
-.hero__scene {
-  position: relative;
-  width: 100%;
-  // Aspect ratio nativo de `/hero-wolf/hero-mk6.png` (1672 × 941). Si en el
-  // futuro se cambia ese asset por otro tamaño, hay que actualizar este
-  // valor y los `IMG_W`/`IMG_H` en `wolf-lake-canvas.ts` y `wolf-lake-flow.ts`.
-  aspect-ratio: 1672 / 941;
-  overflow: hidden;
+// =============================================================================
+// Canvas animados activos en todos los viewports.
+// =============================================================================
+// Los tres componentes (`<app-wolf-lake-flow>`, `<app-wolf-sky>`,
+// `<app-wolf-lake-canvas>`) están escritos para ser responsive:
+//
+//   • wolf-lake-canvas (peces): el tamaño de cada pez se calcula con
+//     `Math.max(11, Math.min(20, cw / 72))` — el 11px min garantiza que
+//     se vean nítidos en phone (cw ≈ 360 → baseSize=11), 20px en desktop
+//     (cw ≥ 1440 → baseSize=20).
+//   • wolf-sky (estrellas): 30 estrellas posicionadas en %, escalan con
+//     el contenedor automáticamente. Tamaño fijo 1.2-1.8px = igual a las
+//     estrellas pintadas del poster, no se hinchan en phone.
+//   • wolf-lake-flow (shader de agua): WebGL render-target que se
+//     re-dimensiona con ResizeObserver. Sigue el rect del scene.
+//
+// Decisión previa de ocultarlos en phone fue errónea — la queja inicial
+// del usuario ("peces dando vueltas, estrellas como puntos") era contra
+// la versión donde la escena medía 360×200 px (banner mini con
+// aspect-ratio). Ahora la escena es 360×100svh (~360×640) — los peces
+// tienen 4× más superficie de nado y el cielo cabe en 18% del top con
+// las estrellas a su escala correcta.
 
-  @media (min-width: 1024px) {
-    position: absolute;
-    inset: 0;
-    aspect-ratio: auto;
-  }
+// ─── Escena (imagen + capas animadas) ────────────────────────────────────────
+// Mobile + desktop: full-bleed absoluta. El comportamiento "aspect-ratio
+// nativo" en mobile (versión previa) producía una franja de 200px alta donde
+// los peces/estrellas no leían — feedback explícito del usuario. Volvemos al
+// patrón premium: imagen como background dominante, contenido editorial
+// encima. Como Apple Vision Pro y los productos de Linear.
+.hero__scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
 }
 
 // ─── Fondo estático ──────────────────────────────────────────────────────────
-// `object-fit: cover` + `object-position: center` — cuando el contenedor
-// comparte aspect-ratio con la imagen (caso mobile), cover y contain producen
-// el mismo render: imagen completa sin distorsión. Cuando el contenedor es
-// más ancho (caso desktop full-bleed), cover llena pantalla con recorte
-// mínimo arriba/abajo.
+// `object-fit: cover` con `object-position` calibrado al hero-mk6.png
+// (1672×941). El lobo wireframe vive en el cuadrante centro-derecho de la
+// imagen — al recortar en portrait, queremos preservarlo. `object-position`
+// = `70% center` mantiene el lobo dentro del frame en cualquier viewport
+// hasta 1024 (phone vertical + landscape phone + tablet portrait).
+// En desktop (≥1024) el viewport es lo bastante ancho para mostrar la
+// imagen completa o casi — vuelve a `center` para no perder el bridge/
+// skyline de la izquierda.
 .hero__bg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  // Phone: foco en el lobo (right side). El lobo es el ancla visual de la
+  // marca; sacrificamos el bridge/skyline de la izquierda en mobile a
+  // favor de un encuadre que se lee como "obra premium" en portrait.
+  object-position: 72% center;
   z-index: 0;
   pointer-events: none;
   user-select: none;
+
+  @media (min-width: 1024px) {
+    object-position: center;
+  }
 }
 
 // ─── Cierre inferior ─────────────────────────────────────────────────────────
@@ -94,24 +116,22 @@
   inset-inline: 0;
   bottom: 0;
   // z-index 5 — encima del flow shader (z=3) y del sky (z=4). El seam
-  // es el cierre visual final del banner antes del contenido editorial,
-  // tiene que poder oscurecer todo el stack visual de la escena.
+  // es el cierre visual final antes del contenido editorial / siguiente
+  // sección. Tiene que poder oscurecer todo el stack visual de la escena.
   z-index: 5;
-  // Mobile: el banner es corto (~200px en phone 360px), así que un seam de
-  // 5rem comería el 40 % de la imagen — perderíamos parte del lago donde
-  // nadan los peces. Lo bajamos a 2.5rem para que solo el último ~20 % de
-  // la imagen reciba el degradé hacia el abismo. Desktop: 11rem original.
-  height: 2.5rem;
+  // Fluid: 5rem en phones (~80px, cubre ~12% del viewport sin asfixiar el
+  // reflejo del lago donde vive el lobo de la marca), 11rem en desktop. La
+  // legibilidad del título sobre la imagen la sostienen los text-shadow
+  // apilados — el seam es para fundir al abyss, no para escudar el copy.
+  // 8rem (versión previa) ahogaba el 20% del viewport en gradiente oscuro,
+  // matando el premium feel del agua. 5rem deja respirar la imagen.
+  height: clamp(5rem, 3.5rem + 4vw, 11rem);
   background: linear-gradient(
     180deg,
     transparent 0%,
     rgb(6 9 26 / 0.55) 45%,
     #06091A 100%
   );
-
-  @media (min-width: 1024px) {
-    height: 11rem;
-  }
 }
 
 // ─── Telemetría superior ─────────────────────────────────────────────────────
@@ -201,10 +221,10 @@
 }
 
 // ─── Capa principal ──────────────────────────────────────────────────────────
-// Mobile: el container fluye después del scene-banner. Padding-top corto —
-// el contenido empieza justo debajo del banner con respiro mínimo.
-// Desktop: container ocupa todo el viewport (min-height: 100dvh) y el
-// contenido se centra vertical sobre la imagen full-bleed.
+// Mobile + desktop: el container ocupa el viewport entero y el contenido se
+// centra verticalmente sobre la imagen full-bleed. Patrón unificado — antes
+// el container fluía debajo de un scene-banner en mobile (versión previa);
+// ahora la imagen es siempre full-bleed y el contenido siempre flota encima.
 .hero__container {
   position: relative;
   z-index: 10;
@@ -212,18 +232,16 @@
   display: flex;
   width: 100%;
   max-width: 80rem;
+  min-height: 100svh;
   flex-direction: column;
-  padding-top: clamp(2rem, 1.25rem + 3vw, 4rem);
+  justify-content: center;
+  // Padding-top fluido: 6rem en phones (suficiente para que el título quede
+  // bajo el nav + telemetría sin colisión), sube a 14rem en desktop.
+  padding-top: clamp(6rem, 3rem + 8vw, 14rem);
   padding-inline:
     max(var(--container-px), env(safe-area-inset-left))
     max(var(--container-px), env(safe-area-inset-right));
-  padding-bottom: clamp(3rem, 2rem + 4vw, 8rem);
-
-  @media (min-width: 1024px) {
-    min-height: 100svh;
-    justify-content: center;
-    padding-top: clamp(8rem, 4rem + 12vw, 14rem);
-  }
+  padding-bottom: clamp(4rem, 2rem + 4vw, 8rem);
 }
 
 .hero__grid {
@@ -391,10 +409,20 @@
 }
 
 // ─── Aside column (cohorte card + scroll hint) ───────────────────────────────
+// Phone (< 1024px): el aside se oculta. La wave-card "Próxima cohorte" con
+// 3 stats compite por atención con el título sobre una imagen que también
+// reclama el ojo — en mobile el premium se hace con jerarquía minimal:
+// imagen + título + copy + nada más. La info de stats vive en el capítulo
+// `timeline` más abajo. Mismo patrón que Apple Vision Pro mobile (hero =
+// imagen + título + 1 acción, sin sidebars).
 .hero__aside {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: none;
+
+  @media (min-width: 1024px) {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
 }
 
 // Override del glass-shell base para hacer el card más translúcido — el bg
@@ -576,37 +604,16 @@
 }
 
 // ─── Landscape phone (≤540px alto + orientación landscape) ──────────────────
-// Caso ignorado: el usuario gira el teléfono (iPhone 14 = 844×390 → 390 alto;
-// iPhone 14 Pro Max = 932×430 → 430 alto). El layout mobile estándar pone la
-// escena con `aspect-ratio: 1672/941` — en 844px de ancho, la escena ocupa
-// 844 × 475px de alto, **más** alto que el viewport. El usuario aterriza
-// viendo solo la imagen, sin texto ni CTA, y debe scrollear para descubrir
-// que hay contenido editorial debajo. Es el peor first-impression posible.
-//
-// Solución: en landscape phone tratamos la escena como background full-bleed
-// (igual que desktop), pero sin forzar 100svh (que dejaría título +
-// wave-card cortados). El contenido fluye en un layout compacto, el hero
-// queda con altura natural ~600-700px y el texto se lee sobre la imagen.
+// El usuario gira el teléfono (iPhone 14 = 844×390; Pro Max = 932×430). El
+// hero ahora es siempre full-bleed con `min-height: 100svh`, lo que en
+// landscape phone deja apenas ~360px de alto útil para título + copy. Para
+// que el contenido respire sin scrollear, soltamos el min-height (el hero
+// crece con su contenido), achicamos el título y reducimos paddings.
 @include m.landscape-phone {
   .hero {
-    // Sin 100svh — el viewport en landscape es bajo. Mejor que el hero
-    // mida lo que necesita su contenido (~650px) y el usuario scrollea
-    // un toque para ver el resto. Más natural que un hero comprimido.
+    // Sin 100svh — en landscape phone el viewport es bajo y forzar la
+    // altura completa apretaría el contenido. El hero crece con su contenido.
     min-height: auto;
-  }
-
-  .hero__scene {
-    // Background full-bleed — la escena ya no manda el alto del hero.
-    position: absolute;
-    inset: 0;
-    aspect-ratio: auto;
-    z-index: 0;
-  }
-
-  .hero__seam {
-    // Seam más amplio en landscape para fundir suavemente con el footer
-    // de la sección (engagements/case-studies abajo).
-    height: 5rem;
   }
 
   .hero__telemetry {
@@ -615,6 +622,7 @@
   }
 
   .hero__container {
+    min-height: auto;
     // Padding-top reducido para que el título esté visible above-the-fold
     // sin scrollear (≥landscape el usuario espera densidad).
     padding-top: clamp(5rem, 4rem + 4vw, 7rem);

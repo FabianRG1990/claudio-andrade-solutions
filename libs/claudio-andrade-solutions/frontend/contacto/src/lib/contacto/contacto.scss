@@ -461,13 +461,14 @@
   font-size: 1rem;
   letter-spacing: 0.022em;
   color: rgb(var(--foam) / 0.92);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  @media (min-width: 1024px) {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-  }
+  // El valor se envuelve a múltiples líneas cuando hace falta — antes
+  // teníamos `white-space: nowrap + text-overflow: ellipsis` para todos
+  // los anchos <1024, lo que truncaba el email `hola@claudioandrade.com`
+  // a `hola@cl...andrade...` en phone 360. Premium = mostrar la info,
+  // no esconderla con puntos suspensivos. `overflow-wrap: anywhere` para
+  // que el email se parta en cualquier carácter (no solo espacios) si
+  // el ancho lo exige — alternativa a `word-break: break-all` que es
+  // demasiado agresiva con palabras normales.
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }

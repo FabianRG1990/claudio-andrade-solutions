@@ -23,7 +23,11 @@
 // en cualquier ancho.
 .services-marquee__head {
   display: grid;
-  gap: 3rem;
+  // Gap fluido — 1.5rem en phones (consistente con engagements/case-studies/
+  // featured-products), 3rem en desktop donde el head es 2-col side-by-side y
+  // el gap horizontal manda. Antes 3rem constante creaba un valle entre el
+  // eyebrow "Capítulo 02" y el título en mobile.
+  gap: clamp(1.5rem, 1rem + 1.5vw, 3rem);
 
   @media (min-width: 1024px) {
     grid-template-columns: 0.6fr 1fr;

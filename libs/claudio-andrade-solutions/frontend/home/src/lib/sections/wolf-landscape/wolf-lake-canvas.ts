@@ -3001,8 +3001,20 @@ export class WolfLakeCanvas {
         const uv = GLOW_SPAWN[i];
         const cuv = imgUVToCanvasUV(uv, cw, ch, IMG_W, IMG_H);
         const start = { x: cuv.x * cw, y: cuv.y * ch };
-        // size ~20 en desktop, ~11 en mobile.
-        const baseSize = Math.max(11, Math.min(20, cw / 72));
+        // Tamaño escalado al canvas con piso 8px y techo 20px. El piso 11px
+        // pre-v2 daba el mismo pez visible en phone 360 que en desktop 1024,
+        // sentía oversized en mobile. El piso 6px (intento 1) los hacía casi
+        // invisibles en phone. 8px es el sweet-spot:
+        //   phone 360  → 6.5  → 8 (piso) — pez chico pero visible
+        //   phone 430  → 7.8  → 8 (piso)
+        //   600        → 10.9
+        //   tablet 768 → 13.9
+        //   tablet 870 → 15.8
+        //   laptop 1024→ 18.6
+        //   desktop 1100+→ 20 (techo, mantiene el size del pre-v2 cap)
+        // El divisor /55 da una curva visible — los peces se achican
+        // notoriamente en phone pero conservan silueta legible.
+        const baseSize = Math.max(8, Math.min(20, cw / 55));
         glowFishes.push(new GlowFish(start, {
           size: baseSize,
           // SpeedScale 0.85-1.15 — los peces ambientales nadan a
@@ -3029,7 +3041,11 @@ export class WolfLakeCanvas {
     // huntingBoost vuelve a 1 y el pez se comporta como cualquier
     // ambiental: oscilación de energy, speedScale normal, applyWander.
     // Brighter palette para destacar como protagonista.
-    const cursorSize = Math.max(13, Math.min(24, cw / 60));
+    // Cursor fish ligeramente más grande que ambientales (protagonista).
+    // Mismo divisor /50, piso 10, techo 24 — al 360 da 10px (vs ambient 8px),
+    // al 1200+ da 24 (vs ambient 20). El delta de 2-4px mantiene la
+    // jerarquía visual sin que el cursor-fish domine al cluster ambient.
+    const cursorSize = Math.max(10, Math.min(24, cw / 50));
     const cursorFish = new GlowFish(
       { x: cw * 0.55, y: ch * 0.80 },
       {
