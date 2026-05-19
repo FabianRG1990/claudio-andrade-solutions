@@ -17,7 +17,6 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorChatCircleText,
   phosphorHouseSimple,
-  phosphorList,
   phosphorPackage,
   phosphorUsersThree,
   phosphorX,
@@ -26,18 +25,28 @@ import { filter, map, startWith } from 'rxjs/operators';
 
 interface NavLink {
   readonly href: string;
+  /** Label "completo" usado en desktop ≥880px. */
   readonly label: string;
+  /** Label compacto para el pill en mobile <880px (donde el ancho del
+   *  viewport no admite "Acerca de nosotros" / "Contáctenos" sin desbordar).
+   *  Por convención cae a 1 palabra. */
+  readonly shortLabel: string;
   /** Nombre del icono phosphor — protagonista visual del item en el drawer
    *  mobile (réplica del patrón side-menu de moofyvip). */
   readonly icon: string;
 }
 
 const LINKS: ReadonlyArray<NavLink> = [
-  { href: '/', label: 'Inicio', icon: 'phosphorHouseSimple' },
-  { href: '/productos', label: 'Productos', icon: 'phosphorPackage' },
-  { href: '/nosotros', label: 'Acerca de nosotros', icon: 'phosphorUsersThree' },
-  { href: '/contacto', label: 'Contáctenos', icon: 'phosphorChatCircleText' },
+  { href: '/', label: 'Inicio', shortLabel: 'Inicio', icon: 'phosphorHouseSimple' },
+  { href: '/productos', label: 'Productos', shortLabel: 'Productos', icon: 'phosphorPackage' },
+  { href: '/nosotros', label: 'Acerca de nosotros', shortLabel: 'Nosotros', icon: 'phosphorUsersThree' },
+  { href: '/contacto', label: 'Contáctenos', shortLabel: 'Contacto', icon: 'phosphorChatCircleText' },
 ];
+
+/** scrollY a partir del cual el pill colapsa al burger. 60 px deja al
+ *  usuario ver el navbar completo en el primer "tramo" del hero antes de
+ *  que aparezca el burger discreto al margen derecho. */
+const SCROLL_COLLAPSE_THRESHOLD = 60;
 
 /**
  * FloatingNav — rail centrado horizontalmente con los links del sitio.
@@ -56,7 +65,6 @@ const LINKS: ReadonlyArray<NavLink> = [
     provideIcons({
       phosphorChatCircleText,
       phosphorHouseSimple,
-      phosphorList,
       phosphorPackage,
       phosphorUsersThree,
       phosphorX,
@@ -74,6 +82,9 @@ export class FloatingNav {
 
   protected readonly links = LINKS;
   protected readonly menuOpen = signal(false);
+  /** True cuando el scrollY supera `SCROLL_COLLAPSE_THRESHOLD`. Dispara
+   *  la transición pill → burger en el rail. */
+  protected readonly scrolled = signal(false);
 
   private readonly navRef =
     viewChild<ElementRef<HTMLElement>>('navRef');
@@ -143,6 +154,35 @@ export class FloatingNav {
         navEl.removeEventListener('pointermove', onMove);
         navEl.removeEventListener('pointerenter', onEnter);
         navEl.removeEventListener('pointerleave', onLeave);
+      });
+    });
+
+    // Scroll listener — coalesced via rAF para no disparar set() en cada
+    // tick del scroll. Threshold 60px: el navbar completo se ve cuando la
+    // página está "al tope"; al primer scroll significativo el pill colapsa
+    // al burger discreto del corner derecho.
+    afterNextRender(() => {
+      if (!this.isBrowser) return;
+
+      let ticking = false;
+      const update = (): void => {
+        this.scrolled.set(window.scrollY > SCROLL_COLLAPSE_THRESHOLD);
+        ticking = false;
+      };
+      const onScroll = (): void => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(update);
+      };
+
+      // Estado inicial (e.g. el usuario llega a la página vía deep-link a
+      // un anchor scrolled-down → tiene que ver el burger desde el primer
+      // paint, no el pill que luego desaparece).
+      update();
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('scroll', onScroll);
       });
     });
 

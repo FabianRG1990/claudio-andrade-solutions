@@ -1,12 +1,14 @@
-<!-- Rail — position: absolute. Anclada al top del documento (no al
-     viewport): al scrollear baja con la página y desaparece. Pill desktop +
-     burger móvil viven aquí — todo el "navbar" (links + acceso a menú) se
-     va con el scroll. Decisión consciente: sin nav post-scroll en mobile. -->
-<div class="floating-nav-rail">
+<!-- Rail fixed que sigue al viewport. Dos estados:
+       · top (scrollY ≤ 60px) → pill visible con todos los links
+       · scrolled (scrollY > 60px) → pill colapsa, burger emerge top-right
+     La transición vive en SCSS (opacity + transform + cubic-bezier spring).
+     `is-scrolled` lo dispara el listener de scroll en floating-nav.ts. -->
+<div class="floating-nav-rail" [class.is-scrolled]="scrolled()">
   <nav
     #navRef
     class="floating-nav__pill"
     aria-label="Navegación principal"
+    [attr.aria-hidden]="scrolled() ? 'true' : null"
   >
     @for (link of links; track link.href) {
       <a
@@ -16,23 +18,38 @@
         (click)="onLinkClick(link.href, $event)"
       >
         <span class="floating-nav__link-indicator" aria-hidden="true"></span>
-        <span class="floating-nav__link-text">{{ link.label }}</span>
+        <!-- Dual-label: el ancho del viewport <880 no acomoda
+             "Acerca de nosotros" / "Contáctenos" en una línea horizontal
+             dentro del pill compacto. CSS conmuta cuál span se renderiza
+             según breakpoint (ver `.floating-nav__link-text--full/short`
+             en floating-nav.scss). -->
+        <span class="floating-nav__link-text floating-nav__link-text--full">{{ link.label }}</span>
+        <span class="floating-nav__link-text floating-nav__link-text--short">{{ link.shortLabel }}</span>
       </a>
     }
   </nav>
 
+  <!-- Burger morfeable: 3 líneas glass que rotan a X cuando el drawer
+       está abierto. Animación CSS pura, sin swap de icono. Cuando el rail
+       está en is-scrolled el burger aparece con fade + scale spring desde
+       0.85; cuando vuelve al top, desaparece de la misma forma inversa. -->
   <button
     type="button"
     class="floating-nav__burger glass-bubble"
     (click)="toggleMenu()"
     [attr.aria-label]="menuOpen() ? 'Cerrar menú' : 'Abrir menú'"
     [attr.aria-expanded]="menuOpen()"
+    [attr.aria-hidden]="!scrolled() && !menuOpen() ? 'true' : null"
   >
-    @if (menuOpen()) {
-      <ng-icon name="phosphorX" size="16" />
-    } @else {
-      <ng-icon name="phosphorList" size="16" />
-    }
+    <span
+      class="floating-nav__burger-icon"
+      [class.is-open]="menuOpen()"
+      aria-hidden="true"
+    >
+      <span class="floating-nav__burger-line"></span>
+      <span class="floating-nav__burger-line"></span>
+      <span class="floating-nav__burger-line"></span>
+    </span>
   </button>
 </div>
 
