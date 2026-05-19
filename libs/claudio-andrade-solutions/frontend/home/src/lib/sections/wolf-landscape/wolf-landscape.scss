@@ -36,9 +36,20 @@
   // Mobile + desktop: el hero ocupa el viewport entero. svh (small viewport
   // height) en lugar de dvh para que el hero no salte cuando la URL bar de
   // iOS Safari colapsa al scroll. Patrón usado por Stripe / Linear.
-  // El landscape-phone override más abajo libera esto cuando el alto del
-  // viewport es < 540px.
+  // El landscape-phone y short-laptop overrides más abajo liberan esto
+  // cuando el alto del viewport es escaso.
   min-height: 100svh;
+
+  // Short-laptop (≥1024 wide, ≤780 tall): MacBook Air 11/13, Surface,
+  // proyecciones a 1024×600/768. Con `min-height: 100svh` el hero llena
+  // TODO el viewport y el primer paint no revela que hay más contenido
+  // debajo — el usuario no scrollea porque cree que es una página corta.
+  // Bajamos a 86svh para dejar una "tira" visible del próximo capítulo
+  // (Featured products) que invite al scroll. Patrón Apple/Linear: hero
+  // no llena en laptops chicas.
+  @include m.short-laptop {
+    min-height: 86svh;
+  }
 }
 
 // =============================================================================
@@ -242,6 +253,13 @@
     max(var(--container-px), env(safe-area-inset-left))
     max(var(--container-px), env(safe-area-inset-right));
   padding-bottom: clamp(4rem, 2rem + 4vw, 8rem);
+
+  // Match al `.hero` parent en short-laptop — sin esto el container manda
+  // y el min-height: 100svh de aquí gana sobre el 86svh del padre. Mismo
+  // valor para que el hero termine en una sola altura coherente.
+  @include m.short-laptop {
+    min-height: 86svh;
+  }
 }
 
 .hero__grid {

@@ -71,11 +71,21 @@
   gap: 1.25rem;
   grid-template-columns: 1fr;
 
-  @media (min-width: 768px) {
+  // Tablet portrait (768–1023): grid 6/6 equal columns. ANTES el bento
+  // 7/5 dejaba la columna derecha (5/12 ≈ 280–360 px) demasiado estrecha
+  // para que "Sistemas a medida" / "Integraciones de IA" tuvieran caja
+  // legible. En este rango el bento asimétrico no luce — mejor par-en-par
+  // 2-col y que el card XL se promueva a fila completa.
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: clamp(22rem, 18rem + 12vw, 26rem);
+  }
+
+  // Laptop+ (≥1024): bento asimétrico real — 12 cols, XL ocupa 7/12 y
+  // dos filas. Solo cuando hay espacio horizontal generoso para que el
+  // MD-card de la derecha (5/12) tenga ~430+ px de ancho.
+  @media (min-width: 1024px) {
     grid-template-columns: repeat(12, 1fr);
-    // Filas fluidas — antes 28rem fijas comían altura extra en tablets
-    // donde la imagen del producto no requiere tanto espacio. clamp baja
-    // a 22rem en 768px y vuelve a 28rem en 1280+.
     grid-template-rows:
       clamp(22rem, 18rem + 12vw, 28rem)
       clamp(22rem, 18rem + 12vw, 28rem);
@@ -135,10 +145,19 @@
   }
 }
 
+// En tablet portrait (768–1023) el XL se promociona a fila completa
+// (span 2 cols del grid 2-col) para que el card hero quede protagonista
+// con ancho generoso. LG y MD también se vuelven full-width — todos los
+// products comparten formato par-en-par excepto el primero. En laptop+
+// vuelve el comportamiento original 12-col bento.
 .product-card--xl {
   min-height: 28rem;
 
-  @media (min-width: 768px) {
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    grid-column: span 2 / span 2;
+  }
+
+  @media (min-width: 1024px) {
     grid-column: span 7 / span 7;
     grid-row: span 2 / span 2;
     min-height: 100%;
@@ -148,7 +167,7 @@
 .product-card--lg {
   min-height: 22rem;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     grid-column: span 7 / span 7;
   }
 }
@@ -156,7 +175,7 @@
 .product-card--md {
   min-height: 20rem;
 
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     grid-column: span 5 / span 5;
   }
 }

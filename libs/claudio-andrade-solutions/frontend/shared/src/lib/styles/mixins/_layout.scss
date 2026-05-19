@@ -114,6 +114,19 @@
   }
 }
 
+// ---- Short-laptop override -----------------------------------------------
+// Para 11" / 13" MacBook Air / Surface en landscape: 1024×600/640/768 hasta
+// 1280×720. Vertical apretado: si el hero usa `min-height: 100svh` el
+// contenido siguiente queda completamente fuera del fold y el usuario
+// no percibe que hay más página. Captura viewports HORIZONTAL (≥1024 ancho)
+// donde la altura es ≤780px — laptops chicas físicas, ventanas a media
+// pantalla, presentaciones proyectadas.
+@mixin short-laptop {
+  @media (min-width: 1024px) and (max-height: 780px) {
+    @content;
+  }
+}
+
 // ---- Reduce motion -------------------------------------------------------
 @mixin reduce-motion {
   @media (prefers-reduced-motion: reduce) {

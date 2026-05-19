@@ -72,7 +72,18 @@ export class RevealDirective {
             observer.disconnect();
           }
         },
-        { threshold: this.amount() },
+        {
+          threshold: this.amount(),
+          // rootMargin '0px 0px 15% 0px' expande el "viewport efectivo"
+          // 15% hacia abajo — el observer dispara cuando el elemento está
+          // 15% del viewport ANTES de entrar visualmente. Sin esto, en
+          // browsers con scroll suave (Chrome) o IntersectionObserver
+          // ligeramente desfasado, el usuario alcanza a ver la sección
+          // con texto aún en estado oculto/blur antes de que la animación
+          // dispare. Con 15% de prebuffer la animación está terminando
+          // justo cuando el usuario percibe la sección entrando.
+          rootMargin: '0px 0px 15% 0px',
+        },
       );
       observer.observe(el);
 
