@@ -46,7 +46,14 @@
 // El piso 0.55 evita que en phone se pierdan completamente; el techo
 // 1.1 evita "bombillas" en monitores 4K.
 .sky-star {
-  --star-scale: clamp(0.55, 100vw / 1440, 1.1);
+  // BUG fix: clamp() requiere TODOS los argumentos del mismo tipo. La
+  // versión anterior tenía `clamp(0.55, 100vw / 1440, 1.1)` — mezcla
+  // <number> (0.55, 1.1) con <length> (100vw/1440 es length), inválido →
+  // toda la variable quedaba sin resolver y `calc(var(--size) * inválido)`
+  // evaluaba a 0 → estrellas con width:0 → invisibles aunque la animación
+  // de opacity siguiera corriendo. Fix: dividir length÷length para sacar
+  // un <number> (CSS Values 4, universal desde 2022-23).
+  --star-scale: clamp(0.55, calc(100vw / 1440px), 1.1);
 
   position: absolute;
   width: calc(var(--size, 2px) * var(--star-scale));
@@ -133,7 +140,9 @@
 //     OPUESTA del vector de viaje (que apunta a ~158° desde east). scaleX
 //     0 → 1 entrando y 1 → 0 saliendo, sincronizado con el fade del head.
 .sky-shooting-star {
-  --star-scale: clamp(0.55, 100vw / 1440, 1.1);
+  // Mismo fix que en .sky-star — ver comentario allí. length÷length para
+  // que clamp tenga todos sus args como <number>.
+  --star-scale: clamp(0.55, calc(100vw / 1440px), 1.1);
 
   position: absolute;
   top: 14%;
