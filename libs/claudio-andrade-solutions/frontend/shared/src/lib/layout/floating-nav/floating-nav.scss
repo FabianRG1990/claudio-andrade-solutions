@@ -273,100 +273,279 @@
 }
 
 // =============================================================================
-// Mobile bottom-sheet
+// Mobile drawer — réplica del side-menu de moofyvip adaptado a la paleta CAS.
+//
+// Estructura: contenedor `position: fixed inset:0` con dos capas:
+//   1) `.mobile-drawer__backdrop` — fondo oscuro con blur, fade-in al abrir.
+//      Tap fuera del panel = cierra el drawer.
+//   2) `.mobile-drawer__panel` — sidenav 280px de ancho que entra de
+//      izquierda a derecha (`transform: translateX(-100%) → 0`) con la
+//      misma curva 500ms ease-in-out que usa mat-sidenav en moofyvip.
+//
+// Cada item del drawer es un "card glass" con icono + label, esquina
+// triangular decorativa y estado activo con borde-izquierdo accent +
+// gradiente lagoon (vide side-menu.scss del repo moofyvip).
 // =============================================================================
 
-.mobile-menu {
+.mobile-drawer {
   position: fixed;
   inset: 0;
   // z-index 65 — encima del .grain (60) pero debajo del brand-bar (70).
   z-index: 65;
-  // Background opacity 0.92 + blur(20px) — calibrado para legibilidad sin
-  // disparar el peso GPU del compositor (el sheet cubre todo el viewport).
-  background: rgb(var(--abyss) / 0.92);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-
-  // El sheet se queda en el DOM; toggleamos con clase para que las
-  // animaciones CSS de salida también se vean.
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 500ms var(--ease-fluid);
+  // svh para que el drawer no salte cuando la URL bar de iOS colapsa.
+  height: 100svh;
 
   &.is-open {
-    opacity: 1;
     pointer-events: auto;
   }
 
-  // El sheet móvil solo aparece donde existe el burger (<880px).
+  // El drawer móvil solo aparece donde existe el burger (<880px).
   @media (min-width: 880px) {
     display: none;
   }
 }
 
-.mobile-menu__container {
-  display: flex;
-  // `100svh` (small viewport height) en lugar de `100dvh`: dvh refleja el alto
-  // dinámico — al scrollear en iOS la barra de URL colapsa y el sheet "se
-  // estira", lo que provoca jitter visible en los items con stagger. svh es
-  // el alto del viewport "chico" (URL bar visible), estable, sin saltos. Da
-  // un par de px de menos pero el patrón premium (Stripe, Linear) usa svh
-  // para overlays fijos por esta razón.
-  min-height: 100svh;
-  flex-direction: column;
-  justify-content: flex-end;
-  // Safe-area: el home indicator de iPhone vive en la franja inferior;
-  // sumarlo al padding-bottom evita que el último link quede tapado por el
-  // gesto bar. Los lados también respetan el inset para landscape con notch.
-  padding:
-    1.5rem
-    max(1.5rem, env(safe-area-inset-right))
-    max(3rem, calc(2rem + env(safe-area-inset-bottom)))
-    max(1.5rem, env(safe-area-inset-left));
-}
-
-.mobile-menu__list {
-  list-style: none;
-
-  > li + li {
-    margin-top: 0.5rem;
-  }
-}
-
-.mobile-menu__item {
-  // Stagger fade-up por item — equivalente al motion.li per-item con delay
-  // incremental del original.
+.mobile-drawer__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--abyss) / 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   opacity: 0;
-  transform: translateY(24px);
-  filter: blur(6px);
-  transition:
-    opacity 700ms var(--ease-fluid),
-    transform 700ms var(--ease-fluid),
-    filter 700ms var(--ease-fluid);
-  transition-delay: calc(100ms + var(--stagger-index, 0) * 50ms);
+  transition: opacity 500ms ease-in-out;
+  cursor: pointer;
 
-  .mobile-menu.is-open & {
+  .mobile-drawer.is-open & {
     opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
   }
 }
 
-.mobile-menu__link {
+.mobile-drawer__panel {
+  position: absolute;
+  // Drawer pegado al borde izquierdo, dejando un margen alrededor para que
+  // se lea como "card flotante" (mismo lenguaje que el dashboard de moofyvip
+  // donde el mat-sidenav tiene margin + border-radius).
+  top: max(1rem, calc(env(safe-area-inset-top) + 0.5rem));
+  bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));
+  left: max(1rem, env(safe-area-inset-left));
+  width: min(20rem, calc(100vw - 2rem));
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  border-bottom: 1px solid rgb(var(--foam) / 0.1);
-  padding-bottom: 0.75rem;
-  font-family: var(--font-display);
-  font-size: 1.875rem;
-  letter-spacing: var(--tracking-tight);
-  color: rgb(var(--foam));
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(var(--foam) / 0.03),
+      rgb(var(--foam) / 0.015)
+    ),
+    rgb(var(--abyss) / 0.92);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  // Sombra suave para que el panel se sienta levantado del fondo.
+  box-shadow:
+    0 24px 56px -16px rgb(6 9 26 / 0.6),
+    inset 0 1px 0 rgb(245 241 232 / 0.06);
+  overflow: hidden;
+  // Transición de entrada — moofyvip usa `transition: all 500ms ease-in-out`
+  // sobre `mat-sidenav`. Replicamos esa curva exacta para el slide horizontal.
+  transform: translateX(calc(-100% - 2rem));
+  transition: transform 500ms ease-in-out;
+
+  .mobile-drawer.is-open & {
+    transform: translateX(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
-.mobile-menu__index {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.45);
+// ─── Header card "Navegación" ──────────────────────────────────────────────
+// Equivalente a `.sidenav-header` del moofyvip: padding 1rem, fondo glass
+// sutil, border, sombra blanda, line-height 1.5.
+.mobile-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  background: rgb(var(--foam) / 0.03);
+  box-shadow: 0 4px 12px -4px rgb(6 9 26 / 0.4);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  color: rgb(var(--foam));
+  line-height: 1.5;
+}
+
+.mobile-drawer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  background: rgb(var(--foam) / 0.04);
+  color: rgb(var(--foam) / 0.7);
+  cursor: pointer;
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+
+  &:hover {
+    background: rgb(var(--foam) / 0.08);
+    color: rgb(var(--foam));
+    border-color: rgb(var(--foam) / 0.18);
+  }
+}
+
+// ─── Lista de items ─────────────────────────────────────────────────────────
+.mobile-drawer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  // Permite scroll si la lista crece más allá del alto del panel.
+  overflow-y: auto;
+  // Scrollbar oculta para look limpio (sigue funcionando con touch).
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    width: 0;
+  }
+}
+
+// ─── Item del drawer (card glass premium) ──────────────────────────────────
+// Réplica del `.menu-item` de moofyvip:
+//   • border-radius 0.95rem, border 1px, background glass sutil
+//   • 5rem de alto, padding interno para icono + label
+//   • border-left transparente (4px) — se vuelve accent en active
+//   • triangulito decorativo en la esquina inferior-derecha
+//   • hover: ilumina border + bg
+//   • active: gradiente lagoon + accent left border + corner triangle teñido
+.mobile-drawer__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  height: 4.5rem;
+  padding: 0 1rem 0 0.875rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  border-left: 3px solid transparent;
+  background: rgb(var(--foam) / 0.02);
+  color: rgb(var(--foam) / 0.78);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-decoration: none;
+  overflow: hidden;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    transform 200ms ease;
+
+  // Stagger de entrada — cada item aparece con un pequeño delay después de
+  // que el panel se desliza. Da el toque premium al abrir el menú.
+  opacity: 0;
+  transform: translateX(-12px);
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    opacity 400ms ease-out,
+    transform 400ms ease-out;
+  transition-delay: calc(220ms + var(--stagger-index, 0) * 60ms);
+
+  .mobile-drawer.is-open & {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  // Hover (pointer fine — touch usa :active al final del archivo).
+  &:hover {
+    background: rgb(var(--foam) / 0.045);
+    border-color: rgb(var(--foam) / 0.18);
+    color: rgb(var(--foam));
+  }
+
+  // Triangulito decorativo bottom-right — réplica del ::after de moofyvip.
+  // Sutil en estado normal, se intensifica + tiñe lagoon en active.
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 12px;
+    height: 12px;
+    background: rgb(var(--foam) / 0.12);
+    clip-path: polygon(100% 0, 0 100%, 100% 100%);
+    pointer-events: none;
+    transition: background 200ms ease;
+  }
+}
+
+// Active state — gradiente lagoon + accent border + glow corner.
+.mobile-drawer__item.is-active {
+  color: rgb(var(--foam));
+  border-left-color: rgb(var(--lagoon));
+  background: linear-gradient(
+    90deg,
+    rgb(var(--lagoon) / 0.18),
+    rgb(var(--foam) / 0.02) 72%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(245 241 232 / 0.06),
+    0 12px 24px -8px rgb(6 9 26 / 0.5);
+
+  &::after {
+    background: linear-gradient(
+      135deg,
+      rgb(var(--bioluminescent) / 0.84),
+      rgb(var(--lagoon) / 0.38)
+    );
+  }
+
+  .mobile-drawer__item-icon {
+    color: rgb(var(--foam));
+    background: rgb(var(--lagoon) / 0.18);
+    border-color: rgb(var(--lagoon) / 0.32);
+  }
+}
+
+// ─── Icon del item ─────────────────────────────────────────────────────────
+// Disco glass con el icono adentro. Tamaño calibrado para que cuadre con
+// el alto del item (4.5rem) sin dominarlo.
+.mobile-drawer__item-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgb(var(--foam) / 0.1);
+  background: rgb(var(--foam) / 0.04);
+  color: rgb(var(--foam) / 0.78);
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+.mobile-drawer__item-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -15,7 +15,11 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  phosphorChatCircleText,
+  phosphorHouseSimple,
   phosphorList,
+  phosphorPackage,
+  phosphorUsersThree,
   phosphorX,
 } from '@ng-icons/phosphor-icons/regular';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -23,13 +27,16 @@ import { filter, map, startWith } from 'rxjs/operators';
 interface NavLink {
   readonly href: string;
   readonly label: string;
+  /** Nombre del icono phosphor — protagonista visual del item en el drawer
+   *  mobile (réplica del patrón side-menu de moofyvip). */
+  readonly icon: string;
 }
 
 const LINKS: ReadonlyArray<NavLink> = [
-  { href: '/', label: 'Inicio' },
-  { href: '/productos', label: 'Productos' },
-  { href: '/nosotros', label: 'Acerca de nosotros' },
-  { href: '/contacto', label: 'Contáctenos' },
+  { href: '/', label: 'Inicio', icon: 'phosphorHouseSimple' },
+  { href: '/productos', label: 'Productos', icon: 'phosphorPackage' },
+  { href: '/nosotros', label: 'Acerca de nosotros', icon: 'phosphorUsersThree' },
+  { href: '/contacto', label: 'Contáctenos', icon: 'phosphorChatCircleText' },
 ];
 
 /**
@@ -45,7 +52,16 @@ const LINKS: ReadonlyArray<NavLink> = [
 @Component({
   selector: 'app-floating-nav',
   imports: [RouterLink, NgIcon],
-  providers: [provideIcons({ phosphorList, phosphorX })],
+  providers: [
+    provideIcons({
+      phosphorChatCircleText,
+      phosphorHouseSimple,
+      phosphorList,
+      phosphorPackage,
+      phosphorUsersThree,
+      phosphorX,
+    }),
+  ],
   templateUrl: './floating-nav.html',
   styleUrl: './floating-nav.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,6 +91,12 @@ export class FloatingNav {
   protected isActive(link: NavLink): boolean {
     const url = this.currentUrl();
     return link.href === '/' ? url === '/' : url.startsWith(link.href);
+  }
+
+  /** Cierra el drawer mobile sin navegar. Usado por el backdrop y el botón
+   *  de cerrar en la cabecera del drawer. */
+  protected closeMenu(): void {
+    this.menuOpen.set(false);
   }
 
   /**

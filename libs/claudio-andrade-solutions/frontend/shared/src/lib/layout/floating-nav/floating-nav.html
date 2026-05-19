@@ -36,23 +36,56 @@
   </button>
 </div>
 
-<!-- Bottom sheet móvil. Se queda renderizado y conmuta vía clase para que
-     las animaciones CSS de entrada/salida fluyan en ambas direcciones. -->
+<!-- ────────────────────────────────────────────────────────────────────────
+     Drawer mobile — réplica del side-menu de moofyvip: panel lateral 280px
+     que entra de izquierda a derecha con transición 500ms ease-in-out,
+     backdrop con blur que oscurece el contenido detrás. Cada item es un
+     card glass con icono protagonista + label + esquina triangular
+     decorativa; el item activo gana borde-izquierdo accent + gradiente
+     lagoon de fondo.
+     ──────────────────────────────────────────────────────────────────── -->
 <div
-  class="mobile-menu"
+  class="mobile-drawer"
   [class.is-open]="menuOpen()"
   [attr.aria-hidden]="!menuOpen()"
 >
-  <div class="mobile-menu__container">
-    <ul class="mobile-menu__list">
+  <!-- Backdrop: capa oscura con blur — tap fuera del panel cierra. -->
+  <div
+    class="mobile-drawer__backdrop"
+    (click)="closeMenu()"
+    aria-hidden="true"
+  ></div>
+
+  <!-- Panel: sidenav que entra desde la izquierda. -->
+  <aside class="mobile-drawer__panel" role="dialog" aria-label="Menú de navegación">
+    <!-- Header — "Navegación" en card glass, idéntico al de moofyvip. -->
+    <header class="mobile-drawer__header">
+      <span>Navegación</span>
+      <button
+        type="button"
+        class="mobile-drawer__close"
+        (click)="closeMenu()"
+        aria-label="Cerrar menú"
+      >
+        <ng-icon name="phosphorX" size="14" />
+      </button>
+    </header>
+
+    <!-- Lista de items — cada uno un card glass con icono + label. -->
+    <nav class="mobile-drawer__list" aria-label="Rutas del sitio">
       @for (link of links; track link.href; let i = $index) {
-        <li class="mobile-menu__item" [style.--stagger-index]="i">
-          <a [routerLink]="link.href" class="mobile-menu__link">
-            <span>{{ link.label }}</span>
-            <span class="mobile-menu__index">0{{ i + 1 }}</span>
-          </a>
-        </li>
+        <a
+          [routerLink]="link.href"
+          class="mobile-drawer__item"
+          [class.is-active]="isActive(link)"
+          [style.--stagger-index]="i"
+        >
+          <span class="mobile-drawer__item-icon" aria-hidden="true">
+            <ng-icon [name]="link.icon" size="18" />
+          </span>
+          <span class="mobile-drawer__item-label">{{ link.label }}</span>
+        </a>
       }
-    </ul>
-  </div>
+    </nav>
+  </aside>
 </div>
