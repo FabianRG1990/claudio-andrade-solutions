@@ -64,7 +64,24 @@ class ShadowFish {
 
   constructor(start: Vec, w: number, h: number, depth: number) {
     // depth: 0..1 — 0 cerca, 1 lejos
-    const sc = (1 - depth) * 7 + 2.5;
+    //
+    // Viewport scale: el bodyScale base estaba calibrado para desktop 1440px.
+    // En phone 360 los peces se renderizaban al mismo tamaño absoluto que en
+    // desktop — un pez "cerca" (sc=9.5, ~126px de largo) ocupaba ~35% del
+    // ancho del viewport phone, leyéndose como desproporcionado vs el resto
+    // del contenido. La queja del usuario fue explícita: "no quiero que los
+    // peces sean tan grandes en pantallas pequeñas".
+    //
+    // `viewportScale` interpola lineal entre 0.45 (phone <540) y 1.0
+    // (desktop ≥1200). Resultado:
+    //   phone 360  → 0.45 → sc 1.1-4.3 → pez ~15-57px largo
+    //   phone 430  → 0.45
+    //   tablet 768 → 0.64 → sc 1.6-6.1 → ~21-81px largo
+    //   tablet 870 → 0.73 → ~24-92px
+    //   laptop 1024→ 0.85 → ~28-108px
+    //   desktop 1200+→ 1.0 → original 33-126px
+    const viewportScale = Math.max(0.45, Math.min(1.0, w / 1200));
+    const sc = ((1 - depth) * 7 + 2.5) * viewportScale;
     this.bodyScale = sc;
     this.segLen = sc * 0.95;
     this.segments = 14;
