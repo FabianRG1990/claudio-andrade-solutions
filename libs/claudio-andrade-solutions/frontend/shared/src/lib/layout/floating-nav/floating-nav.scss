@@ -107,6 +107,29 @@
     opacity: 1;
     transform: none;
   }
+
+  // En pantallas pequeñas (<880px) cuando el drawer está abierto, el rail
+  // entero (pill + burger) se desvanece. La cabecera del drawer ya ofrece
+  // el botón de cerrar; tener simultáneamente burger-morfeado-a-X afuera
+  // y X dentro del drawer es ruido visual. Sobre desktop (≥880px) el burger
+  // sigue presente para que el usuario tenga un punto de retorno claro al
+  // cerrar el drawer mientras lee el viewport amplio.
+  @media (max-width: 879.98px) {
+    &.is-menu-open {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 280ms var(--ease-fluid);
+
+      // El rail base le da `pointer-events: auto` a sus hijos (pill +
+      // burger) sobre el `none` del wrapper. Tenemos que sobrescribir esos
+      // children también — opacity 0 no bloquea clicks, solo oculta. Sin
+      // este override el burger invisible se quedaría capturando taps por
+      // detrás del drawer.
+      > * {
+        pointer-events: none;
+      }
+    }
+  }
 }
 
 // ─── Brand: emblema + wordmark ───────────────────────────────────────────────

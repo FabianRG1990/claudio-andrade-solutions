@@ -3,7 +3,11 @@
        · scrolled (scrollY > 60px) → pill colapsa, burger emerge top-right
      La transición vive en SCSS (opacity + transform + cubic-bezier spring).
      `is-scrolled` lo dispara el listener de scroll en floating-nav.ts. -->
-<div class="floating-nav-rail" [class.is-scrolled]="scrolled()">
+<div
+  class="floating-nav-rail"
+  [class.is-scrolled]="scrolled()"
+  [class.is-menu-open]="menuOpen()"
+>
   <nav
     #navRef
     class="floating-nav__pill"
