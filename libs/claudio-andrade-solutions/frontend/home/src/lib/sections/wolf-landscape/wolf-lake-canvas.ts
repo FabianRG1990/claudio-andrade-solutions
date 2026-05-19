@@ -3231,8 +3231,14 @@ export class WolfLakeCanvas {
             const dxFromCursor = cursorFish.position.x - pointer.x;
             const dyFromCursor = cursorFish.position.y - pointer.y;
             const approachDot = cursorVelX * dxFromCursor + cursorVelY * dyFromCursor;
-            const cursorIsSlow = cursorSpeedSmoothed > 15 && cursorSpeedSmoothed < 200;
-            const cursorIsClose = dToCursor > 30 && dToCursor < 180;
+            // Speed range mas amplio (10-280 px/s): captura aproximaciones
+            // mas lentas y un poco mas rapidas que antes. Distance range
+            // baja a 8 px → dispara aunque el cursor este dentro del hover
+            // radius (era 30 px, dejaba un hueco donde fish quedaba pegado
+            // en hover orbit). 8 px de minimo evita dot mal definido cuando
+            // fish ≈ cursor.
+            const cursorIsSlow = cursorSpeedSmoothed > 10 && cursorSpeedSmoothed < 280;
+            const cursorIsClose = dToCursor > 8 && dToCursor < 180;
             const cursorIsApproaching = approachDot > 0;
             if (cursorIsSlow && cursorIsClose && cursorIsApproaching) {
               // Compute dodge target ONCE at trigger time (locked).
@@ -3252,7 +3258,11 @@ export class WolfLakeCanvas {
               fleeTargetX = cursorFish.position.x + perpX * 30 + cvxN * 60;
               fleeTargetY = cursorFish.position.y + perpY * 30 + cvyN * 60;
               cursorFishFleeUntil = nowSec + 0.6;
-              cursorFishFleeCooldown = nowSec + 1.5;
+              // Cooldown 0.8s (era 1.5s) → solo 0.2s rest despues del
+              // dodge antes de poder volver a disparar. Esto encadena
+              // dodges si el user sigue acercando el cursor → el pez
+              // sigue huyendo, nunca queda pegado orbitando.
+              cursorFishFleeCooldown = nowSec + 0.8;
             }
           }
 
