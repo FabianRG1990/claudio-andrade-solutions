@@ -2829,7 +2829,12 @@ export class WolfLakeCanvas {
     const applyWander = (f: GlowFish, _dtNow: number, upperLimitV?: number): void => {
       const headX = f.spine[0].x;
       const headY = f.spine[0].y;
-      const lookaheadDist = 200 + f.bodyScale * 7;
+      // Lookahead PROPORCIONAL al canvas — antes hardcoded `200 + bodyScale*7`
+      // (~250 px) consumía 67% del ancho en phone 375 (iPhone SE), el pez no
+      // encontraba dirección válida y se quedaba dando vueltas chico al spawn
+      // ("en bola"). 18% del width da 67 px en iPhone SE y 246 px en desktop
+      // 1366 — la proporción relativa al mundo del pez es constante.
+      const lookaheadDist = Math.max(80, cw * 0.18) + f.bodyScale * 3;
       let bestAngle = f.heading;
       let bestScore = -Infinity;
       for (const dev of LOOK_DEVIATIONS) {

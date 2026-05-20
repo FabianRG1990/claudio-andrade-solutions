@@ -29,22 +29,33 @@ const VARIANTS = [
     source: join(DOWNLOADS, 'hero-mk6-mobile-9x16-1080x1920.png'),
     w: 1080,
     h: 1920,
-    // Polígono del agua en UV [0..1]. Trazado manualmente leyendo la imagen.
-    // Comienza top-left donde el agua aparece, recorre la línea de orilla
-    // hacia la derecha, cierra bajando por el borde derecho hasta bottom.
+    // Polígono del agua en UV [0..1]. Trazado a mano siguiendo el contorno
+    // real de la base de la roca con el lobo + skyline + forest. Más puntos
+    // densos en x=0.60-1.0 (zona crítica donde la roca con el lobo entra al
+    // agua) para evitar marcar zonas de roca como agua (animaría la roca) y
+    // dejar sin marcar zonas reales del lago (no se animarían). Esto resuelve
+    // dos issues simultáneamente:
+    //   - "el agua afecta la roca / esquina puntiaguda lejana al lobo"
+    //   - "el agua debajo del lobo no se mueve"
     waterPoly: [
-      [0.00, 0.43],   // borde izquierdo, donde el cielo toca el agua
+      [0.00, 0.43],   // borde izquierdo
       [0.05, 0.42],   // skyline reflection
-      [0.30, 0.42],   // base del skyline
-      [0.45, 0.42],   // forest plano
-      [0.55, 0.44],   // forest empieza a subir
-      [0.62, 0.44],   // antes de la roca
-      [0.68, 0.48],   // entrando a la base de la roca
-      [0.72, 0.52],   // roca bajando
-      [0.78, 0.58],   // más roca
-      [0.85, 0.60],   // roca cerca del lobo
-      [0.92, 0.62],   // roca al borde derecho
-      [1.00, 0.65],   // borde derecho
+      [0.15, 0.43],   // base del skyline
+      [0.30, 0.42],   // final del skyline
+      [0.42, 0.42],   // forest plano
+      [0.52, 0.41],   // forest ligeramente más alto
+      [0.60, 0.44],   // forest baja al agua
+      [0.62, 0.46],   // transición forest→roca
+      [0.64, 0.48],   // esquina puntiaguda donde la roca entra al agua
+      [0.66, 0.50],   // base roca lejana al lobo
+      [0.70, 0.52],   // roca sube
+      [0.74, 0.55],   // silueta lobo izq, base
+      [0.80, 0.56],   // base/pecho del lobo
+      [0.86, 0.58],   // parte trasera del lobo
+      [0.90, 0.62],   // roca desciende
+      [0.94, 0.66],   // extremo de la roca
+      [0.98, 0.74],   // borde casi en el bottom
+      [1.00, 0.78],   // borde derecho
       [1.00, 1.00],
       [0.00, 1.00],
     ],
@@ -158,10 +169,13 @@ async function buildMasks(v) {
     `;
   };
 
-  // ─── Water mask (shader) — blur fuerte para feather suave en orilla ────
-  // Sigma escalado al lado menor (~1.5%) — matchea el feel del original
-  // water-mask-mk6.png.
-  const waterSigma = Math.max(2, Math.min(v.w, v.h) * 0.015);
+  // ─── Water mask (shader) — blur moderado para feather en orilla ──────
+  // Sigma 0.8% del lado menor — previa iteración era 1.5% pero generaba
+  // un halo de blur que extendía el efecto del agua arriba de la línea
+  // del polígono, cubriendo skyline y bordes de la roca → "el agua afecta
+  // la roca/skyline". 0.8% (~17 px en phone 1080) da feather perceptible
+  // pero contenido.
+  const waterSigma = Math.max(2, Math.min(v.w, v.h) * 0.008);
   await sharp(Buffer.from(buildSvg(v.waterPoly)))
     .blur(waterSigma)
     .greyscale()
