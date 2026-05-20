@@ -102,12 +102,10 @@ export class WolfSky {
         // árboles, edificios o reflejos en el lago.
         y: 1 + hash(i, 1) * 17,
         // Radio EXTERIOR del gradient en px (incluye núcleo brillante + halo
-        // soft). 1.6-2.4 px de radio = 3.2-4.8 px de diámetro total visible,
-        // mismo tamaño que las estrellas pintadas del poster (que tienen su
-        // propio glow incorporado en la imagen). El núcleo brillante interno
-        // es sólo 18 % de ese radio (~0.3-0.5 px), el resto es fade soft —
-        // el ojo lee "estrella con halo natural", no "pelota".
-        size: 1.6 + hash(i, 2) * 0.8,
+        // soft). 1.3-2.0 px de radio = 2.6-4.0 px de diámetro total visible.
+        // El núcleo brillante interno es sólo 18 % de ese radio (~0.25-0.36
+        // px), el resto es fade soft — estrella con halo natural, no pelota.
+        size: 1.3 + hash(i, 2) * 0.7,
         // 0.85-1.0 de pico — todas llegan a blanco casi macizo en peak.
         // Combinado con valle al 60 % del pico (ver SCSS), el promedio
         // de brillo es alto: las estrellas siempre están bien presentes
