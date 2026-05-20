@@ -35,7 +35,12 @@ export interface HeroVariant {
 export const HERO_VARIANTS: ReadonlyArray<HeroVariant> = [
   {
     name: 'cinematic',
-    mediaQuery: '(min-width: 1024px) and (max-height: 780px)',
+    // Match laptop chica corta (≥1024 ancho con altura ≤780) Y landscape
+    // phone (cualquier ancho con altura ≤540 + orientation landscape).
+    // El segundo query es CRÍTICO — antes landscape phone caía en tablet y
+    // se servía la imagen 1:1 sobre un viewport horizontal 852×393, lo que
+    // aplastaba la composición y cortaba la cabeza del lobo.
+    mediaQuery: '(min-width: 1024px) and (max-height: 780px), (orientation: landscape) and (max-height: 540px)',
     image: '/hero-wolf/hero-mk6-cinematic.webp',
     lakeMask: '/hero-wolf/lake-mask-cinematic.png',
     waterMask: '/hero-wolf/water-mask-cinematic.png',
@@ -44,7 +49,11 @@ export const HERO_VARIANTS: ReadonlyArray<HeroVariant> = [
   },
   {
     name: 'tablet',
-    mediaQuery: '(min-width: 641px) and (max-width: 1099px)',
+    // min-height: 640px excluye landscape phone (atrapado por la cinematic
+    // arriba). max-aspect-ratio: 6/5 (=1.2) excluye iPad landscape (~1.33),
+    // que cae al fallback desktop con MK6 16:9 — composición que encaja
+    // mejor en orientaciones horizontales del tablet.
+    mediaQuery: '(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)',
     image: '/hero-wolf/hero-mk6-tablet.webp',
     lakeMask: '/hero-wolf/lake-mask-tablet.png',
     waterMask: '/hero-wolf/water-mask-tablet.png',

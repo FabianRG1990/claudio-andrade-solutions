@@ -629,58 +629,81 @@
 }
 
 // ─── Landscape phone (≤540px alto + orientación landscape) ──────────────────
-// El usuario gira el teléfono (iPhone 14 = 844×390; Pro Max = 932×430). El
-// hero ahora es siempre full-bleed con `min-height: 100svh`, lo que en
-// landscape phone deja apenas ~360px de alto útil para título + copy. Para
-// que el contenido respire sin scrollear, soltamos el min-height (el hero
-// crece con su contenido), achicamos el título y reducimos paddings.
+// iPhone 14 = 844×390; Pro Max = 932×430; Galaxy = 740-915×360-412.
+// Iteración previa: el hero crecía con su contenido (min-height: auto) y el
+// usuario tenía que scrollear para ver los peces nadar. Iteración nueva
+// post-feedback: el hero OCUPA TODO EL VIEWPORT (100svh) en landscape phone
+// también — el usuario ve la composición completa (cielo + lobo + lago con
+// peces) sin scrollear, igual que en portrait. El título + copy + CTA se
+// comprimen a la izquierda; la imagen cinematic 21:9 ocupa la "tela"
+// horizontal completa sin recortes verticales feos.
 @include m.landscape-phone {
   .hero {
-    // Sin 100svh — en landscape phone el viewport es bajo y forzar la
-    // altura completa apretaría el contenido. El hero crece con su contenido.
-    min-height: auto;
+    // 100svh garantizado en landscape phone — antes auto generaba un hero
+    // que se cortaba por el viewport y forzaba scroll para ver lo que faltaba.
+    min-height: 100svh;
+  }
+
+  // En landscape phone se sirve la imagen cinematic 21:9 (variant cinematic
+  // del <picture>). Su composición tiene el LOBO en la extrema derecha
+  // (x_uv ≈ 0.85-1.0). Con `object-position: center` (default) el cover
+  // recorta lateralmente por ambos lados, cortando la cabeza del lobo en
+  // viewports comprimidos como 852×393 (iPhone landscape). `right center`
+  // preserva el lobo y recorta el bridge/skyline del lado opuesto —
+  // sacrificamos el bridge (elemento secundario) por la marca visual
+  // (el lobo, ancla de identidad).
+  .hero__bg {
+    object-position: right center;
   }
 
   .hero__telemetry {
-    // Telemetría más cerca del top — el alto del viewport es escaso.
-    top: max(3.5rem, calc(env(safe-area-inset-top) + 2.75rem));
+    // Telemetría más cerca del top — el alto del viewport es escaso (~360px).
+    top: max(3rem, calc(env(safe-area-inset-top) + 2.5rem));
   }
 
   .hero__container {
-    min-height: auto;
-    // Padding-top reducido para que el título esté visible above-the-fold
-    // sin scrollear (≥landscape el usuario espera densidad).
-    padding-top: clamp(5rem, 4rem + 4vw, 7rem);
-    padding-bottom: clamp(3rem, 2rem + 3vw, 5rem);
+    // Container ocupa flex completo del hero (100svh). El contenido se
+    // centra vertical con safe center que ya tiene el container base.
+    min-height: 0;
+    padding-top: clamp(4rem, 3rem + 2vw, 5rem);
+    padding-bottom: clamp(2rem, 1.5rem + 1vw, 3rem);
   }
 
   .hero__title {
-    // Título escala más conservador en landscape: el ancho es generoso
-    // (800px+) pero el alto no. Tope en 3.5rem (~56px) en lugar de 5.5rem
-    // para que título + copy + CTA quepan en ~500px de scroll.
-    font-size: clamp(2rem, 1.5rem + 3vw, 3.5rem);
-    margin-top: 1rem;
+    // Título reducido aún más para que copy + CTA quepan en 360px alto.
+    // Antes 3.5rem max (~56px) era demasiado en viewport landscape phone;
+    // 2.75rem max (~44px) deja aire vertical para el resto del contenido.
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+    line-height: 1.0;
+    margin-top: 0.75rem;
   }
 
   .hero__copy {
-    margin-top: 1.25rem;
-    // En landscape, el copy puede usar más chars por línea — ancho amplio.
+    margin-top: 0.75rem;
     max-width: 55ch;
+    // Body más chico también — la prioridad es que TODO quepa above-the-fold.
+    font-size: clamp(0.875rem, 0.85rem + 0.1vw, 1rem);
   }
 
   .hero__cta {
-    margin-top: 1.5rem;
+    margin-top: 1rem;
   }
 
   // El aside (wave-card) se oculta en landscape phone — duplica info que
-  // el copy ya transmite y come altura crítica. La columna principal toma
-  // todo el ancho del container.
+  // el copy ya transmite y come altura crítica.
   .hero__aside {
     display: none;
   }
 
   .hero__grid {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  // Badge "Soluciones con IA" reducido en gap a su contenido — landscape
+  // phone tiene poco aire vertical para gaps grandes.
+  .hero__badge {
+    margin-bottom: 0;
   }
 }
 

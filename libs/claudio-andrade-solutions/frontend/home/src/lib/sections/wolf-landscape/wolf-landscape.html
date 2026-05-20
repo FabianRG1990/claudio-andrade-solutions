@@ -24,44 +24,50 @@
          navegador: AVIF (~60 KB) → WebP (~135 KB) → PNG (~1.8 MB fallback). -->
     <!-- Art direction: cada variante es una COMPOSICIÓN distinta (no recorte
          mecánico del 16:9) pensada para su tela:
-           • phone (≤640px)     → 9:16 vertical, lobo centrado, cielo+lago amplios
-           • tablet (641-1099)  → 1:1 cuadrado, lobo derecha, balance editorial
-           • cinematic (≥1024 AND alto ≤780) → 21:9 panorama, para laptops cortas
-           • desktop (default)  → 16:9 MK6 original
+           • phone (portrait ≤640px) → 9:16 vertical, lobo centrado, cielo+lago amplios
+           • tablet (641-1099 con altura ≥640) → 1:1 cuadrado, balance editorial
+           • cinematic (≥1024 AND alto ≤780, O landscape phone) → 21:9 panorama
+           • desktop (default) → 16:9 MK6 original
          IMPORTANTE: el orden de los <source> importa — el primero que matchea
-         gana. La cinematic va antes que la desktop porque su `max-height` la
-         restringe a viewports cortos; si quedara después, la desktop ganaría
-         por defecto en cualquier ≥1024. -->
+         gana. La cinematic va antes que la tablet porque DEBE ganar en
+         landscape phone (que cae en el rango width del tablet pero con altura
+         muy baja). El tablet excluye explícitamente alturas < 640 para no
+         agarrar landscape phone. -->
     <picture>
-      <!-- Cinematic (≥1024 wide AND ≤780 alto): laptops chicas, ventana media -->
+      <!-- Cinematic: laptop chica corta O landscape phone (cualquier ancho
+           con altura ≤540 + orientation landscape). El segundo query atrapa
+           iPhone/Android volteados (aspect ~2:1). -->
       <source
-        media="(min-width: 1024px) and (max-height: 780px)"
+        media="(min-width: 1024px) and (max-height: 780px), (orientation: landscape) and (max-height: 540px)"
         srcset="hero-wolf/hero-mk6-cinematic.avif"
         type="image/avif"
       />
       <source
-        media="(min-width: 1024px) and (max-height: 780px)"
+        media="(min-width: 1024px) and (max-height: 780px), (orientation: landscape) and (max-height: 540px)"
         srcset="hero-wolf/hero-mk6-cinematic.webp"
         type="image/webp"
       />
       <source
-        media="(min-width: 1024px) and (max-height: 780px)"
+        media="(min-width: 1024px) and (max-height: 780px), (orientation: landscape) and (max-height: 540px)"
         srcset="hero-wolf/hero-mk6-cinematic.jpg"
       />
 
-      <!-- Tablet (641-1099): iPad portrait+landscape, tablets en general -->
+      <!-- Tablet (641-1099 wide, altura ≥640, aspect ≤6/5 = portrait/casi
+           cuadrado): iPad portrait, tablets en general. El max-aspect-ratio
+           6/5 (=1.2) excluye iPad landscape (~1.33), que cae al fallback
+           desktop con MK6 16:9 — composición que encaja bien en ese rango. -->
       <source
-        media="(min-width: 641px) and (max-width: 1099px)"
+        media="(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)"
         srcset="hero-wolf/hero-mk6-tablet.avif"
         type="image/avif"
       />
       <source
-        media="(min-width: 641px) and (max-width: 1099px)"
+        media="(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)"
         srcset="hero-wolf/hero-mk6-tablet.webp"
         type="image/webp"
       />
       <source
-        media="(min-width: 641px) and (max-width: 1099px)"
+        media="(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)"
         srcset="hero-wolf/hero-mk6-tablet.png"
       />
 
