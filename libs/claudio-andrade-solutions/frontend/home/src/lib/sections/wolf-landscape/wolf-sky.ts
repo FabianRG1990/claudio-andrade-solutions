@@ -23,10 +23,21 @@ interface Star {
   delay: number;
 }
 
-/** Períodos primos coprimos. Cualquier subset que se sortee da un patrón
- *  arrítmico al ojo. 4.7s..8.3s son cadencias "respiración lenta", no
- *  parpadeo nervioso — la sensación realista que pediste. */
-const PERIODS = [4.7, 5.3, 6.1, 6.9, 7.7, 8.3];
+/**
+ * Hash determinístico estilo GLSL. Para el mismo `i` y `salt` siempre
+ * devuelve el mismo número en [0..1), uniformemente distribuido y sin
+ * patrón visible.
+ *
+ * Lo usamos en vez de la versión anterior `(i * primo) % 1000` que producía
+ * pasos lineales perfectamente regulares — combinados x e y daban DOS
+ * diagonales (una por cada "pasada" antes del wrap del módulo) que el ojo
+ * leía como dos rayas de estrellas. El sin-hash da distribución uniforme
+ * de verdad, así las estrellas quedan repartidas por todo el cielo.
+ */
+function hash(i: number, salt: number): number {
+  const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
 
 /**
  * WolfSky — capa decorativa con 30 estrellas que titilan sobre el cielo
@@ -80,35 +91,36 @@ export class WolfSky {
   protected readonly stars = computed<Star[]>(() => {
     const out: Star[] = [];
     for (let i = 0; i < 30; i++) {
-      // PRNG determinístico por índice — multiplicadores primos para
-      // que la distribución se sienta uniforme sin patrón visible.
-      const a = (i * 137 + 17) % 1000;
-      const b = (i * 71 + 23) % 1000;
-      const c = (i * 211 + 41) % 1000;
-      const d = (i * 311 + 53) % 1000;
-      const e = (i * 433 + 89) % 1000;
-
       out.push({
         i,
         // Margen 8-92 % horizontal — los árboles laterales recortan los
         // bordes del cielo en MK6, así que dejamos hueco para no pintar
         // sobre follaje.
-        x: 8 + (a / 1000) * 84,
+        x: 8 + hash(i, 0) * 84,
         // Cielo limpio: 1-18 % vertical. En MK6 el horizonte/skyline vive
         // ~20-25 %, así que cualquier estrella debajo de 18 % cae sobre
         // árboles, edificios o reflejos en el lago.
-        y: 1 + (b / 1000) * 17,
-        // 1.2-1.8 px de núcleo. Pequeñas como las pintadas del poster —
-        // al pulsar el halo se nota, pero el punto en sí no se hincha.
-        size: 1.2 + (c / 1000) * 0.6,
-        // 0.65-0.95 — pico variado. Subido respecto a la versión MK3
-        // porque el cielo de MK6 ya trae estrellas pintadas; las animadas
-        // necesitan brillar un punto más para no perderse entre ellas.
-        peak: 0.65 + (d / 1000) * 0.3,
-        dur: PERIODS[i % PERIODS.length],
+        y: 1 + hash(i, 1) * 17,
+        // Radio EXTERIOR del gradient en px (incluye núcleo brillante + halo
+        // soft). 1.6-2.4 px de radio = 3.2-4.8 px de diámetro total visible,
+        // mismo tamaño que las estrellas pintadas del poster (que tienen su
+        // propio glow incorporado en la imagen). El núcleo brillante interno
+        // es sólo 18 % de ese radio (~0.3-0.5 px), el resto es fade soft —
+        // el ojo lee "estrella con halo natural", no "pelota".
+        size: 1.6 + hash(i, 2) * 0.8,
+        // 0.85-1.0 de pico — todas llegan a blanco casi macizo en peak.
+        // Combinado con valle al 60 % del pico (ver SCSS), el promedio
+        // de brillo es alto: las estrellas siempre están bien presentes
+        // y la pulsación es sutil sobre ese fondo brillante.
+        peak: 0.85 + hash(i, 3) * 0.15,
+        // Período 6-10 s. Combinado con la keyframe multi-stop del SCSS
+        // (5 puntos por ciclo, 2 sub-picos por estrella), cada sub-pico
+        // toma 3-5 s — ritmo "respiración" pausado, lo que el ojo lee
+        // como twinkle natural, no parpadeo apresurado.
+        dur: 6 + hash(i, 4) * 4,
         // 0..8 s de fase — cubre más que el período máximo, así el ciclo
         // colectivo arranca completamente desfasado entre estrellas.
-        delay: (e / 1000) * 8,
+        delay: hash(i, 5) * 8,
       });
     }
     return out;
