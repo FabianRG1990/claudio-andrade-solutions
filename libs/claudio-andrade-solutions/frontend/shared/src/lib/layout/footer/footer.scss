@@ -62,6 +62,12 @@
   display: flex;
   align-items: center;
   gap: 0.875rem;
+
+  // El emblema (lobo) por defecto mira a la derecha; en el footer queremos
+  // que mire hacia la izquierda — hacia el eyebrow + tagline a su derecha.
+  // Setear la custom property cascadea hasta el `<img>` dentro de
+  // <app-emblem-mark>, que la lee con scaleX(var(--emblem-flip, 1)).
+  --emblem-flip: -1;
 }
 
 .footer__brand-meta {
