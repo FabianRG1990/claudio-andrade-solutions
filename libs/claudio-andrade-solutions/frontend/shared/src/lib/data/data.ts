@@ -124,6 +124,11 @@ export type Service = {
   // sistema que `Product.accent` — los 4 valores corresponden a los tokens
   // de color del proyecto.
   accent?: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
+  // iconColor: color del icono del card (tile rounded-square). Va separado
+  // del `accent` del halo para que cada card tenga su propia identidad sin
+  // limitarse a la paleta de 4 accents. Paleta abisal/bioluminiscente —
+  // hex válidos para usar como `var(--icon-color)` en SCSS.
+  iconColor: string;
 };
 
 // Status → mapping a "tono" visual existente:
@@ -145,6 +150,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorPulseBold',
     accent: 'lagoon',
+    iconColor: '#5EC4D1',
   },
   {
     slug: 'sistemas-medida',
@@ -157,6 +163,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorTerminalWindowBold',
     accent: 'kelp',
+    iconColor: '#7FE3A8',
   },
   {
     slug: 'integraciones-ia',
@@ -169,6 +176,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorRobotBold',
     accent: 'bioluminescent',
+    iconColor: '#9C8AF5',
   },
   {
     slug: 'apps-walmart',
@@ -181,6 +189,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorPackageBold',
     accent: 'coral',
+    iconColor: '#F0B870',
   },
   {
     slug: 'landing-premium',
@@ -193,6 +202,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorBrowsersBold',
     accent: 'lagoon',
+    iconColor: '#E879B8',
   },
   {
     slug: 'apps-moviles',
@@ -205,6 +215,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorDeviceMobileBold',
     accent: 'kelp',
+    iconColor: '#7B98F0',
   },
   {
     slug: 'analisis-flujos',
@@ -217,6 +228,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorChartLineUpBold',
     accent: 'bioluminescent',
+    iconColor: '#7FE3D6',
   },
   {
     slug: 'automatizacion',
@@ -229,6 +241,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorGearBold',
     accent: 'coral',
+    iconColor: '#F0876B',
   },
   {
     slug: 'consultoria-cloud',
@@ -241,6 +254,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorCloudCheckBold',
     accent: 'lagoon',
+    iconColor: '#9DAEEF',
   },
   {
     slug: 'consultoria-estrategica',
@@ -253,6 +267,7 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorBrainBold',
     accent: 'kelp',
+    iconColor: '#5FD89F',
   },
 ];
 

@@ -258,6 +258,9 @@
   border-bottom: 1px solid rgb(var(--foam) / 0.08);
 }
 
+// Tile rounded-square plano tipo iOS app-icon — fondo neutro (no tintado
+// del color del icono, eso creaba un halo/glow alrededor) y el icono toma
+// su color de `--icon-color` que cada servicio define en data.ts.
 .service-card__icon {
   flex-shrink: 0;
   display: inline-flex;
@@ -265,8 +268,9 @@
   justify-content: center;
   width: 3.25rem;
   height: 3.25rem;
-  border-radius: 9999px;
-  color: rgb(var(--foam));
+  border-radius: 0.875rem;
+  background: rgb(255 255 255 / 0.035);
+  color: var(--icon-color, rgb(var(--foam)));
 }
 
 .service-card__hero-meta {

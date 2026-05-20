@@ -34,7 +34,7 @@
 
             <!-- HEAD: icono protagonista + secuencia editorial + status -->
             <header class="service-card__hero">
-              <span class="service-card__icon glass-bubble-icon">
+              <span class="service-card__icon" [style.--icon-color]="sp.iconColor">
                 @if (sp.icon) {
                   <ng-icon [name]="sp.icon" size="24" />
                 }
