@@ -33,23 +33,15 @@
   background: #06091A;
   display: flex;
   flex-direction: column;
-  // Mobile + desktop: el hero ocupa el viewport entero. svh (small viewport
-  // height) en lugar de dvh para que el hero no salte cuando la URL bar de
-  // iOS Safari colapsa al scroll. Patrón usado por Stripe / Linear.
-  // El landscape-phone y short-laptop overrides más abajo liberan esto
-  // cuando el alto del viewport es escaso.
-  min-height: 100svh;
-
-  // Short-laptop (≥1024 wide, ≤780 tall): MacBook Air 11/13, Surface,
-  // proyecciones a 1024×600/768. Con `min-height: 100svh` el hero llena
-  // TODO el viewport y el primer paint no revela que hay más contenido
-  // debajo — el usuario no scrollea porque cree que es una página corta.
-  // Bajamos a 86svh para dejar una "tira" visible del próximo capítulo
-  // (Featured products) que invite al scroll. Patrón Apple/Linear: hero
-  // no llena en laptops chicas.
-  @include m.short-laptop {
-    min-height: 86svh;
-  }
+  // Mobile + desktop: el hero ocupa el viewport entero, con FLOOR de 35rem
+  // (560px). El floor protege a teléfonos con Chrome address bar visible
+  // donde 100svh puede colapsar a ~500-540px y dejar al título sin aire.
+  // En esos casos el hero excede el viewport por unos px y el usuario hace
+  // scroll para ver lo que falta — preferible a contenido cortado above-fold.
+  // svh (no dvh) evita el salto cuando la URL bar de iOS Safari colapsa al
+  // scroll (patrón Stripe / Linear). Los overrides de landscape-phone y
+  // short-laptop al final del archivo liberan esto cuando el alto es escaso.
+  min-height: max(35rem, 100svh);
 }
 
 // =============================================================================
@@ -243,9 +235,19 @@
   display: flex;
   width: 100%;
   max-width: 80rem;
-  min-height: 100svh;
+  // `flex: 1 0 auto` hace que el container ocupe TODO el alto disponible del
+  // `.hero` parent (flex column) sin tener que duplicar el `min-height: 100svh`
+  // de antes — los dos peleaban en short-laptop. `min-height: 0` libera al flex
+  // item de su tamaño intrínseco para que el `safe center` funcione.
+  flex: 1 0 auto;
+  min-height: 0;
   flex-direction: column;
-  justify-content: center;
+  // `safe center` = centra cuando hay aire, alinea al start cuando el contenido
+  // excede el contenedor. Sin `safe`, los browsers cortan el contenido por
+  // arriba cuando el flex centra contenido más alto que su caja (bug visible
+  // en Chrome con title grande + svh chico). Soportado Chrome 93+ / FF 63+ /
+  // Safari 16+. Cae a `center` regular en browsers viejos (degrade aceptable).
+  justify-content: safe center;
   // Padding-top fluido: 6rem en phones (suficiente para que el título quede
   // bajo el nav + telemetría sin colisión), sube a 14rem en desktop.
   padding-top: clamp(6rem, 3rem + 8vw, 14rem);
@@ -253,20 +255,18 @@
     max(var(--container-px), env(safe-area-inset-left))
     max(var(--container-px), env(safe-area-inset-right));
   padding-bottom: clamp(4rem, 2rem + 4vw, 8rem);
-
-  // Match al `.hero` parent en short-laptop — sin esto el container manda
-  // y el min-height: 100svh de aquí gana sobre el 86svh del padre. Mismo
-  // valor para que el hero termine en una sola altura coherente.
-  @include m.short-laptop {
-    min-height: 86svh;
-  }
 }
 
 .hero__grid {
   display: grid;
   gap: 2rem;
 
-  @media (min-width: 1024px) {
+  // 2-col aparece SOLO cuando hay ancho generoso (1100px+) Y alto suficiente
+  // (≥720px) para sostener el wave-card sin asfixiar al título. iPad Pro
+  // landscape (1024×768) y MacBook 11/13" cortas (1366×640/720) no califican
+  // — quedan en 1-col y se ven editorialmente correctos. La 2-col es premium
+  // de desktop, no es la versión "más pequeña" de nada.
+  @media (min-width: 1100px) and (min-height: 720px) {
     grid-template-columns: 1.5fr 1fr;
     align-items: end;
     margin: 3rem 0 0 0;
@@ -427,16 +427,20 @@
 }
 
 // ─── Aside column (cohorte card + scroll hint) ───────────────────────────────
-// Phone (< 1024px): el aside se oculta. La wave-card "Próxima cohorte" con
-// 3 stats compite por atención con el título sobre una imagen que también
-// reclama el ojo — en mobile el premium se hace con jerarquía minimal:
-// imagen + título + copy + nada más. La info de stats vive en el capítulo
-// `timeline` más abajo. Mismo patrón que Apple Vision Pro mobile (hero =
-// imagen + título + 1 acción, sin sidebars).
+// El aside aparece SOLO en desktop pleno (≥1100px ancho AND ≥720px alto). En
+// phone, tablet, iPad Pro landscape, MacBook chico y ventanas a media pantalla
+// queda oculto. La wave-card "Próxima cohorte" con 3 stats compite por
+// atención con el título sobre una imagen que también reclama el ojo — en
+// viewports estrechos el premium se hace con jerarquía minimal: imagen +
+// título + copy + nada más. La info de stats vive en el capítulo `timeline`
+// más abajo. Mismo patrón que Apple Vision Pro mobile (hero = imagen +
+// título + 1 acción, sin sidebars). El guard de altura `min-height: 720px`
+// evita que aparezca en short-laptop (1366×640, 1280×720) donde tapaba media
+// pantalla al título.
 .hero__aside {
   display: none;
 
-  @media (min-width: 1024px) {
+  @media (min-width: 1100px) and (min-height: 720px) {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -574,7 +578,10 @@
     opacity 600ms 1450ms var(--ease-fluid),
     transform 600ms 1450ms var(--ease-fluid);
 
-  @media (min-width: 1024px) {
+  // Match el threshold de `.hero__aside` — el scroll-hint vive dentro del
+  // aside así que si éste está oculto el hint también, pero alineamos el
+  // breakpoint para coherencia.
+  @media (min-width: 1100px) and (min-height: 720px) {
     display: flex;
   }
 
@@ -674,5 +681,74 @@
 
   .hero__grid {
     grid-template-columns: 1fr;
+  }
+}
+
+// ─── Short-laptop (≥1024 wide, ≤780 tall) ───────────────────────────────────
+// MacBook Air 11/13, Surface, notebooks 1366×640/720/768, ventanas a media
+// pantalla en monitores grandes, presentaciones proyectadas a 1024×600.
+// Patrón unificado: NO miniaturizar la versión desktop — bajar a layout 1-col
+// y comprimir la tipografía/padding para que el contenido respire en alto
+// limitado. Más cerca del editorial "ancho generoso, alto controlado" que del
+// patrón "card lateral" de pantallas amplias. Apple/Linear hacen lo mismo:
+// laptops chicas reciben la versión phone-grande, no la desktop comprimida.
+@include m.short-laptop {
+  .hero {
+    // Floor de 28rem (448px) cubre el min-height contra svh chico en short.
+    // 86svh deja una franja del próximo capítulo visible al primer paint (~14%
+    // del viewport) que invita al scroll — clave en laptops chicas donde el
+    // usuario no asume scroll si el hero llena.
+    min-height: max(28rem, 86svh);
+  }
+
+  // Telemetría más cerca del top — sin esto el `max(8rem, ...)` desktop deja
+  // 128px de aire desperdiciado sobre la línea de Angular/Nx/Yarn.
+  .hero__telemetry {
+    top: max(5rem, calc(env(safe-area-inset-top) + 4rem));
+  }
+
+  .hero__telemetry-col--right {
+    margin-top: -2rem;
+  }
+
+  .hero__container {
+    // Padding-top fluido pero contenido — el cap del desktop (14rem) en un
+    // viewport de 640px alto consume 1/4 del hero. 6rem max acá deja sitio
+    // al título sin pegarse al nav.
+    padding-top: clamp(4.5rem, 3rem + 2vw, 6rem);
+    padding-bottom: clamp(2.5rem, 2rem + 1.5vw, 4rem);
+  }
+
+  .hero__grid {
+    // Garantiza 1-col aunque hayamos entrado al threshold de 1100px (improbable
+    // pero defensivo: una ventana 1366×640 = 1366≥1100 ∧ 640<720 → no entra al
+    // 2-col. Pero si alguien sube min-height a 700, esta regla protege).
+    grid-template-columns: 1fr;
+    margin-top: 0;
+    gap: 2rem;
+  }
+
+  // Título escalado para alto controlado. En 1366×640: 1.2*16 + 0.025*1366 =
+  // ~53px (vs ~74px que daba el clamp desktop). En 1280×720: ~51px. En
+  // 1024×600: ~45px. Todos caben en 3 líneas sin asfixiar al copy + CTA.
+  .hero__title {
+    font-size: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+    margin-top: 1.25rem;
+    max-width: 22ch;
+  }
+
+  .hero__copy {
+    margin-top: 1.5rem;
+    max-width: 55ch;
+  }
+
+  .hero__cta {
+    margin-top: 1.75rem;
+  }
+
+  // El aside ya está oculto por su propia media (1100×720). Defensivo aquí
+  // por si alguien baja el ancho a 1024 — short-laptop manda siempre.
+  .hero__aside {
+    display: none;
   }
 }

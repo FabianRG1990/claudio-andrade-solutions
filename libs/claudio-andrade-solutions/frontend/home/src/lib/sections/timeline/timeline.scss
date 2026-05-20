@@ -72,13 +72,11 @@
 .timeline__lead {
   max-width: 56ch;
   text-wrap: pretty;
-  font-size: 1rem;
+  // Fluid 16→17px (en lugar del step a 768) — la curva es chica pero el
+  // salto era visible al rotar el dispositivo cerca de 768.
+  font-size: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem);
   line-height: 1.65;
   color: rgb(var(--foam) / 0.7);
-
-  @media (min-width: 768px) {
-    font-size: 1.0625rem;
-  }
 }
 
 // ─── Stats hero ──────────────────────────────────────────────────────────────
@@ -156,15 +154,13 @@
   text-wrap: balance;
   max-width: 16ch;
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  // Fluid 24→28px sin step en 768. Mantiene la jerarquía intermedia entre
+  // body lg y h2-lg que el zone-title necesita.
+  font-size: clamp(1.5rem, 1.4rem + 0.5vw, 1.75rem);
   font-weight: 500;
   line-height: 1.15;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam) / 0.92);
-
-  @media (min-width: 768px) {
-    font-size: 1.75rem;
-  }
 }
 
 // ─── Timeline list · vertical con dot+line ──────────────────────────────────
@@ -230,15 +226,14 @@
 .timeline__year {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 1.625rem;
+  // Fluid 26→30px en lugar del step a 768. El año (mono, tabular-nums) es
+  // el ancla visual del hito — la curva suave evita el "pop" en el cambio
+  // de orientación cerca de 768.
+  font-size: clamp(1.625rem, 1.5rem + 0.55vw, 1.875rem);
   line-height: 1;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
   font-variant-numeric: tabular-nums;
-
-  @media (min-width: 768px) {
-    font-size: 1.875rem;
-  }
 }
 
 .timeline__body {
@@ -404,16 +399,14 @@
 .tech-card__name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  // Fluid 20→22px sin step. El nombre de la tech (Angular/Nx/Three.js/etc.)
+  // es el ancla de la card — la curva suave evita pop visible al pasar 768.
+  font-size: clamp(1.25rem, 1.2rem + 0.25vw, 1.375rem);
   font-weight: 500;
   line-height: 1.15;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
   text-wrap: balance;
-
-  @media (min-width: 768px) {
-    font-size: 1.375rem;
-  }
 }
 
 .tech-card__reason {

@@ -49,10 +49,9 @@
   max-width: 28rem;
   text-wrap: pretty;
   color: rgb(var(--foam) / 0.65);
-
-  @media (min-width: 768px) {
-    font-size: 18px;
-  }
+  // Token fluido 17→20px en lugar del step a 18px @768. Mismo lead pattern
+  // que las otras secciones (availability/timeline) — coherencia editorial.
+  font-size: var(--type-body-lg);
 }
 
 .engagements__grid {
