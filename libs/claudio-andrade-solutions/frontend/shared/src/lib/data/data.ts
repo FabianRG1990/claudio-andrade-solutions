@@ -449,56 +449,76 @@ export const availability = {
 // partnership recurrente.
 export type Engagement = {
   name: string;
+  // Precio actual (sin símbolo de moneda — fricción visual mínima).
   price: string;
+  // Precio ancla (tachado encima del actual) — efecto "Price Anchoring".
+  originalPrice?: string;
+  // Desglose en unidad pequeña (ej. "≈ 150/día") — reduce dolor de pago.
+  priceBreakdown?: string;
   cadence: string;
   description: string;
-  perks: readonly string[];
+  // `features` es paralelo a `engagementFeatures` (mismo orden + longitud).
+  // `true` = check; `false` = X tenue. Inclusión jerárquica: cada plan superior
+  // es superset del anterior — Auditoría (diagnóstico) ⊂ Proyecto cerrado
+  // (incluye discovery + build) ⊂ Acompañamiento (incluye todo + retainer).
+  features: readonly boolean[];
+  // Mensaje de escasez (solo en plan destacado) — refuerza cohorte limitada
+  // que ya vive en `availability.ticketingNote`.
+  scarcityNote?: string;
   accent: 'foam' | 'lagoon' | 'coral';
   highlight?: boolean;
 };
 
+// Lista unificada de capacidades — paralela a `Engagement.features`. Orden
+// estructurado en 3 bloques: diagnóstico → construcción → operación. La
+// inclusión es cumulativa: cada plan tiene los anteriores + los suyos.
+export const engagementFeatures: readonly string[] = [
+  'Inventario de stack y procesos',
+  'Hoja de ruta priorizada a 12 meses',
+  'Sesión de cierre con dirección',
+  'Build con alcance y precio cerrados',
+  'Sprints quincenales con demo viva',
+  'Stack premium (Angular · Firebase · IA)',
+  'Documentación técnica completa',
+  'Garantía post-entrega de 30 días',
+  'Equipo de producto fraccional',
+  'CTO fraccional y soporte 24/7',
+];
+
 export const engagements: Engagement[] = [
   {
     name: 'Auditoría',
-    price: 'Desde $1.8K',
+    price: '1.8K',
+    originalPrice: '2.5K',
+    priceBreakdown: '≈ 600 / semana',
     cadence: 'trabajo de 2 a 4 semanas',
     description:
       'Diagnóstico tecnológico completo. Mapeo de stack, riesgos, oportunidades de automatización e IA, y una hoja de ruta priorizada por impacto.',
-    perks: [
-      'Sesiones con responsables clave',
-      'Inventario de stack y procesos',
-      'Hoja de ruta a 12 meses',
-      'Sesión de cierre con dirección',
-    ],
+    features: [true, true, true, false, false, false, false, false, false, false],
     accent: 'foam',
   },
   {
     name: 'Proyecto cerrado',
-    price: 'Desde $14K',
+    price: '14K',
+    originalPrice: '18K',
+    priceBreakdown: '≈ 700 / semana',
     cadence: 'alcance fijo',
     description:
       'Construcción integral de una solución concreta. Estimación cerrada, hitos quincenales, demo viva en cada sprint y entrega documentada.',
-    perks: [
-      'Alcance y precio cerrados',
-      'Sprints de 2 semanas con demo',
-      'Stack premium (Angular · Firebase · IA)',
-      'Documentación y entrega incluidos',
-    ],
+    features: [true, true, true, true, true, true, true, true, false, false],
+    scarcityNote: '2 cupos abiertos · cohorte actual',
     accent: 'lagoon',
     highlight: true,
   },
   {
     name: 'Acompañamiento',
-    price: 'Desde $4.5K',
+    price: '4.5K',
+    originalPrice: '6K',
+    priceBreakdown: '≈ 150 / día',
     cadence: 'mensual',
     description:
       'Compromiso a largo plazo: equipo de producto fraccional, sprints continuos, soporte 24/7 y prioridad en agenda. Ideal para empresas en crecimiento sostenido.',
-    perks: [
-      'Equipo dedicado fraccional',
-      'Soporte y guardia 24/7',
-      'Prioridad en agenda',
-      'CTO fraccional incluido',
-    ],
+    features: [true, true, true, true, true, true, true, true, true, true],
     accent: 'coral',
   },
 ];

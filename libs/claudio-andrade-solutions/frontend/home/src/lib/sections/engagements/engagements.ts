@@ -4,9 +4,10 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorArrowUpRightBold,
   phosphorCheckBold,
+  phosphorXBold,
 } from '@ng-icons/phosphor-icons/bold';
 
-import { engagements } from '@cas-ui-shared/data/data';
+import { engagements, engagementFeatures } from '@cas-ui-shared/data/data';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 
@@ -19,7 +20,7 @@ import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directi
   selector: 'app-engagements',
   imports: [RouterLink, NgIcon, Eyebrow, RevealDirective],
   providers: [
-    provideIcons({ phosphorArrowUpRightBold, phosphorCheckBold }),
+    provideIcons({ phosphorArrowUpRightBold, phosphorCheckBold, phosphorXBold }),
   ],
   templateUrl: './engagements.html',
   styleUrl: './engagements.scss',
@@ -27,4 +28,5 @@ import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directi
 })
 export class Engagements {
   protected readonly engagements = engagements;
+  protected readonly engagementFeatures = engagementFeatures;
 }

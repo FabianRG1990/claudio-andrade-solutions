@@ -224,8 +224,10 @@
 // halo (que está en z-index 0 del mismo stacking context).
 .engagement-card__head,
 .engagement-card__price-row,
+.engagement-card__price-breakdown,
 .engagement-card__description,
-.engagement-card__perks,
+.engagement-card__features,
+.engagement-card__scarcity,
 .engagement-card__cta-wrap {
   position: relative;
   z-index: 1;
@@ -277,7 +279,21 @@
   margin-top: 1.125rem;
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+// Precio ancla tachado — R3 Price Anchoring. Va antes del actual, en mono
+// pequeño, con line-through. Color foam tenue para que el cerebro compare
+// sin que compita con el precio vigente.
+.engagement-card__price-original {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam) / 0.40);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .engagement-card__price {
@@ -300,6 +316,17 @@
   color: rgb(var(--foam) / 0.55);
 }
 
+// Desglose en unidad pequeña — R6 (≈ 150/día, ≈ 700/semana). Reduce la
+// fricción al procesar la cifra grande.
+.engagement-card__price-breakdown {
+  margin-top: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: rgb(var(--foam) / 0.50);
+  font-variant-numeric: tabular-nums;
+}
+
 .engagement-card__description {
   margin-top: 0.75rem;
   text-wrap: pretty;
@@ -307,7 +334,10 @@
   line-height: 1.55;
 }
 
-.engagement-card__perks {
+// Lista unificada de capacidades — R7 + R8. Mismo orden para los 3 cards;
+// cada uno marca check o X según `features[i]`. Las ausentes quedan muy
+// tenues para que el ojo cuente "completitud" del plan superior.
+.engagement-card__features {
   margin-top: 1.25rem;
   list-style: none;
   border-top: 1px solid rgb(var(--foam) / 0.1);
@@ -318,18 +348,22 @@
   }
 }
 
-.engagement-card--highlight .engagement-card__perks {
+.engagement-card--highlight .engagement-card__features {
   border-top-color: rgb(var(--lagoon) / 0.2);
 }
 
-.engagement-card__perk {
+.engagement-card__feature {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
   color: rgb(var(--foam) / 0.85);
 }
 
-.engagement-card__check {
+.engagement-card__feature--absent {
+  color: rgb(var(--foam) / 0.32);
+}
+
+.engagement-card__feature-icon {
   margin-top: 0.125rem;
   flex-shrink: 0;
   display: flex;
@@ -342,15 +376,44 @@
   color: rgb(var(--foam) / 0.85);
 }
 
-.engagement-card--highlight .engagement-card__check {
+.engagement-card--highlight .engagement-card__feature:not(.engagement-card__feature--absent) .engagement-card__feature-icon {
   background: rgb(var(--lagoon) / 0.3);
   color: rgb(var(--lagoon));
   box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.4);
 }
 
-.engagement-card__perk-label {
+.engagement-card__feature--absent .engagement-card__feature-icon {
+  background: transparent;
+  color: rgb(var(--foam) / 0.28);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.08);
+}
+
+.engagement-card__feature-label {
   font-size: 15px;
   line-height: 1.4;
+}
+
+// R9 Escasez — solo en el card destacado. Pulse dot + texto en tono coral
+// para que tire la mirada al CTA sin sentirse de cyber-monday.
+.engagement-card__scarcity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--coral));
+}
+
+.engagement-card__scarcity-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: rgb(var(--coral));
+  box-shadow: 0 0 8px 2px rgb(var(--coral) / 0.55);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .engagement-card__cta-wrap {
