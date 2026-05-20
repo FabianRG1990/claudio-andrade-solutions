@@ -8,6 +8,8 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { getActiveHeroVariant, onHeroVariantChange } from './hero-variants';
+
 /**
  * WolfLakeFlow — capa WebGL que anima el agua del Hero MK6 aplicando un
  * *flow map* sobre la imagen estática, y ADEMÁS samplea el canvas de los
@@ -131,19 +133,32 @@ export class WolfLakeFlow {
     // Patrón de cleanup tolerante al ciclo de vida — copiado de
     // wolf-lake-canvas.ts. En HMR el componente puede destruirse antes
     // de que `start()` resuelva; sin esto Angular tira NG0911.
+    // Además, re-init en variant change (rotación / resize que cruza un
+    // breakpoint) para que el shader use la máscara/imagen del polígono
+    // del variant activo, no de uno anterior.
     let cleanup: (() => void) | undefined;
+    let variantCleanup: (() => void) | undefined;
     let isDestroyed = false;
     this.destroyRef.onDestroy(() => {
       isDestroyed = true;
       cleanup?.();
+      variantCleanup?.();
     });
-    afterNextRender(async () => {
+    const runStart = async (): Promise<void> => {
+      cleanup?.();
+      cleanup = undefined;
       const c = await this.start();
       if (isDestroyed) {
         c?.();
       } else {
         cleanup = c ?? undefined;
       }
+    };
+    afterNextRender(async () => {
+      await runStart();
+      variantCleanup = onHeroVariantChange(() => {
+        void runStart();
+      });
     });
   }
 
@@ -168,22 +183,24 @@ export class WolfLakeFlow {
       return;
     }
 
-    // ─── Cargar imagen del hero + máscara del agua ──────────────────────────
-    // water-mask-mk6.png se generó por polyline tracing del contorno real
-    // del agua (siguiendo el filo de las rocas y los árboles), con un
-    // Gaussian blur sigma=8 px para feather suave en el borde. R-channel:
-    // 1 = agua (animar), 0 = no-agua (estático).
+    // ─── Cargar imagen del hero + máscara del agua del variant activo ──────
+    // El variant viene de `getActiveHeroVariant()` (matchMedia) — el mismo
+    // sistema que decide qué <source> del <picture> gana. Eso garantiza que
+    // el shader use la máscara correspondiente a la imagen que ESTÁ siendo
+    // mostrada al usuario; sin esto, el flow animaría agua en zonas donde
+    // la imagen visible no tiene agua (o no animaría donde sí la tiene).
     //
-    // Se usa esta máscara en vez de lake-mask-mk3.png — esta es para el
-    // flow del agua; la otra está calibrada para los peces (zona más
-    // interior). La máscara para el flow puede llegar al filo de las
-    // rocas y a la orilla.
+    // water-mask-{variant}.png es la máscara con blur grueso (sigma ~1.5%
+    // del lado menor) — feather suave en orilla. Distinta de la lake-mask-
+    // {variant}.png (peces, hard edge + inset 4%): el flow puede llegar
+    // hasta el filo de las rocas; los peces se mantienen más adentro.
+    const variant = getActiveHeroVariant();
     let heroImg: HTMLImageElement;
     let maskImg: HTMLImageElement;
     try {
       [heroImg, maskImg] = await Promise.all([
-        loadImage('/hero-wolf/hero-mk6.webp'),
-        loadImage('/hero-wolf/water-mask-mk6.png'),
+        loadImage(variant.image),
+        loadImage(variant.waterMask),
       ]);
     } catch (e) {
       console.warn('[WolfLakeFlow] texture load failed', e);

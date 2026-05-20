@@ -22,7 +22,66 @@
     <!-- Imagen estática MK6 (lago + lobo wireframe + skyline + cielo
          estrellado). El `<picture>` negocia formato por compatibilidad del
          navegador: AVIF (~60 KB) → WebP (~135 KB) → PNG (~1.8 MB fallback). -->
+    <!-- Art direction: cada variante es una COMPOSICIÓN distinta (no recorte
+         mecánico del 16:9) pensada para su tela:
+           • phone (≤640px)     → 9:16 vertical, lobo centrado, cielo+lago amplios
+           • tablet (641-1099)  → 1:1 cuadrado, lobo derecha, balance editorial
+           • cinematic (≥1024 AND alto ≤780) → 21:9 panorama, para laptops cortas
+           • desktop (default)  → 16:9 MK6 original
+         IMPORTANTE: el orden de los <source> importa — el primero que matchea
+         gana. La cinematic va antes que la desktop porque su `max-height` la
+         restringe a viewports cortos; si quedara después, la desktop ganaría
+         por defecto en cualquier ≥1024. -->
     <picture>
+      <!-- Cinematic (≥1024 wide AND ≤780 alto): laptops chicas, ventana media -->
+      <source
+        media="(min-width: 1024px) and (max-height: 780px)"
+        srcset="hero-wolf/hero-mk6-cinematic.avif"
+        type="image/avif"
+      />
+      <source
+        media="(min-width: 1024px) and (max-height: 780px)"
+        srcset="hero-wolf/hero-mk6-cinematic.webp"
+        type="image/webp"
+      />
+      <source
+        media="(min-width: 1024px) and (max-height: 780px)"
+        srcset="hero-wolf/hero-mk6-cinematic.jpg"
+      />
+
+      <!-- Tablet (641-1099): iPad portrait+landscape, tablets en general -->
+      <source
+        media="(min-width: 641px) and (max-width: 1099px)"
+        srcset="hero-wolf/hero-mk6-tablet.avif"
+        type="image/avif"
+      />
+      <source
+        media="(min-width: 641px) and (max-width: 1099px)"
+        srcset="hero-wolf/hero-mk6-tablet.webp"
+        type="image/webp"
+      />
+      <source
+        media="(min-width: 641px) and (max-width: 1099px)"
+        srcset="hero-wolf/hero-mk6-tablet.png"
+      />
+
+      <!-- Phone (≤640): portrait vertical -->
+      <source
+        media="(max-width: 640px)"
+        srcset="hero-wolf/hero-mk6-phone.avif"
+        type="image/avif"
+      />
+      <source
+        media="(max-width: 640px)"
+        srcset="hero-wolf/hero-mk6-phone.webp"
+        type="image/webp"
+      />
+      <source
+        media="(max-width: 640px)"
+        srcset="hero-wolf/hero-mk6-phone.png"
+      />
+
+      <!-- Desktop wide (default fallback): MK6 original 16:9 -->
       <source srcset="hero-wolf/hero-mk6.avif" type="image/avif" />
       <source srcset="hero-wolf/hero-mk6.webp" type="image/webp" />
       <img

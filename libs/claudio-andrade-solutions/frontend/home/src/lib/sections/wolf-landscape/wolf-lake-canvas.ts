@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 
 import { FishThreeRenderer, type FishHandle } from './wolf-fish-three';
+import { getActiveHeroVariant, onHeroVariantChange } from './hero-variants';
 
 /**
  * WolfLakeCanvas — capa interactiva sobre el lago del Hero MK6.
@@ -2562,19 +2563,35 @@ export class WolfLakeCanvas {
     // el handler de destroy ANTES, capturar el cleanup en una variable, y
     // si el handler ya corrió cuando llegamos a setearla, ejecutamos el
     // cleanup directamente.
+    //
+    // Además: re-init si el viewport cruza un breakpoint del hero (rotación,
+    // resize). El `<picture>` cambia el src automáticamente, pero la lógica
+    // del canvas (polígono del lake, IMG_W/H, color sample) está atada al
+    // variant en init time. Sin este re-init, los peces nadarían según la
+    // geometría del variant anterior mientras el usuario ve otra imagen.
     let cleanup: (() => void) | undefined;
+    let variantCleanup: (() => void) | undefined;
     let isDestroyed = false;
     this.destroyRef.onDestroy(() => {
       isDestroyed = true;
       cleanup?.();
+      variantCleanup?.();
     });
-    afterNextRender(async () => {
+    const runStart = async (): Promise<void> => {
+      cleanup?.();
+      cleanup = undefined;
       const c = await this.start();
       if (isDestroyed) {
         c?.();
       } else {
         cleanup = c ?? undefined;
       }
+    };
+    afterNextRender(async () => {
+      await runStart();
+      variantCleanup = onHeroVariantChange(() => {
+        void runStart();
+      });
     });
   }
 
@@ -2593,14 +2610,19 @@ export class WolfLakeCanvas {
     const fishRenderer = new FishThreeRenderer(GLOW_BODY_PROFILE.length);
 
     // ─── Init Three.js + cargar máscara + hero color del lago en paralelo
+    // Variant activo: detectado vía matchMedia, coincide con qué <source>
+    // del <picture> ganó el match. Las URLs y dimensiones (image, lake mask,
+    // width, height) salen del variant — así un viewport phone usa la
+    // máscara/imagen del polígono phone, no del MK6 desktop.
+    const variant = getActiveHeroVariant();
     let maskImg: HTMLImageElement;
     let heroImg: HTMLImageElement;
     try {
       const initialW = host.offsetWidth || 1;
       const initialH = host.offsetHeight || 1;
       [maskImg, heroImg] = await Promise.all([
-        loadImage('/hero-wolf/lake-mask-mk3.png'),
-        loadImage('/hero-wolf/hero-mk6.png'),
+        loadImage(variant.lakeMask),
+        loadImage(variant.image),
         fishRenderer.init(canvas, initialW, initialH),
       ]);
     } catch {
@@ -2611,12 +2633,12 @@ export class WolfLakeCanvas {
     // Hero como buffer RGB para samplear el color del agua en cada pez.
     // Cada frame por pez ~3 lookups bilinear = <100µs total.
     const heroColor = imageToColor(heroImg);
-    // Dimensiones nativas de la imagen del hero (MK6 = mismas que MK3:
-    // 1672×941). Si en el futuro se cambia el src del `<img class="hero__bg">`
-    // por una imagen de OTRO tamaño, hay que actualizar estos y regenerar
-    // los polígonos en generate-masks.mjs.
-    const IMG_W = 1672;
-    const IMG_H = 941;
+    // Dimensiones nativas de la imagen del variant activo (1672×941 desktop,
+    // 1080×1920 phone, 1600×1600 tablet, 2520×1080 cinematic). El cover
+    // transform en `imgUVToCanvasUV` usa estas dims para mapear UV de la
+    // imagen → UV del canvas (object-fit: cover; object-position: center).
+    const IMG_W = variant.width;
+    const IMG_H = variant.height;
 
     // ─── Resize handler — mantiene canvas sincronizado al host.
     // Three.js maneja canvas.width/height vía setSize + setPixelRatio (clamp
