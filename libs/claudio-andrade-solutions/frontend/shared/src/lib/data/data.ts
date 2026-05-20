@@ -26,7 +26,7 @@ export type Product = {
 export const products: Product[] = [
   {
     slug: 'auditoria-tecnologica',
-    name: 'Auditoría tecnológica',
+    name: 'Sistemas a medida',
     zone: 'Diagnóstico',
     timeline: '2 — 4 semanas',
     deliverables: 14,
@@ -39,7 +39,7 @@ export const products: Product[] = [
   },
   {
     slug: 'sistemas-a-medida',
-    name: 'Sistemas a medida',
+    name: 'Landing premium',
     zone: 'Desarrollo',
     timeline: '12 — 24 semanas',
     deliverables: 32,
@@ -65,7 +65,7 @@ export const products: Product[] = [
   },
   {
     slug: 'apps-walmart',
-    name: 'Apps proveedores Walmart',
+    name: 'Apps Para proveedores de Walmart',
     zone: 'Vertical',
     timeline: '6 — 12 semanas',
     deliverables: 22,
@@ -78,7 +78,7 @@ export const products: Product[] = [
   },
   {
     slug: 'landing-premium',
-    name: 'Landing premium',
+    name: 'Auditoría de tecnología',
     zone: 'Marca',
     timeline: '3 — 6 semanas',
     deliverables: 9,
