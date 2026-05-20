@@ -29,36 +29,40 @@ const VARIANTS = [
     source: join(DOWNLOADS, 'hero-mk6-mobile-9x16-1080x1920.png'),
     w: 1080,
     h: 1920,
-    // Polígono del agua en UV [0..1]. Trazado siguiendo la marca explícita
-    // del usuario (screenshot con línea roja sobre la base real de la roca):
-    // la línea de orilla es PRÁCTICAMENTE HORIZONTAL en y≈0.55, NO desciende
-    // hasta y=0.78 en el borde derecho como mi versión previa asumía. Mi
-    // iteración anterior incluía mucha zona de roca dentro del polígono y
-    // dejaba sin marcar agua real del lago — error de lectura visual mío.
+    // Polígono del agua en UV [0..1]. Trazado siguiendo PUNTO POR PUNTO la
+    // segunda marca explícita del usuario (línea roja sobre la base real del
+    // forest + roca). Iteración previa quedó corta: la línea de orilla está
+    // MÁS ARRIBA (y≈0.48-0.54) de lo que yo asumía visualmente. Esta versión
+    // está calibrada a la marca del usuario, no a mi lectura.
     //
     // Zonas:
-    //   x=0.00-0.42 → horizonte/skyline a y≈0.42-0.43
-    //   x=0.48-0.55 → forest baja al agua (transición vertical)
-    //   x=0.55-1.00 → BASE DE LA ROCA marcada por el usuario, ~y=0.55
-    //                 horizontal con loma sutil en el centro (lobo) y
-    //                 ligero descenso al borde derecho (y=0.57)
+    //   x=0.00-0.14 → skyline reflection libre (línea no marcada acá; queda
+    //                 en y≈0.42-0.43 = base del skyline visible)
+    //   x=0.17+     → la marca del usuario empieza acá. Forest oscuro entra
+    //                 al frame y la línea sube a y≈0.49
+    //   x=0.20-0.55 → forest oscuro con pequeñas lomas en y=0.48-0.52
+    //   x=0.55-1.00 → roca con lobo, línea cerca de y=0.49-0.54
     waterPoly: [
       [0.00, 0.43],
       [0.05, 0.42],
-      [0.15, 0.43],
-      [0.30, 0.42],
-      [0.42, 0.42],   // forest plano izquierdo
-      [0.48, 0.45],   // forest sube en altura, agua baja
-      [0.53, 0.50],   // forest desciende fuerte
-      [0.57, 0.53],   // forest termina, transición a roca
-      [0.62, 0.55],   // BASE DE LA ROCA (marca usuario)
-      [0.68, 0.54],   // sutil loma de la roca
-      [0.74, 0.53],
-      [0.80, 0.54],
-      [0.86, 0.55],
-      [0.92, 0.56],
-      [0.97, 0.57],
-      [1.00, 0.57],   // borde derecho casi al mismo nivel
+      [0.10, 0.42],
+      [0.14, 0.43],
+      [0.17, 0.47],   // forest sube al frame
+      [0.20, 0.49],   // INICIO marca del usuario
+      [0.25, 0.50],
+      [0.30, 0.49],
+      [0.35, 0.48],   // forest loma alta
+      [0.42, 0.49],
+      [0.48, 0.51],   // forest baja
+      [0.55, 0.52],   // forest termina, roca empieza
+      [0.60, 0.50],
+      [0.65, 0.49],   // base roca con lobo
+      [0.72, 0.49],
+      [0.78, 0.50],
+      [0.84, 0.51],
+      [0.90, 0.52],
+      [0.95, 0.53],
+      [1.00, 0.54],   // borde derecho
       [1.00, 1.00],
       [0.00, 1.00],
     ],
