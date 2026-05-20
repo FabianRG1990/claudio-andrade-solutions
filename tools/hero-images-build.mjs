@@ -29,33 +29,36 @@ const VARIANTS = [
     source: join(DOWNLOADS, 'hero-mk6-mobile-9x16-1080x1920.png'),
     w: 1080,
     h: 1920,
-    // Polígono del agua en UV [0..1]. Trazado a mano siguiendo el contorno
-    // real de la base de la roca con el lobo + skyline + forest. Más puntos
-    // densos en x=0.60-1.0 (zona crítica donde la roca con el lobo entra al
-    // agua) para evitar marcar zonas de roca como agua (animaría la roca) y
-    // dejar sin marcar zonas reales del lago (no se animarían). Esto resuelve
-    // dos issues simultáneamente:
-    //   - "el agua afecta la roca / esquina puntiaguda lejana al lobo"
-    //   - "el agua debajo del lobo no se mueve"
+    // Polígono del agua en UV [0..1]. Trazado siguiendo la marca explícita
+    // del usuario (screenshot con línea roja sobre la base real de la roca):
+    // la línea de orilla es PRÁCTICAMENTE HORIZONTAL en y≈0.55, NO desciende
+    // hasta y=0.78 en el borde derecho como mi versión previa asumía. Mi
+    // iteración anterior incluía mucha zona de roca dentro del polígono y
+    // dejaba sin marcar agua real del lago — error de lectura visual mío.
+    //
+    // Zonas:
+    //   x=0.00-0.42 → horizonte/skyline a y≈0.42-0.43
+    //   x=0.48-0.55 → forest baja al agua (transición vertical)
+    //   x=0.55-1.00 → BASE DE LA ROCA marcada por el usuario, ~y=0.55
+    //                 horizontal con loma sutil en el centro (lobo) y
+    //                 ligero descenso al borde derecho (y=0.57)
     waterPoly: [
-      [0.00, 0.43],   // borde izquierdo
-      [0.05, 0.42],   // skyline reflection
-      [0.15, 0.43],   // base del skyline
-      [0.30, 0.42],   // final del skyline
-      [0.42, 0.42],   // forest plano
-      [0.52, 0.41],   // forest ligeramente más alto
-      [0.60, 0.44],   // forest baja al agua
-      [0.62, 0.46],   // transición forest→roca
-      [0.64, 0.48],   // esquina puntiaguda donde la roca entra al agua
-      [0.66, 0.50],   // base roca lejana al lobo
-      [0.70, 0.52],   // roca sube
-      [0.74, 0.55],   // silueta lobo izq, base
-      [0.80, 0.56],   // base/pecho del lobo
-      [0.86, 0.58],   // parte trasera del lobo
-      [0.90, 0.62],   // roca desciende
-      [0.94, 0.66],   // extremo de la roca
-      [0.98, 0.74],   // borde casi en el bottom
-      [1.00, 0.78],   // borde derecho
+      [0.00, 0.43],
+      [0.05, 0.42],
+      [0.15, 0.43],
+      [0.30, 0.42],
+      [0.42, 0.42],   // forest plano izquierdo
+      [0.48, 0.45],   // forest sube en altura, agua baja
+      [0.53, 0.50],   // forest desciende fuerte
+      [0.57, 0.53],   // forest termina, transición a roca
+      [0.62, 0.55],   // BASE DE LA ROCA (marca usuario)
+      [0.68, 0.54],   // sutil loma de la roca
+      [0.74, 0.53],
+      [0.80, 0.54],
+      [0.86, 0.55],
+      [0.92, 0.56],
+      [0.97, 0.57],
+      [1.00, 0.57],   // borde derecho casi al mismo nivel
       [1.00, 1.00],
       [0.00, 1.00],
     ],
