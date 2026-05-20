@@ -1,11 +1,4 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  phosphorCloudCheckBold,
-  phosphorCodeBlockBold,
-  phosphorRobotBold,
-  phosphorStackBold,
-} from '@ng-icons/phosphor-icons/bold';
 
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
@@ -23,7 +16,6 @@ interface Stat {
 interface Tech {
   name: string;
   category: string;
-  icon: string;
   reason: string;
   accent: 'lagoon' | 'kelp' | 'coral' | 'bioluminescent';
 }
@@ -52,7 +44,6 @@ const TECH_STACK: ReadonlyArray<Tech> = [
   {
     name: 'Angular + TypeScript',
     category: 'Frontend',
-    icon: 'phosphorCodeBlockBold',
     reason:
       'Type safety de extremo a extremo, signals para reactivity moderna y ecosistema enterprise con soporte LTS de Google. La base sobre la que armamos cada proyecto serio.',
     accent: 'lagoon',
@@ -60,7 +51,6 @@ const TECH_STACK: ReadonlyArray<Tech> = [
   {
     name: 'Nx + Yarn',
     category: 'Monorepo',
-    icon: 'phosphorStackBold',
     reason:
       'Builds incrementales, código compartido entre apps y workspaces deterministas. Un solo repo, varios productos, sin duplicar lógica ni configuración.',
     accent: 'kelp',
@@ -68,7 +58,6 @@ const TECH_STACK: ReadonlyArray<Tech> = [
   {
     name: 'Firebase + Google Cloud',
     category: 'Infraestructura',
-    icon: 'phosphorCloudCheckBold',
     reason:
       'Auth, Firestore en tiempo real, Cloud Run para tareas asíncronas y logs auditables. Despliegue en minutos, escalado automático y costos predecibles.',
     accent: 'bioluminescent',
@@ -76,7 +65,6 @@ const TECH_STACK: ReadonlyArray<Tech> = [
   {
     name: 'Claude · IA',
     category: 'Inteligencia',
-    icon: 'phosphorRobotBold',
     reason:
       'Razonamiento avanzado, contexto largo y agentes con tool use. IA integrada al proceso real del negocio — no un complemento que se queda en demo.',
     accent: 'coral',
@@ -96,15 +84,7 @@ const TECH_STACK: ReadonlyArray<Tech> = [
  */
 @Component({
   selector: 'app-timeline',
-  imports: [Eyebrow, NgIcon, RevealDirective],
-  providers: [
-    provideIcons({
-      phosphorCloudCheckBold,
-      phosphorCodeBlockBold,
-      phosphorRobotBold,
-      phosphorStackBold,
-    }),
-  ],
+  imports: [Eyebrow, RevealDirective],
   templateUrl: './timeline.html',
   styleUrl: './timeline.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

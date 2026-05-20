@@ -349,17 +349,6 @@
   gap: 0.875rem;
 }
 
-.tech-card__icon {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 9999px;
-  color: rgb(var(--foam));
-}
-
 .tech-card__category {
   margin: 0;
   font-size: 10px;
