@@ -63,59 +63,125 @@
       fetchpriority="high"
     />
 
+    <!-- Preload del GLB del pez. El archivo pesa ~7.7 MB y antes se
+         pre-loadeaba dinámicamente desde el chunk lazy de wolf-fish-three —
+         eso significaba que la descarga arrancaba sólo después de que
+         Angular hidratara y evaluara ese chunk (segundos perdidos en mobile).
+         Acá arranca en cuanto el browser parsea el <head>, en paralelo con
+         el bundle JS y las imágenes del hero. Para cuando GLTFLoader pide
+         el archivo, está caliente en cache.
+         crossorigin="anonymous" matchea el fetch del loader; sin él el
+         browser dispara un fetch nuevo en lugar de usar el cache. -->
+    <link
+      rel="preload"
+      href="/hero-wolf/fish-model.glb"
+      as="fetch"
+      type="model/gltf-binary"
+      crossorigin="anonymous"
+    />
+
     <!-- =========================================================================
-         iOS Safari viewport fix — `--app-vh` desde visualViewport.height.
-         iOS Safari (al menos 17-18) tiene bugs documentados con `100dvh` /
-         `100lvh` / `100svh`: en algunos paths render devuelven valores que
-         NO matchean el viewport visible real, dejando elementos sticky/full-
-         viewport (hero, drawer modal) más cortos que el área visible. El
-         user reportó (2026-05) que ni dvh ni lvh resolvían el bleed-through
-         de la siguiente sección bajo el hero, ni cubrían el drawer hasta
-         abajo.
-         Solución: `window.visualViewport.height` reporta el área visible REAL
-         (excluye URL bar overlay, keyboard, etc) — funciona consistentemente
-         en iOS Safari, Samsung Internet, Chrome Android. Exponemos ese valor
-         como CSS custom property `--app-vh` que los componentes consumen con
-         `var(--app-vh, 100dvh)` (fallback a dvh para browsers sin JS / pre-
-         hidratación).
-         Sticky-max: solo crecemos `--app-vh`, nunca lo encogemos. Razón: si
-         el user scrollea y la URL bar se oculta, --app-vh sube al "viewport
-         grande". Cuando vuelve a aparecer, no encogemos — así el hero NO
-         re-cropea su imagen cada vez que la URL bar transiciona (era el otro
-         pain point del usuario, "la imagen se ve cracheada al scroll").
-         Reset solo en orientationchange (rotación = nueva geometría real).
-         Inline + síncrono en <head> antes del <style> del splash: la variable
-         está seteada ANTES del primer paint, sin flash de altura incorrecta.
+         iOS Safari viewport fix — `--app-vh` desde el LAYOUT viewport.
+         iOS Safari 17/18 tiene bugs documentados con `100dvh` / `100lvh` /
+         `100svh`: el valor calculado no matchea el viewport real, dejando
+         el hero/drawer más cortos que la pantalla. Reporte usuario iPhone 15
+         (2026-05): ni dvh ni lvh resolvían el bleed-through del capítulo 1
+         bajo el hero; en rotación, el hero quedaba con altura del orientation
+         anterior y mostraba solo el cielo.
+         Estrategia:
+           • `window.innerHeight` en iOS Safari = LAYOUT viewport = el valor
+             URL-bar-OCULTA (el grande). Es lo que queremos: el hero debe
+             extenderse DETRÁS del URL bar overlay, no terminar arriba de él.
+           • `visualViewport.height` = VISUAL viewport = lo que se ve ahora
+             (chico cuando URL bar visible). Tomamos el MAX de los dos.
+           • Sticky-max dentro de la misma orientación: --app-vh solo crece,
+             nunca encoge. Razón: si la URL bar transiciona durante el
+             scroll, no encogemos → hero no re-cropea su imagen.
+           • Reset SOLO en cambio de orientación real (portrait↔landscape).
+             iOS Safari tiene delay entre orientationchange y innerHeight
+             update — re-medimos a 0/50/200/500ms + RAF para capturar el
+             valor estabilizado.
+         Inline + síncrono en <head> antes del <style> del splash: la
+         variable está seteada ANTES del primer paint.
          ========================================================================= -->
     <script>
       (function () {
         var maxVh = 0;
+        var lastOrientation = null;
+
+        function measureVh() {
+          // innerHeight en iOS Safari = layout viewport (URL bar oculta,
+          // valor grande). Es el target — queremos extendernos detrás del
+          // URL bar overlay.
+          var inner = window.innerHeight || 0;
+          var visual =
+            (window.visualViewport && window.visualViewport.height) || 0;
+          return Math.max(inner, visual);
+        }
+
         function setAppVh() {
-          var h = (window.visualViewport && window.visualViewport.height) ||
-                  window.innerHeight;
+          var h = measureVh();
           if (h > maxVh) {
             maxVh = h;
-            document.documentElement.style.setProperty('--app-vh', maxVh + 'px');
+            document.documentElement.style.setProperty(
+              '--app-vh',
+              maxVh + 'px',
+            );
           }
         }
-        setAppVh();
-        // Re-measure tras el primer paint — algunas versiones de iOS Safari
-        // reportan visualViewport.height incorrectamente en el primer tick
-        // sincrónico, se estabiliza tras un frame.
-        if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(setAppVh);
+
+        function getOrientation() {
+          if (
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(orientation: landscape)').matches
+          ) {
+            return 'landscape';
+          }
+          return 'portrait';
         }
-        window.addEventListener('resize', setAppVh, { passive: true });
-        window.addEventListener('orientationchange', function () {
-          // Reset del sticky-max — la rotación cambia la geometría real.
+
+        function handleOrientationChange() {
+          var current = getOrientation();
+          if (current === lastOrientation) return;
+          lastOrientation = current;
+          // Reset del sticky-max — la nueva orientación tiene geometría
+          // distinta y queremos medir desde cero.
           maxVh = 0;
+          // iOS Safari delay innerHeight update post-rotación. Re-medimos
+          // en varias ventanas de tiempo para capturar el valor estable.
           setAppVh();
+          setTimeout(setAppVh, 50);
+          setTimeout(setAppVh, 200);
+          setTimeout(setAppVh, 500);
           if (typeof requestAnimationFrame === 'function') {
             requestAnimationFrame(setAppVh);
           }
-        });
+        }
+
+        lastOrientation = getOrientation();
+        setAppVh();
+        // Re-measure tras el primer paint — algunas versiones de iOS
+        // reportan innerHeight incorrectamente en el primer tick síncrono.
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(setAppVh);
+        }
+
+        window.addEventListener('resize', setAppVh, { passive: true });
+        window.addEventListener('orientationchange', handleOrientationChange);
         if (window.visualViewport) {
           window.visualViewport.addEventListener('resize', setAppVh);
+        }
+        // matchMedia change como signal extra de cambio de orientación —
+        // iOS Safari dispara este event de forma más confiable que
+        // orientationchange en algunos contextos.
+        if (typeof window.matchMedia === 'function') {
+          var mql = window.matchMedia('(orientation: landscape)');
+          if (typeof mql.addEventListener === 'function') {
+            mql.addEventListener('change', handleOrientationChange);
+          } else if (typeof mql.addListener === 'function') {
+            // Safari iOS < 14
+            mql.addListener(handleOrientationChange);
+          }
         }
       })();
     </script>
@@ -330,16 +396,20 @@
 
     <!-- =========================================================================
          Boot trigger + failsafe.
-         Primary: window 'load' — dispara cuando el documento + recursos
-         críticos (CSS, fuentes preload, imagen del splash) terminaron de
-         cargar. Es la señal honesta de "ya está todo listo, fundimos al
-         contenido". No depende de que Angular hidrate; funciona aunque el
-         bundle JS falle.
-         Min-hold de 350ms: si el load es muy rápido (caché caliente), el
-         splash apenas se vería y se sentiría como flash. Forzar un mínimo
+         Primary: DOMContentLoaded — disparamos en cuanto el HTML está parseado
+         y los CSS críticos in-line están aplicados. NO esperamos a `window.load`
+         porque ese event espera TODOS los recursos (incluyendo el GLB de 7.7
+         MB del pez que preloadeamos en paralelo) — esperar ese evento dejaba
+         al usuario viendo el splash 10-30 segundos en mobile.
+         La imagen estática del hero (avif/webp/png) se carga con
+         `fetchpriority="high"` y `decoding="async"`; aunque el splash fade
+         antes que termine de pintar, el browser ya tiene la imagen lista para
+         el primer paint o llega ms después — la transición es invisible.
+         Min-hold de 350ms: si DOMContentLoaded es muy rápido (cache caliente),
+         el splash apenas se vería y se sentiría como flash. Forzar un mínimo
          lo lee como gesto, no como bug.
-         Failsafe: 4000ms — garantiza que la app aparece SIEMPRE, incluso si
-         'load' no se dispara (worker bug, recursos pendientes infinitos).
+         Failsafe: 2000ms — garantiza que la app aparece SIEMPRE, incluso si
+         DOMContentLoaded no se dispara (raro pero defensivo).
          ========================================================================= -->
     <script>
       (function () {
@@ -356,13 +426,13 @@
           var wait = Math.max(0, MIN_HOLD - elapsed);
           setTimeout(boot, wait);
         }
-        if (document.readyState === 'complete') {
+        if (document.readyState === 'interactive' || document.readyState === 'complete') {
           bootWithHold();
         } else {
-          window.addEventListener('load', bootWithHold, { once: true });
+          document.addEventListener('DOMContentLoaded', bootWithHold, { once: true });
         }
         // Failsafe absoluto — el splash nunca debe quedarse colgado.
-        setTimeout(boot, 4000);
+        setTimeout(boot, 2000);
       })();
     </script>
   </body>

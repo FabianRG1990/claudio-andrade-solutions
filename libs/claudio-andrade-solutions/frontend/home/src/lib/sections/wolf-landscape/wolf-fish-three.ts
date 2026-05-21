@@ -33,13 +33,24 @@ import type { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBl
 
 const FISH_GLB_URL = '/hero-wolf/fish-model.glb';
 
-// Preload del GLB a nivel de módulo: el archivo pesa ~7.7 MB y bloquea el
-// fade-in de los peces. Esta línea inyecta un `<link rel="preload">` en cuanto
-// el chunk lazy del home se evalúa — el browser arranca la descarga en paralelo
-// al resto del bundle de Three.js, de modo que para cuando GLTFLoader lo pide
-// dentro de `init()`, el archivo ya está caliente en el HTTP cache. Guardado
-// por `typeof document` para no romper SSR (Node no tiene document).
-if (typeof document !== 'undefined' && !document.querySelector(`link[data-fish-glb-preload]`)) {
+// Preload del GLB. El archivo pesa ~7.7 MB y antes de cualquier optimización
+// bloqueaba el fade-in de los peces 10-30s en mobile.
+//
+// Estrategia primaria: el preload vive directamente en `index.html <head>` con
+// `as="fetch"` — el browser arranca la descarga en paralelo con el bundle JS,
+// inmediato al parsear el documento. Para cuando este chunk lazy se evalúa y
+// `init()` pide el archivo, el GLB ya está caliente en cache.
+//
+// El check aquí abajo solo inyecta el preload si NO existe en el HTML (caso
+// edge: build sin el preload en index.html, o tests). Verifica AMBOS markers:
+//   • `link[data-fish-glb-preload]` — preload inyectado por este módulo
+//   • `link[href*="fish-model.glb"]` — preload del HTML
+// para no duplicar fetches.
+if (
+  typeof document !== 'undefined' &&
+  !document.querySelector(`link[data-fish-glb-preload]`) &&
+  !document.querySelector(`link[rel="preload"][href*="fish-model.glb"]`)
+) {
   const link = document.createElement('link');
   link.rel = 'preload';
   link.as = 'fetch';

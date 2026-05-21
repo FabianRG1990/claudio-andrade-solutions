@@ -2602,11 +2602,34 @@ export class WolfLakeCanvas {
         cleanup = c ?? undefined;
       }
     };
-    afterNextRender(async () => {
-      await runStart();
-      variantCleanup = onHeroVariantChange(() => {
-        void runStart();
-      });
+    afterNextRender(() => {
+      // Defer init hasta que el browser esté idle: el init carga el GLB
+      // (~7.7 MB), compila shaders, decodea masks como ImageData, etc —
+      // todo trabajo pesado que compite con el first paint/interactive en
+      // mobile. requestIdleCallback espera a que el main thread esté libre
+      // (timeout 2s defensivo para que no se eternice). Reporte usuario
+      // iPhone 15 (2026-05): la página se quedaba "trabada" 20s+ antes de
+      // que aparecieran los peces.
+      // El GLB se está descargando en paralelo desde el preload en
+      // index.html — para cuando este idle dispare, el archivo ya está
+      // caliente en cache.
+      const kickoff = (): void => {
+        void (async (): Promise<void> => {
+          await runStart();
+          variantCleanup = onHeroVariantChange(() => {
+            void runStart();
+          });
+        })();
+      };
+      // requestIdleCallback no existe en Safari < 15 (raro en 2026 pero
+      // posible). Fallback: setTimeout 200ms = post-paint razonable.
+      if (typeof (window as unknown as { requestIdleCallback?: unknown }).requestIdleCallback === 'function') {
+        (window as unknown as {
+          requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number;
+        }).requestIdleCallback(kickoff, { timeout: 2000 });
+      } else {
+        setTimeout(kickoff, 200);
+      }
     });
   }
 
