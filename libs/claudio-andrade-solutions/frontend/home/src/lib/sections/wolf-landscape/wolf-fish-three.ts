@@ -1159,18 +1159,22 @@ export class FishThreeRenderer {
 
     // Composer + bloom: cada pass aloca al menos un WebGLRenderTarget
     // (UnrealBloomPass aloca 5: 1 horizontal + 4 mip levels). Sin esto
-    // cada re-init filtra ~6 render targets — en navegación repetida
-    // o cruces de breakpoint el browser termina matando la pestaña.
+    // cada re-init filtra ~6 render targets — en cruces de breakpoint
+    // (rotación de dispositivo) o navegación repetida el browser termina
+    // matando la pestaña por presión de GPU memory.
     this.composer?.dispose();
     this.bloomPass?.dispose();
     this.composer = null;
     this.bloomPass = null;
 
+    // renderer.dispose() libera shader programs, buffers y listeners DOM
+    // del WebGLRenderer. NO llamamos forceContextLoss(): el canvas
+    // pertenece al componente Angular y se reutiliza en cada variant
+    // change (rotación → nuevo renderer sobre el mismo canvas). Forzar
+    // la pérdida del contexto deja el canvas inutilizable para el
+    // siguiente `new WebGLRenderer({ canvas })` y el hero queda en blanco.
+    // Cuando el componente realmente se destruye, el canvas se remueve
+    // del DOM y el GC libera el contexto.
     this.renderer.dispose();
-    // forceContextLoss libera el contexto WebGL inmediatamente en lugar
-    // de esperar al GC del browser. Sin esto, en Chrome/Firefox las
-    // pestañas acumulan contextos perdidos y al pasar de ~16 la pestaña
-    // se cae (límite hard del WebGL spec, sección 5.13.12).
-    this.renderer.forceContextLoss();
   }
 }

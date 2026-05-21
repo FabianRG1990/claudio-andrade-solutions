@@ -400,11 +400,12 @@ export class WolfLakeFlow {
       if (fishTex) gl.deleteTexture(fishTex);
       gl.deleteBuffer(positionBuffer);
       gl.deleteProgram(program);
-      // Liberar el contexto WebGL al destruir el componente. Sin esto el
-      // browser mantiene el contexto vivo hasta el GC y, en navegaciones
-      // repetidas o cruces de breakpoint (que disparan re-init), se llega
-      // al límite hard de WebGL (~16 contextos) y la pestaña se cae.
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      // No llamamos `WEBGL_lose_context.loseContext()`: el canvas se
+      // reutiliza en cada variant change (rotación) y un contexto
+      // perdido deja inservible al canvas para el próximo `getContext()`.
+      // Las llamadas `deleteTexture/Buffer/Program` arriba ya liberan
+      // las GPU resources de este ciclo; el contexto vive con el canvas
+      // y muere con él cuando el componente se desmonta.
     };
   }
 }
