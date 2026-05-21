@@ -163,10 +163,7 @@ export class WolfLakeFlow {
   }
 
   private async start(): Promise<(() => void) | void> {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      console.info('[WolfLakeFlow] skipped: prefers-reduced-motion');
-      return;
-    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const canvas = this.canvasRef().nativeElement;
     const host = this.hostRef.nativeElement;
@@ -217,7 +214,6 @@ export class WolfLakeFlow {
       return;
     }
     gl.useProgram(program);
-    console.info('[WolfLakeFlow] mounted ok — flow map running');
 
     // Quad fullscreen — dos triángulos en clip-space.
     const positionBuffer = gl.createBuffer();
@@ -404,6 +400,11 @@ export class WolfLakeFlow {
       if (fishTex) gl.deleteTexture(fishTex);
       gl.deleteBuffer(positionBuffer);
       gl.deleteProgram(program);
+      // Liberar el contexto WebGL al destruir el componente. Sin esto el
+      // browser mantiene el contexto vivo hasta el GC y, en navegaciones
+      // repetidas o cruces de breakpoint (que disparan re-init), se llega
+      // al límite hard de WebGL (~16 contextos) y la pestaña se cae.
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
   }
 }

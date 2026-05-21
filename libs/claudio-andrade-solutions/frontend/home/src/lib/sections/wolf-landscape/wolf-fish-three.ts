@@ -33,6 +33,23 @@ import type { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBl
 
 const FISH_GLB_URL = '/hero-wolf/fish-model.glb';
 
+// Preload del GLB a nivel de módulo: el archivo pesa ~7.7 MB y bloquea el
+// fade-in de los peces. Esta línea inyecta un `<link rel="preload">` en cuanto
+// el chunk lazy del home se evalúa — el browser arranca la descarga en paralelo
+// al resto del bundle de Three.js, de modo que para cuando GLTFLoader lo pide
+// dentro de `init()`, el archivo ya está caliente en el HTTP cache. Guardado
+// por `typeof document` para no romper SSR (Node no tiene document).
+if (typeof document !== 'undefined' && !document.querySelector(`link[data-fish-glb-preload]`)) {
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'fetch';
+  link.type = 'model/gltf-binary';
+  link.href = FISH_GLB_URL;
+  link.crossOrigin = 'anonymous';
+  link.setAttribute('data-fish-glb-preload', '');
+  document.head.appendChild(link);
+}
+
 // Maximo de joints en la spine. La cadena del simulador tiene tipicamente
 // 13 (GLOW_BODY_PROFILE.length); reservamos 16 para padding.
 const MAX_SPINE = 16;
@@ -449,8 +466,6 @@ export class FishThreeRenderer {
     if (bbox) {
       this.meshMin.copy(bbox.min);
       this.meshMax.copy(bbox.max);
-      // eslint-disable-next-line no-console
-      console.log('[FishThree] mesh bbox', this.meshMin.toArray(), this.meshMax.toArray());
     }
 
     // PBR robotic premium — matchea el reference image del usuario:
@@ -507,8 +522,6 @@ export class FishThreeRenderer {
     material.userData = { uniforms };
 
     material.onBeforeCompile = (shader) => {
-      // eslint-disable-next-line no-console
-      console.log('[FishThree] shader compile v34-premium-smootherstep');
       shader.uniforms['uSpine'] = uniforms.uSpine;
       shader.uniforms['uSegLen'] = uniforms.uSegLen;
       shader.uniforms['uSegN'] = uniforms.uSegN;
@@ -1143,6 +1156,21 @@ export class FishThreeRenderer {
     }
     this.lightMaterial?.dispose();
     this.envTexture?.dispose();
+
+    // Composer + bloom: cada pass aloca al menos un WebGLRenderTarget
+    // (UnrealBloomPass aloca 5: 1 horizontal + 4 mip levels). Sin esto
+    // cada re-init filtra ~6 render targets — en navegación repetida
+    // o cruces de breakpoint el browser termina matando la pestaña.
+    this.composer?.dispose();
+    this.bloomPass?.dispose();
+    this.composer = null;
+    this.bloomPass = null;
+
     this.renderer.dispose();
+    // forceContextLoss libera el contexto WebGL inmediatamente en lugar
+    // de esperar al GC del browser. Sin esto, en Chrome/Firefox las
+    // pestañas acumulan contextos perdidos y al pasar de ~16 la pestaña
+    // se cae (límite hard del WebGL spec, sección 5.13.12).
+    this.renderer.forceContextLoss();
   }
 }

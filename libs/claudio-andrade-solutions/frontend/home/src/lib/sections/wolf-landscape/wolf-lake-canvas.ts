@@ -2625,7 +2625,11 @@ export class WolfLakeCanvas {
         loadImage(variant.image),
         fishRenderer.init(canvas, initialW, initialH),
       ]);
-    } catch {
+    } catch (err) {
+      // Sin fish: el `<picture>` del hero ya está pintado, así que el usuario
+      // ve la escena estática. Logueamos para que un fallo silencioso (GLB
+      // corrupto, mask 404, WebGL bloqueado) sea diagnosticable en DevTools.
+      console.warn('[WolfLakeCanvas] init failed; falling back to static hero', err);
       fishRenderer.destroy();
       return;
     }
