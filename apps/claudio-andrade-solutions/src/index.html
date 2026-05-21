@@ -104,6 +104,8 @@
       }
 
       .boot-splash__logo {
+        position: relative;
+        z-index: 1;
         width: 72px;
         height: 72px;
         /* Latido sutil — escala +/- 4% sobre 2.4s. Frecuencia tipo respiración
@@ -114,6 +116,56 @@
            pegado. */
         filter: drop-shadow(0 8px 32px rgb(94 196 209 / 0.18))
           drop-shadow(0 2px 8px rgb(6 9 26 / 0.6));
+      }
+
+      /* Anillo decorativo alrededor del logo del splash — gradient purple→cyan
+         con box-shadow de glow. Estático (sin rotación) por pedido explícito.
+         Técnica del original (Uiverse): un disco con gradient + un disco encima
+         del color del fondo con blur fuerte; las orillas blureadas dejan filtrar
+         el gradient como un anillo. Tamaño 120px contra logo de 72px → ring
+         claramente visible con espacio cómodo entre la marca y el halo. */
+      .boot-splash__halo {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 120px;
+        height: 120px;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+
+      .boot-splash__halo-ring {
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(
+          rgb(186, 66, 255) 35%,
+          rgb(0, 225, 255)
+        );
+        border-radius: 50%;
+        filter: blur(1px);
+        box-shadow:
+          0px -5px 20px 0px rgb(186, 66, 255),
+          0px 5px 20px 0px rgb(0, 225, 255);
+        /* Linear porque cualquier easing se nota como tirón en una rotación
+           continua. 1.1s = cadence más enérgica que el 1.7s del Uiverse
+           original, lee como "cargando activo" sin entrar en frenetismo. */
+        animation: boot-splash-spin 1.1s linear infinite;
+      }
+
+      @keyframes boot-splash-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .boot-splash__halo-mask {
+        position: absolute;
+        inset: 0;
+        /* Matchea #06091a del splash (no rgb(36,36,36) del original) para que
+           el centro funda al fondo y el ring quede limpio sobre el navy. */
+        background-color: #06091a;
+        border-radius: 50%;
+        filter: blur(10px);
       }
 
       @keyframes boot-splash-breath {
@@ -141,7 +193,8 @@
             opacity 200ms linear,
             visibility 0s linear 200ms;
         }
-        .boot-splash__logo {
+        .boot-splash__logo,
+        .boot-splash__halo-ring {
           animation: none;
         }
         html.app-booted .boot-splash {
@@ -201,6 +254,10 @@
          lecturas de screen reader (aria-hidden). El costo de mantener el
          elemento es despreciable (un <div> + <img>). -->
     <div class="boot-splash" aria-hidden="true">
+      <div class="boot-splash__halo">
+        <div class="boot-splash__halo-ring"></div>
+        <div class="boot-splash__halo-mask"></div>
+      </div>
       <img
         class="boot-splash__logo"
         src="/logo/logo-192.webp"
