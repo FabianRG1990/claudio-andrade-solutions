@@ -3028,20 +3028,21 @@ export class WolfLakeCanvas {
         const uv = GLOW_SPAWN[i];
         const cuv = imgUVToCanvasUV(uv, cw, ch, IMG_W, IMG_H);
         const start = { x: cuv.x * cw, y: cuv.y * ch };
-        // Tamaño escalado al canvas con piso 8px y techo 20px. El piso 11px
-        // pre-v2 daba el mismo pez visible en phone 360 que en desktop 1024,
-        // sentía oversized en mobile. El piso 6px (intento 1) los hacía casi
-        // invisibles en phone. 8px es el sweet-spot:
-        //   phone 360  → 6.5  → 8 (piso) — pez chico pero visible
-        //   phone 430  → 7.8  → 8 (piso)
-        //   600        → 10.9
-        //   tablet 768 → 13.9
-        //   tablet 870 → 15.8
-        //   laptop 1024→ 18.6
-        //   desktop 1100+→ 20 (techo, mantiene el size del pre-v2 cap)
-        // El divisor /55 da una curva visible — los peces se achican
-        // notoriamente en phone pero conservan silueta legible.
-        const baseSize = Math.max(8, Math.min(20, cw / 55));
+        // Tamaño escalado al ALTO del canvas — el lago ocupa un % consistente
+        // de la altura entre variantes (≈40-50%), no del ancho. Escalar a `cw`
+        // daba peces idénticos en 1366×768 que en 1366×640, pero el lago se
+        // achica con la altura → en short-laptop los peces dominaban al lobo.
+        // ch * 0.025 produce:
+        //   phone portrait 390×844 → 21 → 20 (techo)
+        //   phone landscape 844×390→ 9.8
+        //   tablet 1024×768       → 19.2
+        //   short-laptop 1366×640 → 16   (vs 20 con la fórmula vieja)
+        //   short-laptop 1600×720 → 18   (vs 20)
+        //   desktop 1920×1080     → 27 → 20 (techo)
+        //   ultrawide 2560×1080   → 27 → 20 (techo)
+        // Piso 8px protege phones angostos; techo 20px mantiene el cap
+        // del diseño desktop.
+        const baseSize = Math.max(8, Math.min(20, ch * 0.025));
         glowFishes.push(new GlowFish(start, {
           size: baseSize,
           // SpeedScale 0.85-1.15 — los peces ambientales nadan a
@@ -3069,10 +3070,13 @@ export class WolfLakeCanvas {
     // ambiental: oscilación de energy, speedScale normal, applyWander.
     // Brighter palette para destacar como protagonista.
     // Cursor fish ligeramente más grande que ambientales (protagonista).
-    // Mismo divisor /50, piso 10, techo 24 — al 360 da 10px (vs ambient 8px),
-    // al 1200+ da 24 (vs ambient 20). El delta de 2-4px mantiene la
-    // jerarquía visual sin que el cursor-fish domine al cluster ambient.
-    const cursorSize = Math.max(10, Math.min(24, cw / 50));
+    // Mismo eje (ch * 0.030), piso 10, techo 24 — al phone landscape 390 da
+    // 11.7px (vs ambient 9.8), al laptop 1080 da 32→24 (vs ambient 20). El
+    // delta de 2-4px mantiene la jerarquía visual sin que el cursor-fish
+    // domine al cluster ambient. Escalar a `ch` (no `cw`) sincroniza la
+    // proporción con la altura del lago, evitando que en short-laptop el
+    // cursor-fish se vea sobredimensionado.
+    const cursorSize = Math.max(10, Math.min(24, ch * 0.030));
     const cursorFish = new GlowFish(
       { x: cw * 0.55, y: ch * 0.80 },
       {

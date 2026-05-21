@@ -35,12 +35,21 @@ export interface HeroVariant {
 export const HERO_VARIANTS: ReadonlyArray<HeroVariant> = [
   {
     name: 'cinematic',
-    // Match laptop chica corta (≥1024 ancho con altura ≤780) Y landscape
-    // phone (cualquier ancho con altura ≤540 + orientation landscape).
-    // El segundo query es CRÍTICO — antes landscape phone caía en tablet y
-    // se servía la imagen 1:1 sobre un viewport horizontal 852×393, lo que
-    // aplastaba la composición y cortaba la cabeza del lobo.
-    mediaQuery: '(min-width: 1024px) and (max-height: 780px), (orientation: landscape) and (max-height: 540px)',
+    // Servimos cinematic SOLO cuando hay aspect-ratio realmente ultrawide
+    // (≥ 21:9 ≈ 2.33) — monitores ultrawide reales tipo LG 34"/Alienware
+    // 3440×1440, Samsung Odyssey, etc. O landscape phone (altura ≤540px en
+    // orientación landscape).
+    //
+    // Histórico: antes la cinematic se servía a `(min-width: 1024px) and
+    // (max-height: 780px)` — eso atrapaba laptops 14"/15" estándar (1366×768,
+    // 1600×720) que son 16:9 / ~2.22:1, no ultrawide. La cinematic
+    // composition tiene el lobo a la extrema derecha y el lago muy delgado
+    // verticalmente; encajada en un 16:9 deja la base del lago tan flaca
+    // que los peces dominan visualmente al lobo y las ondulaciones del
+    // shader trabajan contra la base de la ciudad/roca. Esos viewports
+    // ahora caen al fallback `desktop` (mk6 16:9), que matchea su tela
+    // físicamente y se ve sin distorsión.
+    mediaQuery: '(min-width: 1024px) and (min-aspect-ratio: 21/9), (orientation: landscape) and (max-height: 540px)',
     image: '/hero-wolf/hero-mk6-cinematic.webp',
     lakeMask: '/hero-wolf/lake-mask-cinematic.png',
     waterMask: '/hero-wolf/water-mask-cinematic.png',

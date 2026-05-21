@@ -717,11 +717,15 @@
 // laptops chicas reciben la versión phone-grande, no la desktop comprimida.
 @include m.short-laptop {
   .hero {
-    // Floor de 28rem (448px) cubre el min-height contra svh chico en short.
-    // 86svh deja una franja del próximo capítulo visible al primer paint (~14%
-    // del viewport) que invita al scroll — clave en laptops chicas donde el
-    // usuario no asume scroll si el hero llena.
-    min-height: max(28rem, 86svh);
+    // Hero ocupa el viewport COMPLETO también en short-laptop. Probamos
+    // un 86svh para "invitar al scroll" dejando una franja del próximo
+    // capítulo visible, pero en la práctica esa franja se lee como un
+    // bug — el usuario percibe que el hero "no llega abajo" y que el
+    // background de la siguiente sección se filtra y rompe la composición.
+    // Patrón premium estándar (Apple, Stripe, Linear): hero full-bleed
+    // siempre, el usuario asume que hay más al hacer scroll. Floor 28rem
+    // (448px) cubre svh chico defensivamente.
+    min-height: max(28rem, 100svh);
   }
 
   // Telemetría más cerca del top — sin esto el `max(8rem, ...)` desktop deja
