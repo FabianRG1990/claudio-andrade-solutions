@@ -2540,12 +2540,27 @@ const sampleMask = (
   styles: [`
     /* z-index 2 — debajo del shader del flow (z=3) que lee este canvas
        como textura y compone los peces ondulados encima del lago.
-       opacity:0 — el canvas SIGUE rindiendo (Three.js dibuja cada frame),
-       pero no es visualmente directo: lo que ve el usuario es la salida
-       del flow shader, que toma este canvas como fuente. Sin opacity:0
-       veríamos los peces dos veces: la versión "cruda" aquí + la versión
-       ondulada en el flow. */
-    :host { position: absolute; inset: 0; pointer-events: none; z-index: 2; opacity: 0; }
+
+       Visibility: por defecto OPACITY:1 — el canvas es directamente visible.
+       Cuando el flow shader (WolfLakeFlow) monta exitosamente, agrega la
+       clase \`.flow-active\` al parent .hero__scene y este host se oculta
+       (opacity:0). Eso garantiza que SIEMPRE haya peces visibles:
+         · Path normal (flow shader OK): peces ondulados por el shader.
+         · Path fallback (Safari iOS WebGL-as-texture fail, prefers-reduced-
+           motion, contexto WebGL perdido, error en compile del shader, etc):
+           los peces se renderizan directos sin la "film de agua" encima.
+       Antes este host era opacity:0 incondicional — si el shader fallaba,
+       los peces se renderizaban (Three.js OK) pero invisibles → bug
+       reportado en iPhone Safari. */
+    :host {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 1;
+      transition: opacity 320ms ease-out;
+    }
+    :host-context(.hero__scene.flow-active) { opacity: 0; }
     .wolf-lake-canvas { display: block; width: 100%; height: 100%; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -2596,8 +2611,21 @@ export class WolfLakeCanvas {
   }
 
   private async start(): Promise<(() => void) | void> {
-    // ─── prefers-reduced-motion: salir, no montamos nada
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // ─── prefers-reduced-motion: SÍ montamos.
+    // Histórico: antes saltábamos en reduced-motion para respetar la
+    // preferencia del sistema. Pero Apple define reduced-motion como
+    // "reduce motion of UI elements" (parallax, zoom, fades agresivos) —
+    // no como "no animar contenido". Los peces nadando son contenido
+    // ambiental suave, equivalente a un video corriendo en mute. Apple
+    // misma anima videos en sus product pages con reduced-motion activo.
+    //
+    // El bailout principal ocurre en Safari iOS: Low Power Mode activa
+    // reduced-motion automáticamente, así que iPhones en LPM nunca veían
+    // peces (reportado por el usuario). Con este cambio el canvas monta
+    // siempre. El flow shader (WolfLakeFlow) sí respeta reduced-motion
+    // — su UV-distortion es la animación intensa; los peces nadando son
+    // suaves y se ven directamente si el shader no monta (host de
+    // wolf-lake-canvas pasa a opacity:1 cuando .flow-active está ausente).
 
     const canvas = this.canvasRef().nativeElement;
     const host = this.hostRef.nativeElement;

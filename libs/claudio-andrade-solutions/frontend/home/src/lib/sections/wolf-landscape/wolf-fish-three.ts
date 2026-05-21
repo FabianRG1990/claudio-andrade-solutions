@@ -211,6 +211,15 @@ export class FishThreeRenderer {
       antialias: true,
       premultipliedAlpha: true,
       powerPreference: 'high-performance',
+      // Safari iOS borra el drawing buffer inmediatamente después de cada
+      // composite. El compañero <app-wolf-lake-flow> hace texImage2D(canvas)
+      // sobre ESTE canvas en su propio RAF para componer los peces con el
+      // shader del agua — sin preserveDrawingBuffer en Safari ese read
+      // devuelve transparente y los peces no aparecen (Chrome/FF/Edge no
+      // tienen el problema porque mantienen el buffer hasta el siguiente
+      // RAF). Costo: una copia extra de framebuffer por frame, despreciable
+      // para un canvas hero único.
+      preserveDrawingBuffer: true,
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(width, height, false);

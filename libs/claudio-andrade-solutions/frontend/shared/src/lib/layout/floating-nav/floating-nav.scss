@@ -449,8 +449,22 @@
   // z-index 65 — encima del .grain (60) pero debajo del brand-bar (70).
   z-index: 65;
   pointer-events: none;
-  // svh para que el drawer no salte cuando la URL bar de iOS colapsa.
-  height: 100svh;
+  // Altura del viewport visible REAL. Histórico:
+  //   • 100svh (small): mide siempre con la URL bar visible. Si el usuario
+  //     scrollea hacia abajo (URL bar colapsa) y luego abre el drawer, el
+  //     drawer mide menos que el viewport real → la parte inferior queda
+  //     sin cubrir y el contenido de la página siguiente se ve nítido sin
+  //     el backdrop blur (reportado por usuario en Safari iOS / Samsung
+  //     Internet).
+  //   • 100dvh (dynamic): se ajusta al viewport visible en tiempo real.
+  //     El drawer es un modal sin scroll interno (la lista cabe), así que
+  //     no hay scroll que dispare cambios de URL bar mientras está abierto
+  //     → no hay "salto" perceptible — el caso de uso original de svh no
+  //     se materializa en este modal.
+  // Fallback: 100vh primero para Safari iOS < 15.4 (raro en 2026, pero
+  // protege dispositivos viejos donde dvh no existe).
+  height: 100vh;
+  height: 100dvh;
 
   &.is-open {
     pointer-events: auto;

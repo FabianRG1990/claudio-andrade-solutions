@@ -388,6 +388,20 @@ export class WolfLakeFlow {
     // displacement), el fade es invisible — solo asegura que no aparezca
     // un canvas a medio inicializar.
     canvas.classList.add('is-ready');
+
+    // Señal cross-component: el shader del flow montó OK. La regla
+    // `:host-context(.hero__scene.flow-active)` del WolfLakeCanvas oculta
+    // (opacity:0) el fish canvas directamente visible — el shader ahora
+    // es el que compone los peces ondulados encima del agua.
+    //
+    // Caso fallback: si llegamos a este punto, todo (WebGL + texturas +
+    // shader + variant) cargó OK. Si fallamos en cualquier paso previo, esta
+    // línea NO se ejecuta y `.flow-active` nunca se agrega → el fish canvas
+    // se queda visible (opacity:1) y el usuario al menos ve los peces
+    // sin la composición agua-encima. Ese fallback es crítico para
+    // Safari iOS donde el WebGL-canvas-as-texture (Three.js → flow shader)
+    // tiene historial de fallar silencioso.
+    host.parentElement?.classList.add('flow-active');
     if (isActive()) start();
 
     return () => {
@@ -400,6 +414,10 @@ export class WolfLakeFlow {
       if (fishTex) gl.deleteTexture(fishTex);
       gl.deleteBuffer(positionBuffer);
       gl.deleteProgram(program);
+      // Limpiar la señal — en variant change, runStart() vuelve a llamar
+      // start() que re-agrega la clase si todo monta OK. Si la nueva
+      // inicialización falla, el fish canvas vuelve a ser visible.
+      host.parentElement?.classList.remove('flow-active');
       // No llamamos `WEBGL_lose_context.loseContext()`: el canvas se
       // reutiliza en cada variant change (rotación) y un contexto
       // perdido deja inservible al canvas para el próximo `getContext()`.
