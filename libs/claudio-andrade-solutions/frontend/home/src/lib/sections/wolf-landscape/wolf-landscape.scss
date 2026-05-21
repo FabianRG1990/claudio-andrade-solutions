@@ -644,17 +644,15 @@
     min-height: 100svh;
   }
 
-  // En landscape phone se sirve la imagen cinematic 21:9 (variant cinematic
-  // del <picture>). Su composición tiene el LOBO en la extrema derecha
-  // (x_uv ≈ 0.85-1.0). Con `object-position: center` (default) el cover
-  // recorta lateralmente por ambos lados, cortando la cabeza del lobo en
-  // viewports comprimidos como 852×393 (iPhone landscape). `right center`
-  // preserva el lobo y recorta el bridge/skyline del lado opuesto —
-  // sacrificamos el bridge (elemento secundario) por la marca visual
-  // (el lobo, ancla de identidad).
-  .hero__bg {
-    object-position: right center;
-  }
+  // En landscape phone ahora se sirve la mk6 desktop (16:9), igual que la
+  // laptop. No tocamos `object-position` acá — `imgUVToCanvasUV` en los
+  // canvas (peces, sky, water-flow) está hardcodeada a `object-position:
+  // center`. Cualquier override desalinearía las máscaras del agua y los
+  // peces nadarían fuera del lago visible. Heredamos `72% center` del
+  // breakpoint mobile base (ver `.hero__bg` arriba), que sigue siendo
+  // válido: a 844×390 no hay crop horizontal (dispW exact) así que el
+  // `72%` no aplica, y `center` vertical deja al lobo al top con el
+  // mismo tratamiento que en 1600×720 de la laptop.
 
   .hero__telemetry {
     // Telemetría más cerca del top — el alto del viewport es escaso (~360px).

@@ -37,19 +37,24 @@ export const HERO_VARIANTS: ReadonlyArray<HeroVariant> = [
     name: 'cinematic',
     // Servimos cinematic SOLO cuando hay aspect-ratio realmente ultrawide
     // (≥ 21:9 ≈ 2.33) — monitores ultrawide reales tipo LG 34"/Alienware
-    // 3440×1440, Samsung Odyssey, etc. O landscape phone (altura ≤540px en
-    // orientación landscape).
+    // 3440×1440, Samsung Odyssey, etc.
     //
-    // Histórico: antes la cinematic se servía a `(min-width: 1024px) and
-    // (max-height: 780px)` — eso atrapaba laptops 14"/15" estándar (1366×768,
-    // 1600×720) que son 16:9 / ~2.22:1, no ultrawide. La cinematic
-    // composition tiene el lobo a la extrema derecha y el lago muy delgado
-    // verticalmente; encajada en un 16:9 deja la base del lago tan flaca
-    // que los peces dominan visualmente al lobo y las ondulaciones del
-    // shader trabajan contra la base de la ciudad/roca. Esos viewports
-    // ahora caen al fallback `desktop` (mk6 16:9), que matchea su tela
-    // físicamente y se ve sin distorsión.
-    mediaQuery: '(min-width: 1024px) and (min-aspect-ratio: 21/9), (orientation: landscape) and (max-height: 540px)',
+    // Histórico:
+    // 1) Antes se servía a `(min-width: 1024px) and (max-height: 780px)` —
+    //    eso atrapaba laptops 14"/15" estándar (1366×768, 1600×720) que son
+    //    16:9 / ~2.22:1, no ultrawide.
+    // 2) Después incluimos `(orientation: landscape) and (max-height: 540px)`
+    //    para phone landscape, asumiendo que la cinematic 21:9 encajaría
+    //    bien en ~2:1. En la práctica el shader del agua también ondulaba
+    //    la base de la ciudad/roca por la geometría delgada del lago en esa
+    //    composición. El usuario lo confirmó visualmente y pidió usar la
+    //    misma imagen del laptop (mk6 desktop) también ahí.
+    // Resultado: cinematic queda reservada SOLO para monitores ultrawide
+    // reales. Phone landscape cae al fallback `desktop` (mk6 16:9) —
+    // tablet (1:1) lo excluye por su requisito `min-height: 640px`, y la
+    // mk6 se ajusta a 844×390 con crop vertical leve (el lobo queda visible
+    // a la derecha y el lago a la base, mismo tratamiento que en la laptop).
+    mediaQuery: '(min-width: 1024px) and (min-aspect-ratio: 21/9)',
     image: '/hero-wolf/hero-mk6-cinematic.webp',
     lakeMask: '/hero-wolf/lake-mask-cinematic.png',
     waterMask: '/hero-wolf/water-mask-cinematic.png',

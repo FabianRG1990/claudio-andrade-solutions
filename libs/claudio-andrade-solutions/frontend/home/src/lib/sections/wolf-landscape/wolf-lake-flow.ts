@@ -555,10 +555,23 @@ const FRAG_SHADER = /* glsl */ `
     // fondo parecen desproporcionadamente grandes contra los features
     // (reflejos, textura) que SÍ están perspectivados en el bitmap.
     //
-    // depth = 0 en y=0.30 (justo arriba del waterline más alto), 1.0 en
-    // y=1.0 (foreground). Cuadrado para que el fondo casi no se mueva
-    // y el frente reciba la amplitud máxima.
-    float depth = clamp((imgUV.y - 0.30) / 0.70, 0.0, 1.0);
+    // depth = 0 en y=0.42 (línea del horizonte donde el agua toca la base
+    // de la ciudad y la roca), 1.0 en y=1.0 (foreground). El user reportó
+    // que en viewports horizontales (laptop 14"/15", tablet horizontal,
+    // phone horizontal) percibía "la ciudad y la roca se distorsionan por
+    // el agua" — en realidad la silueta de las estructuras no se mueve,
+    // pero el reflejo del agua justo debajo (que es la ciudad invertida)
+    // sí, y se lee como wobble de la base.
+    //
+    // Histórico: threshold 0.30 daba ~7-8 px de displacement en y=0.45
+    // (zona inmediata bajo la ciudad), lo que en agua calma de noche se
+    // perciben como un latido en la silueta de la ciudad reflejada.
+    // Subir el threshold a 0.42 deja la zona horizonte-y-reflejo-inmediato
+    // virtualmente quieta (depth → 0 en el rango 0.42-0.45) y mantiene el
+    // movimiento del lago medio (depth=0.224 en y=0.55) y el frente
+    // (depth=1.0 en y=1.0) intactos. Foreground retiene la amplitud
+    // máxima — donde el agua tiene que sentirse viva.
+    float depth = clamp((imgUV.y - 0.42) / 0.58, 0.0, 1.0);
     // depth^1.7: el horizonte (depth bajo) sigue casi quieto, pero el
     // cuerpo medio y el frente reciben más amplitud que con depth² puro.
     // Esto le da más vida a la zona donde se ve el agua de cerca, sin

@@ -26,30 +26,31 @@
          mecánico del 16:9) pensada para su tela:
            • phone (portrait ≤640px) → 9:16 vertical, lobo centrado, cielo+lago amplios
            • tablet (641-1099 con altura ≥640) → 1:1 cuadrado, balance editorial
-           • cinematic (ultrawide ≥21:9 O landscape phone) → 21:9 panorama
-           • desktop (default) → 16:9 MK6 original (laptops 14"/15", monitores 16:9/16:10)
+           • cinematic (ultrawide ≥21:9) → 21:9 panorama, solo monitores ultrawide reales
+           • desktop (default) → 16:9 MK6 original (laptops 14"/15", monitores 16:9/16:10,
+             tablet landscape, phone landscape — todas las telas "horizontales no ultrawide")
          IMPORTANTE: el orden de los <source> importa — el primero que matchea
-         gana. La cinematic va antes que la tablet porque DEBE ganar en
-         landscape phone (que cae en el rango width del tablet pero con altura
-         muy baja). El tablet excluye explícitamente alturas < 640 para no
-         agarrar landscape phone. -->
+         gana. La cinematic va primero por consistencia visual: si en el futuro
+         se vuelve a habilitar para algún otro viewport, queda en cabeza. El
+         tablet excluye explícitamente alturas < 640 para no agarrar landscape
+         phone — ese viewport cae directo al fallback desktop. -->
     <picture>
-      <!-- Cinematic: SOLO monitores ultrawide reales (≥21:9) O landscape
-           phone (altura ≤540 + orientation landscape). Laptops 14"/15"
-           estándar (16:9, ~2.22:1) NO califican — caen al fallback desktop
-           (MK6 16:9) cuya composición encaja físicamente en su tela. -->
+      <!-- Cinematic: SOLO monitores ultrawide reales (≥21:9, ej.
+           3440×1440, 2560×1080). Laptops 14"/15" (16:9 ~2.22:1) y phone
+           landscape caen al fallback desktop (MK6 16:9) que encaja sin
+           distorsionar la base de ciudad/roca con el shader del agua. -->
       <source
-        media="(min-width: 1024px) and (min-aspect-ratio: 21/9), (orientation: landscape) and (max-height: 540px)"
+        media="(min-width: 1024px) and (min-aspect-ratio: 21/9)"
         srcset="hero-wolf/hero-mk6-cinematic.avif"
         type="image/avif"
       />
       <source
-        media="(min-width: 1024px) and (min-aspect-ratio: 21/9), (orientation: landscape) and (max-height: 540px)"
+        media="(min-width: 1024px) and (min-aspect-ratio: 21/9)"
         srcset="hero-wolf/hero-mk6-cinematic.webp"
         type="image/webp"
       />
       <source
-        media="(min-width: 1024px) and (min-aspect-ratio: 21/9), (orientation: landscape) and (max-height: 540px)"
+        media="(min-width: 1024px) and (min-aspect-ratio: 21/9)"
         srcset="hero-wolf/hero-mk6-cinematic.jpg"
       />
 

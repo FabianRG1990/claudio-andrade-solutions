@@ -3028,21 +3028,28 @@ export class WolfLakeCanvas {
         const uv = GLOW_SPAWN[i];
         const cuv = imgUVToCanvasUV(uv, cw, ch, IMG_W, IMG_H);
         const start = { x: cuv.x * cw, y: cuv.y * ch };
-        // Tamaño escalado al ALTO del canvas — el lago ocupa un % consistente
-        // de la altura entre variantes (≈40-50%), no del ancho. Escalar a `cw`
-        // daba peces idénticos en 1366×768 que en 1366×640, pero el lago se
-        // achica con la altura → en short-laptop los peces dominaban al lobo.
-        // ch * 0.025 produce:
-        //   phone portrait 390×844 → 21 → 20 (techo)
-        //   phone landscape 844×390→ 9.8
-        //   tablet 1024×768       → 19.2
-        //   short-laptop 1366×640 → 16   (vs 20 con la fórmula vieja)
-        //   short-laptop 1600×720 → 18   (vs 20)
-        //   desktop 1920×1080     → 27 → 20 (techo)
-        //   ultrawide 2560×1080   → 27 → 20 (techo)
-        // Piso 8px protege phones angostos; techo 20px mantiene el cap
+        // Tamaño escalado al LADO MENOR del canvas — robusto ante orientación.
+        // Intentos previos:
+        //   • cw / 55: peces idénticos en 1366×768 y 1366×640, pero el lago
+        //     se achica con la altura → en short-laptop dominaban al lobo.
+        //   • ch * 0.025: ok en landscape, pero en phone portrait (9:16) el
+        //     lago ocupa solo ~30% del ch (vs ~50% en mk6 desktop 16:9), así
+        //     que 20px en un lago de ~253px = 8% del lago — los peces se
+        //     veían enormes en portrait (queja explícita del usuario).
+        // min(cw, ch) * 0.025 desacopla del aspect ratio: usa el "tamaño
+        // más corto" del canvas como referencia, que correlaciona mejor con
+        // la dimensión visualmente más estrecha del lago en cada variante.
+        //   phone portrait 390×844 → min=390 → 10
+        //   phone landscape 844×390 → min=390 → 10
+        //   tablet portrait 820×1180 → min=820 → 20 (techo)
+        //   tablet landscape 1180×820 → min=820 → 20 (techo)
+        //   short-laptop 1366×640 → min=640 → 16
+        //   laptop 1600×720       → min=720 → 18
+        //   desktop 1920×1080     → min=1080 → 27 → 20 (techo)
+        //   ultrawide 2560×1080   → min=1080 → 27 → 20 (techo)
+        // Piso 8px protege phones muy chicos; techo 20px mantiene el cap
         // del diseño desktop.
-        const baseSize = Math.max(8, Math.min(20, ch * 0.025));
+        const baseSize = Math.max(8, Math.min(20, Math.min(cw, ch) * 0.025));
         glowFishes.push(new GlowFish(start, {
           size: baseSize,
           // SpeedScale 0.85-1.15 — los peces ambientales nadan a
@@ -3070,13 +3077,13 @@ export class WolfLakeCanvas {
     // ambiental: oscilación de energy, speedScale normal, applyWander.
     // Brighter palette para destacar como protagonista.
     // Cursor fish ligeramente más grande que ambientales (protagonista).
-    // Mismo eje (ch * 0.030), piso 10, techo 24 — al phone landscape 390 da
-    // 11.7px (vs ambient 9.8), al laptop 1080 da 32→24 (vs ambient 20). El
-    // delta de 2-4px mantiene la jerarquía visual sin que el cursor-fish
-    // domine al cluster ambient. Escalar a `ch` (no `cw`) sincroniza la
-    // proporción con la altura del lago, evitando que en short-laptop el
-    // cursor-fish se vea sobredimensionado.
-    const cursorSize = Math.max(10, Math.min(24, ch * 0.030));
+    // Mismo eje (min(cw,ch) * 0.030), piso 10, techo 24. Usar el lado
+    // menor del canvas evita el bug del intento previo con `ch * 0.030`
+    // que en phone portrait daba 24 (techo) en un lago de ~253px de alto.
+    // Ahora: phone portrait/landscape → 12, laptop 720 → 22, desktop
+    // 1080 → 24 (techo). Delta de 2-4px sobre el ambient mantiene la
+    // jerarquía visual sin que el cursor-fish domine al cluster.
+    const cursorSize = Math.max(10, Math.min(24, Math.min(cw, ch) * 0.030));
     const cursorFish = new GlowFish(
       { x: cw * 0.55, y: ch * 0.80 },
       {
