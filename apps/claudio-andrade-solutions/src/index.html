@@ -64,6 +64,63 @@
     />
 
     <!-- =========================================================================
+         iOS Safari viewport fix — `--app-vh` desde visualViewport.height.
+         iOS Safari (al menos 17-18) tiene bugs documentados con `100dvh` /
+         `100lvh` / `100svh`: en algunos paths render devuelven valores que
+         NO matchean el viewport visible real, dejando elementos sticky/full-
+         viewport (hero, drawer modal) más cortos que el área visible. El
+         user reportó (2026-05) que ni dvh ni lvh resolvían el bleed-through
+         de la siguiente sección bajo el hero, ni cubrían el drawer hasta
+         abajo.
+         Solución: `window.visualViewport.height` reporta el área visible REAL
+         (excluye URL bar overlay, keyboard, etc) — funciona consistentemente
+         en iOS Safari, Samsung Internet, Chrome Android. Exponemos ese valor
+         como CSS custom property `--app-vh` que los componentes consumen con
+         `var(--app-vh, 100dvh)` (fallback a dvh para browsers sin JS / pre-
+         hidratación).
+         Sticky-max: solo crecemos `--app-vh`, nunca lo encogemos. Razón: si
+         el user scrollea y la URL bar se oculta, --app-vh sube al "viewport
+         grande". Cuando vuelve a aparecer, no encogemos — así el hero NO
+         re-cropea su imagen cada vez que la URL bar transiciona (era el otro
+         pain point del usuario, "la imagen se ve cracheada al scroll").
+         Reset solo en orientationchange (rotación = nueva geometría real).
+         Inline + síncrono en <head> antes del <style> del splash: la variable
+         está seteada ANTES del primer paint, sin flash de altura incorrecta.
+         ========================================================================= -->
+    <script>
+      (function () {
+        var maxVh = 0;
+        function setAppVh() {
+          var h = (window.visualViewport && window.visualViewport.height) ||
+                  window.innerHeight;
+          if (h > maxVh) {
+            maxVh = h;
+            document.documentElement.style.setProperty('--app-vh', maxVh + 'px');
+          }
+        }
+        setAppVh();
+        // Re-measure tras el primer paint — algunas versiones de iOS Safari
+        // reportan visualViewport.height incorrectamente en el primer tick
+        // sincrónico, se estabiliza tras un frame.
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(setAppVh);
+        }
+        window.addEventListener('resize', setAppVh, { passive: true });
+        window.addEventListener('orientationchange', function () {
+          // Reset del sticky-max — la rotación cambia la geometría real.
+          maxVh = 0;
+          setAppVh();
+          if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(setAppVh);
+          }
+        });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', setAppVh);
+        }
+      })();
+    </script>
+
+    <!-- =========================================================================
          Boot splash — capa pintada en el primer frame, antes de que Angular
          hidrate. Cubre el viewport con #06091A (mismo navy que el ocean-bg
          base, sin costura cuando crossfadea) + logo breathing en el centro.

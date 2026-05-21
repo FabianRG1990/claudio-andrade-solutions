@@ -35,31 +35,28 @@
   flex-direction: column;
   // Mobile + desktop: el hero ocupa el viewport entero, con FLOOR de 35rem
   // (560px). El floor protege a teléfonos con address bar visible donde
-  // dvh puede colapsar a ~500-540px y dejar al título sin aire.
+  // el viewport puede colapsar a ~500-540px y dejar al título sin aire.
   //
-  // 100dvh — mide siempre el viewport visible REAL.
+  // `var(--app-vh)` viene del JS sticky-max en `apps/.../index.html`. Mide
+  // `visualViewport.height` (el área visible REAL en iOS Safari, donde
+  // 100dvh/100lvh/100svh fallan según versión). Sticky-max: solo crece
+  // nunca encoge → la imagen del hero NO re-cropea cuando la URL bar
+  // transiciona durante el scroll (era pain point reportado).
+  //
+  // Fallback chain:
+  //   1. 100vh — browsers sin dvh ni JS (raro en 2026).
+  //   2. var(--app-vh, 100dvh) — moderno: usa --app-vh si el script
+  //      cargó; dvh si no (mejor que nada).
   //
   // Historial:
-  //   • 100svh (small): dejaba franja vacía abajo cuando URL bar se
-  //     colapsaba.
-  //   • 100lvh (large): garantiza imagen estable (no re-cropea cuando
-  //     URL bar entra/sale), pero deja la siguiente sección (Capítulo 01)
-  //     asomar above-fold en Safari/Samsung mobile cuando la URL bar
-  //     está visible — reporte usuario 2026-05.
-  //   • 100dvh (dynamic, actual): el hero matchea siempre el viewport
-  //     visible, sin bleed-through. Trade-off: cuando la URL bar
-  //     transiciona durante el scroll, el container y la imagen
-  //     (height:100%) se redimensionan suavemente — el object-fit:cover
-  //     re-cropea ligeramente. Con object-position:72% center el sujeto
-  //     principal (el lobo) se mantiene en su zona y el cambio es sutil.
-  //     Es un trade-off necesario: el bleed-through above-fold es
-  //     peor que un micro-reframe durante el scroll (cuando el usuario
-  //     se está alejando del hero de todas formas).
-  //
-  // Fallback: vh primero para browsers sin dvh (raro en 2026, pero cubre
-  // versiones viejas). Browser moderno toma la segunda (dvh).
+  //   • 100svh: dejaba franja vacía abajo cuando URL bar se colapsaba.
+  //   • 100lvh: la siguiente sección (Capítulo 01) asomaba above-fold
+  //     en Safari mobile cuando URL bar visible (reporte 2026-05).
+  //   • 100dvh puro: ídem — bug del browser, el valor que reporta no
+  //     matchea el viewport visible real en algunos paths render.
+  //   • --app-vh sticky-max (actual): JS mide directamente, sin bug.
   min-height: max(35rem, 100vh);
-  min-height: max(35rem, 100dvh);
+  min-height: max(35rem, var(--app-vh, 100dvh));
 }
 
 // =============================================================================
@@ -657,12 +654,12 @@
 // horizontal completa sin recortes verticales feos.
 @include m.landscape-phone {
   .hero {
-    // 100dvh — sincronizado con la regla base. lvh dejaba la siguiente
-    // sección visible above-fold en Safari/Samsung mobile (reporte
-    // 2026-05). El minor re-crop al transicionar URL bar es preferible
-    // al bleed-through de "Capítulo 01".
+    // Sincronizado con la regla base — usa `--app-vh` sticky-max desde JS
+    // para evitar el bug de viewport units de iOS Safari. Sin floor
+    // (35rem) porque landscape phone tiene poca altura y queremos que
+    // el hero ocupe exactamente el viewport visible.
     min-height: 100vh;
-    min-height: 100dvh;
+    min-height: var(--app-vh, 100dvh);
   }
 
   // En landscape phone ahora se sirve la mk6 desktop (16:9), igual que la
