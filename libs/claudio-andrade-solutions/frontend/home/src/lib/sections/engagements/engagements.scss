@@ -106,22 +106,69 @@
   overflow: hidden;
   border-radius: var(--radius-squircle);
   padding: 0.5rem;
+  // Override del shadow base de glass-shell con un stack más profundo:
+  // drops atmosféricas en dos capas + top highlight más vivo (1.5px en
+  // 0.30 vs el 1px / 0.20 del default). El efecto "premium top tier" en
+  // pricing cards (Linear/Stripe/Vercel) viene de la luz cenital sobre
+  // el rim superior + la profundidad atmosférica, no de bordes saturados.
+  box-shadow:
+    0 48px 96px -32px rgb(6 9 26 / 0.85),
+    0 18px 36px -14px rgb(6 9 26 / 0.55),
+    0 0 0 1px rgb(245 241 232 / 0.10),
+    inset 0 1.5px 0 rgb(245 241 232 / 0.30),
+    inset 0 -1px 0 rgb(6 9 26 / 0.55),
+    inset 1px 0 0 rgb(245 241 232 / 0.05),
+    inset -1px 0 0 rgb(245 241 232 / 0.05);
+  transition:
+    transform 600ms var(--ease-fluid),
+    box-shadow 600ms var(--ease-fluid);
 
   @media (min-width: 1024px) {
     opacity: 0.9;
   }
+
+  // Hover lift exclusivo de cards no-highlight — la highlight ya viene
+  // elevada por su translateY/scale y compite si también se la hace lift.
+  // El no-highlight gana drop más profunda + top highlight más brillante.
+  @media (hover: hover) and (pointer: fine) {
+    &:not(.engagement-card--highlight):hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 60px 120px -32px rgb(6 9 26 / 0.95),
+        0 24px 48px -14px rgb(6 9 26 / 0.65),
+        0 0 0 1px rgb(245 241 232 / 0.16),
+        inset 0 1.5px 0 rgb(245 241 232 / 0.42),
+        inset 0 -1px 0 rgb(6 9 26 / 0.60),
+        inset 1px 0 0 rgb(245 241 232 / 0.08),
+        inset -1px 0 0 rgb(245 241 232 / 0.08);
+    }
+  }
 }
 
 .engagement-card--highlight {
+  // El Pearl + lightning del CTA proyectado a escala de tarjeta: borde
+  // fino azul eléctrico + 3 capas de halo atmosférico (mucho más suaves
+  // que en el botón, porque la card es ~30× más grande — la misma
+  // intensidad sería ofensiva). Card y CTA se leen como una sola pieza
+  // energizada, no botón pegado encima de card neutra.
   box-shadow:
-    0 36px 72px -28px rgb(6 9 26 / 0.72),
-    0 0 0 1px rgb(245 241 232 / 0.075),
-    inset 0 1px 0 rgb(245 241 232 / 0.2),
-    inset 0 -1px 0 rgb(6 9 26 / 0.45),
-    inset 1px 0 0 rgb(245 241 232 / 0.04),
-    inset -1px 0 0 rgb(245 241 232 / 0.04),
-    0 0 0 2px rgb(var(--lagoon) / 0.6),
-    0 0 60px -12px rgb(86 170 184 / 0.45);
+    // Drops atmosféricas — esta es la hero del set, más profundas que
+    // las non-highlight
+    0 60px 120px -32px rgb(6 9 26 / 0.92),
+    0 24px 48px -16px rgb(6 9 26 / 0.65),
+    // Borde fino azul (reemplaza el ring lagoon flat de 2px)
+    0 0 0 1px rgb(160 210 255 / 0.45),
+    // Halo eléctrico — 3 capas concéntricas
+    0 0 0 2px rgb(80 160 255 / 0.18),
+    0 0 24px -4px rgb(80 160 255 / 0.28),
+    0 0 60px -16px rgb(40 120 255 / 0.40),
+    // Insets premium (mismo lenguaje que el non-highlight pero más vivo)
+    inset 0 1.5px 0 rgb(245 241 232 / 0.35),
+    inset 0 -1px 0 rgb(6 9 26 / 0.55),
+    inset 1px 0 0 rgb(245 241 232 / 0.06),
+    inset -1px 0 0 rgb(245 241 232 / 0.06),
+    // Tint azul interno desde el top — refuerza "luz cenital eléctrica"
+    inset 0 12px 32px -12px rgb(80 160 255 / 0.14);
 
   @media (min-width: 1024px) {
     opacity: 1;
@@ -134,26 +181,57 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-squircle);
-  background: linear-gradient(
-    to bottom,
-    rgb(var(--lagoon) / 0.08),
-    transparent,
-    rgb(var(--lagoon) / 0.04)
-  );
+  // Aurora real adentro del card (sólo en el highlight, este element
+  // es @if t.highlight en el template). Segunda capa de glow más
+  // concentrado encima del aurora del __inner, blureado y en screen
+  // blend para que se siente como "luz proyectada desde adentro" en
+  // vez de un tinte plano. Es lo que diferencia un "premium card" de
+  // un "tinted card".
+  background:
+    radial-gradient(
+      ellipse 50% 28% at 50% 22%,
+      rgb(80 160 255 / 0.24) 0%,
+      rgb(40 120 255 / 0.08) 40%,
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 70% 30% at 50% 105%,
+      rgb(20 60 150 / 0.14) 0%,
+      transparent 70%
+    );
+  filter: blur(12px);
+  opacity: 0.85;
+  mix-blend-mode: screen;
 }
 
 .engagement-card__overlay-edge {
   pointer-events: none;
   position: absolute;
-  inset: -1px;
+  inset: 0;
   border-radius: var(--radius-squircle);
+  // Real gradient border via mask technique. Dos máscaras componibles:
+  // una llena el content-box, otra el padding-box; con composite "exclude"
+  // sólo queda el padding (1.5px) cubierto por el gradient — un borde
+  // gradient real, no un box-shadow ring plano.
+  //
+  // Direccionalidad 155deg: top-left brilla (specular bright white-blue),
+  // bottom-right cae a azul profundo. Esto es lo que separa un "tinted
+  // ring" de un "physical object under directional light".
+  padding: 1.5px;
   background: linear-gradient(
-    to bottom,
-    rgb(var(--lagoon) / 0.3),
-    transparent,
-    transparent
+    155deg,
+    rgb(220 235 255 / 0.95) 0%,
+    rgb(160 210 255 / 0.62) 20%,
+    rgb(80 160 255 / 0.36) 48%,
+    rgb(30 70 160 / 0.20) 75%,
+    rgb(20 30 70 / 0.12) 100%
   );
-  opacity: 0.5;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.95;
 }
 
 .engagement-card__inner {
@@ -165,6 +243,71 @@
   // padding compactado de 1.75rem → 1.5rem (top/bottom): ahorra ~0.5rem
   // de altura sin que las cards se sientan cramped.
   padding: 1.5rem 1.5rem 1.25rem;
+
+  // Override total del background del glass-core. El default leans
+  // 55-80% opacidad sobre abyss + foam wash arriba — la mezcla con el
+  // bg de la página (niebla + agua + fish) se leía como "muddy beige
+  // tinted box" (lo que el user llamó "tierroso/chafa"). Replanteo:
+  // surface opaco frío + light modeling con 3 fuentes radiales — key
+  // cenital + 2 fills laterales — + AO inferior + specular bevel
+  // arriba. Real obsidian glass premium, no tinted box.
+  background:
+    // Specular key light — luz cenital tight, ~30% del card
+    radial-gradient(
+      ellipse 130% 50% at 50% -8%,
+      rgb(255 255 255 / 0.11) 0%,
+      rgb(255 255 255 / 0.028) 30%,
+      transparent 60%
+    ),
+    // Fill light esquina top-left (blanco neutro)
+    radial-gradient(
+      ellipse 65% 38% at 12% 0%,
+      rgb(255 255 255 / 0.07) 0%,
+      transparent 50%
+    ),
+    // Fill light esquina top-right (leve cool cast — refleja ambient)
+    radial-gradient(
+      ellipse 65% 38% at 88% 0%,
+      rgb(180 210 240 / 0.06) 0%,
+      transparent 50%
+    ),
+    // Ambient occlusion inferior — anchor visual al page
+    radial-gradient(
+      ellipse 100% 55% at 50% 105%,
+      rgb(0 0 0 / 0.42) 0%,
+      transparent 65%
+    ),
+    // Surface — abyss saturado, mucho más opaco que el glass-core
+    // default (que dejaba pasar 20-45% del bg page). 95-99% opacity
+    // significa que el backdrop-blur sigue activo en los márgenes
+    // pero el surface es macizo y no se lee tinted.
+    linear-gradient(
+      170deg,
+      rgb(16 22 42 / 0.95) 0%,
+      rgb(10 14 30 / 0.97) 50%,
+      rgb(6 10 22 / 0.99) 100%
+    );
+
+  box-shadow:
+    // Specular bevel arriba — 2px tight rim donde la luz cenital
+    // toca el borde superior del cristal
+    inset 0 1.5px 0 rgb(255 255 255 / 0.22),
+    // Soft inner glow del top — extiende la specular hacia abajo
+    inset 0 12px 24px -12px rgb(255 255 255 / 0.10),
+    // Ambient inner shadow inferior — refuerza profundidad
+    inset 0 -24px 48px -20px rgb(0 0 0 / 0.55),
+    inset 0 -1px 0 rgb(0 0 0 / 0.45),
+    // 1px lit edges laterales — "el filo del vidrio captura luz"
+    inset 1px 0 0 rgb(255 255 255 / 0.05),
+    inset -1px 0 0 rgb(255 255 255 / 0.05);
+
+  // Noise del glass-core default es overlay-blend a 0.035 — sobre
+  // surfaces opacos cool se lee como ruido sucio. Lo bajo aún más
+  // para que sea apenas perceptible (mantiene la textura de cristal
+  // real sin contaminar el modelado de luz).
+  &::before {
+    opacity: 0.015;
+  }
 }
 
 // ─── Halo de color por accent ────────────────────────────────────────────────
@@ -197,10 +340,13 @@
   );
 }
 .engagement-card[data-accent='lagoon'] .engagement-card__glow {
+  // Highlight = blue eléctrico (matchea el Pearl + lightning del CTA).
+  // foam y coral mantienen su tono original — sólo el "más popular"
+  // cambia a azul para reforzar coherencia con su botón.
   background: radial-gradient(
     circle,
-    rgb(var(--lagoon) / 0.42) 0%,
-    rgb(var(--lagoon) / 0.12) 38%,
+    rgb(80 160 255 / 0.48) 0%,
+    rgb(80 160 255 / 0.14) 38%,
     transparent 72%
   );
 }
@@ -254,24 +400,24 @@
   align-items: center;
   gap: 0.375rem;
   border-radius: 9999px;
-  background: rgb(var(--lagoon) / 0.25);
+  background: rgb(80 160 255 / 0.18);
   padding: 0.375rem 0.75rem;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--lagoon));
+  color: rgb(180 220 255);
   box-shadow:
-    inset 0 0 0 1px rgb(var(--lagoon) / 0.5),
-    0 0 20px -2px rgb(86 170 184 / 0.5);
+    inset 0 0 0 1px rgb(160 210 255 / 0.45),
+    0 0 20px -2px rgb(80 160 255 / 0.40);
 }
 
 .engagement-card__tag-pulse {
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 9999px;
-  background: rgb(var(--lagoon));
-  box-shadow: 0 0 8px 2px rgb(86 170 184 / 0.6);
+  background: rgb(180 220 255);
+  box-shadow: 0 0 8px 2px rgb(80 160 255 / 0.55);
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
@@ -306,7 +452,11 @@
 
 .engagement-card--highlight .engagement-card__price {
   font-size: var(--type-mono-display);
-  color: rgb(var(--lagoon));
+  color: rgb(180 220 255);
+  // Subtle text-shadow azul: lo mismo que hacen Linear y Vercel con el
+  // precio de su plan recomendado — el glow es lo que separa el "premium"
+  // del "tech generic".
+  text-shadow: 0 0 32px rgb(80 160 255 / 0.50);
 }
 
 .engagement-card__cadence {
@@ -349,7 +499,55 @@
 }
 
 .engagement-card--highlight .engagement-card__features {
-  border-top-color: rgb(var(--lagoon) / 0.2);
+  border-top-color: rgb(160 210 255 / 0.22);
+}
+
+// Highlight inner — mismo modelado de luz que el non-highlight pero con
+// cast azul eléctrico en las fuentes radiales + aurora interna concentrada
+// en el upper-third (donde está el precio). Es "obsidian glass iluminado
+// por dentro con electricidad azul", no "tinted box".
+.engagement-card--highlight .engagement-card__inner {
+  background:
+    // Key light con cast azul-blanco
+    radial-gradient(
+      ellipse 130% 50% at 50% -8%,
+      rgb(220 235 255 / 0.14) 0%,
+      rgb(140 180 255 / 0.05) 30%,
+      transparent 60%
+    ),
+    // Fill top-left azul
+    radial-gradient(
+      ellipse 65% 38% at 12% 0%,
+      rgb(160 200 255 / 0.08) 0%,
+      transparent 50%
+    ),
+    // Fill top-right cool
+    radial-gradient(
+      ellipse 65% 38% at 88% 0%,
+      rgb(180 210 240 / 0.07) 0%,
+      transparent 50%
+    ),
+    // Aurora interna — glow azul difuso en el área del precio
+    radial-gradient(
+      ellipse 75% 50% at 50% 28%,
+      rgb(80 160 255 / 0.12) 0%,
+      rgb(40 120 255 / 0.05) 35%,
+      transparent 70%
+    ),
+    // AO inferior — misma profundidad que el non-highlight
+    radial-gradient(
+      ellipse 100% 55% at 50% 105%,
+      rgb(0 0 0 / 0.42) 0%,
+      transparent 65%
+    ),
+    // Surface — abyss con tinte cool blue (no demasiado, sólo lo
+    // suficiente para que se sienta "electrificado por dentro")
+    linear-gradient(
+      170deg,
+      rgb(16 26 56 / 0.95) 0%,
+      rgb(10 18 44 / 0.97) 50%,
+      rgb(8 14 36 / 0.99) 100%
+    );
 }
 
 .engagement-card__feature {
@@ -377,9 +575,11 @@
 }
 
 .engagement-card--highlight .engagement-card__feature:not(.engagement-card__feature--absent) .engagement-card__feature-icon {
-  background: rgb(var(--lagoon) / 0.3);
-  color: rgb(var(--lagoon));
-  box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.4);
+  background: rgb(80 160 255 / 0.18);
+  color: rgb(180 220 255);
+  box-shadow:
+    inset 0 0 0 1px rgb(160 210 255 / 0.40),
+    0 0 8px -1px rgb(80 160 255 / 0.30);
 }
 
 .engagement-card__feature--absent .engagement-card__feature-icon {
@@ -426,7 +626,7 @@
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  border-radius: 9999px;
+  border-radius: 14px;
   padding: 0.375rem 0.375rem 0.375rem 1.25rem;
   font-family: var(--font-button);
   font-size: 13px;
