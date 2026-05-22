@@ -699,12 +699,12 @@
     inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.16),
     inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
     inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.25),
-    // Lightning multi-layer (5 capas: ring + 4 halos)
-    0 0 0 1px rgb(160 210 255 / 0.65),
-    0 0 0.4rem rgb(180 220 255 / 0.32),
-    0 0 0.9rem rgb(80 160 255 / 0.48),
-    0 0 1.7rem rgb(40 120 255 / 0.55),
-    0 0 2.6rem rgb(20 90 255 / 0.42),
+    // Lightning multi-layer calibrado — aurora discreta, no neon agresivo.
+    0 0 0 1px rgb(160 210 255 / 0.42),
+    0 0 0.5rem rgb(140 190 255 / 0.22),
+    0 0 1.1rem rgb(80 160 255 / 0.28),
+    0 0 1.9rem rgb(40 120 255 / 0.28),
+    0 0 2.8rem rgb(20 90 255 / 0.16),
     // Drop shadow Pearl
     0 3rem 3rem rgb(0 0 0 / 0.30),
     0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
@@ -756,18 +756,18 @@
     z-index: 1;
   }
 
-  // Hover: electric pulse arc — todas las capas del lightning suben
+  // Hover: aurora se intensifica con elegancia, no enciende letrero.
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       box-shadow:
-        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.22),
+        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.18),
         inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.35),
-        0 0 0 1px rgb(180 220 255 / 0.80),
-        0 0 0.5rem rgb(200 230 255 / 0.45),
-        0 0 1.1rem rgb(110 180 255 / 0.62),
-        0 0 2.1rem rgb(50 130 255 / 0.70),
-        0 0 3.2rem rgb(25 95 255 / 0.55),
+        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.28),
+        0 0 0 1px rgb(170 215 255 / 0.55),
+        0 0 0.7rem rgb(150 200 255 / 0.32),
+        0 0 1.3rem rgb(100 170 255 / 0.40),
+        0 0 2.3rem rgb(50 130 255 / 0.40),
+        0 0 3.4rem rgb(25 95 255 / 0.24),
         0 3rem 3rem rgb(0 0 0 / 0.30),
         0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
 
@@ -784,14 +784,14 @@
   &:active {
     transform: translateY(4px);
     box-shadow:
-      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.26),
+      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.24),
       inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.80),
       inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.20),
-      0 0 0 1px rgb(160 210 255 / 0.70),
-      0 0 0.4rem rgb(180 220 255 / 0.38),
-      0 0 0.9rem rgb(80 160 255 / 0.55),
-      0 0 1.6rem rgb(40 120 255 / 0.60),
-      0 0 2.4rem rgb(20 90 255 / 0.48),
+      0 0 0 1px rgb(160 210 255 / 0.48),
+      0 0 0.5rem rgb(140 190 255 / 0.26),
+      0 0 1.1rem rgb(80 160 255 / 0.32),
+      0 0 1.9rem rgb(40 120 255 / 0.32),
+      0 0 2.8rem rgb(20 90 255 / 0.20),
       0 3rem 3rem rgb(0 0 0 / 0.30),
       0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
     transition: transform 120ms ease;
