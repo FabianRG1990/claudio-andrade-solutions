@@ -204,106 +204,188 @@
 }
 
 // ---- glass-button --------------------------------------------------------
-// CTA principal del sistema — "vidrio líquido 3D" inspirado en `.glass-nav`
-// del navbar pero escalado a tamaño botón. Reemplaza a `.glass-bubble` en
-// CTAs (bubble usa un catchlight diagonal arriba/izquierda al 32%/14% que
-// se leía como esfera reflectiva; acá el 3D vive en *bordes* — top brillante
-// continuo + bottom contraluz + laterales — que es como se ve el vidrio
-// real cuando lo cortás en una pieza pequeña, no como burbuja con punto de
-// luz). Usar emparejado con `.glass-button-icon` para la esferita interior
-// del icono cuando el CTA tenga uno (ej. pill-button con flecha).
+// CTA principal — Pearl Button (negro sólido, no traslúcido). Diseño
+// referenciado por el usuario desde Uiverse (marcelodolza). Receta:
+//   • Surface opaca abyss/black (#080808) — NO backdrop-filter.
+//   • Multi-layer shadow stack:
+//       1. Inset top white glow (0.3rem 0.9rem · 0.30) — luz cenital
+//          golpea el top dome.
+//       2. Inset bottom thin dark (-0.1rem 0.3rem · 0.70) — definición.
+//       3. Inset bottom WHITE rim glow (-0.4rem 0.9rem · 0.50) — la
+//          FIRMA del diseño: luz rebotando hacia arriba en el rim
+//          inferior, da la sensación de cristal/perla.
+//       4. Drop shadow profunda (3rem 3rem · 0.30) + tighter (1rem 1rem
+//          -0.6rem · 0.80) — la cápsula flota.
+//   • ::before — gran dome ellipse rgb(255,255,255 / 0.12) extendiéndose
+//     desde arriba del botón hacia abajo (clipped por overflow:hidden),
+//     simula la cara superior del pearl.
+//   • ::after — strip glossy del top con linear-gradient blanco→transparent
+//     + inset top meniscus brillante. La "cresta" del dome.
+//   • Hover: top glow más brillante (0.4) + bottom rim aún más brillante
+//     (0.7) + dome ::before se desplaza arriba + dome ::after fade.
+//   • Active: translateY(4px) — se hunde como botón físico real.
 .glass-button {
   position: relative;
-  // Wash vertical foam — gradient con leve "respiro" en el medio (0.10 → 0.02
-  // → 0.06) que sugiere refracción curva, sin tirar a un punto concreto.
-  background:
-    linear-gradient(
-      180deg,
-      rgb(245 241 232 / 0.10) 0%,
-      rgb(245 241 232 / 0.02) 50%,
-      rgb(245 241 232 / 0.06) 100%
-    );
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  backdrop-filter: blur(14px) saturate(140%);
-  // Foam macizo (sin alpha) — el 0.97 anterior dejaba el texto del label
-  // ligeramente translúcido sobre el blur del backdrop, lo que se leía como
-  // "difuminado". A foam sólido las letras quedan nítidas sin tocar el
-  // cristal de fondo.
-  color: rgb(245 241 232);
+  isolation: isolate;
+  overflow: hidden;
+
+  background-color: #080808;
+  color: rgb(245 241 232 / 0.85);
+
+  // Iteración 2: el demo de Uiverse vive sobre fondo gris claro — sus
+  // blancos pierden visibilidad por similitud con el bg. Contra abyss
+  // (casi negro), los MISMOS valores de blanco se vuelven dramáticos.
+  // Bajados ~50% para mantener la proporción visual del original.
   box-shadow:
-    // Drop atmosférico (mismo lenguaje que `glass-nav-shell`, escalado).
-    0 24px 48px -16px rgb(0 0 0 / 0.55),
-    0 8px 16px -8px rgb(0 0 0 / 0.40),
-    // Ring exterior hairline foam — define silueta del vidrio cortado.
-    0 0 0 1px rgb(245 241 232 / 0.12),
-    // Top edge — franja brillante CONTINUA al borde superior (no point).
-    // 1.5px hairline + 4px de difusión hacia adentro = "vidrio mojado arriba".
-    inset 0 1.5px 0 rgb(255 255 255 / 0.35),
-    inset 0 4px 10px -4px rgb(255 255 255 / 0.18),
-    // Bottom edge — contraluz tenue + sombra negra interior. La luz tenue
-    // (0.18) se lee como "iluminado por debajo"; la sombra (0.40) le da peso.
-    inset 0 -1.5px 0 rgb(255 255 255 / 0.18),
-    inset 0 -8px 16px -10px rgb(0 0 0 / 0.40),
-    // Laterales — finos highlights de "vidrio cortado".
-    inset 2px 0 4px -3px rgb(255 255 255 / 0.10),
-    inset -2px 0 4px -3px rgb(255 255 255 / 0.10);
+    inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.16),
+    inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
+    inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.25),
+    0 3rem 3rem rgb(0 0 0 / 0.30),
+    0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
+
   transition:
-    transform 600ms var(--ease-fluid),
-    background 600ms var(--ease-fluid),
-    box-shadow 600ms var(--ease-fluid);
+    transform 200ms ease,
+    box-shadow 200ms ease;
   touch-action: manipulation;
 
-  // Hover: amplifica los bordes (vidrio "mojado más"). Sin alterar la
-  // posición de la luz — sigue viviendo en bordes, no en puntos.
+  // ::before — dome highlight desde arriba (clipped por overflow). Bajado
+  // 0.12 → 0.05 — el original casi no se ve en la imagen de referencia.
+  &::before {
+    content: '';
+    position: absolute;
+    left: -15%;
+    right: -15%;
+    top: -100%;
+    bottom: 25%;
+    border-radius: 50%;
+    background-color: rgb(255 255 255 / 0.05);
+    z-index: 0;
+    pointer-events: none;
+    transition: transform 300ms ease;
+  }
+
+  // ::after — cresta glossy del top. Gradient 0.30 → 0.14, meniscus
+  // 0.80 → 0.45 para que el "wet look" sea sutil, no un destello.
+  &::after {
+    content: '';
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    top: 12%;
+    bottom: 40%;
+    border-radius: 22px 22px 0 0;
+    box-shadow: inset 0 10px 8px -10px rgb(255 255 255 / 0.45);
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.14) 0%,
+      rgb(0 0 0 / 0) 50%,
+      rgb(0 0 0 / 0) 100%
+    );
+    z-index: 0;
+    pointer-events: none;
+    transition:
+      opacity 300ms ease,
+      transform 300ms ease;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      transform: translateY(-1px);
-      background:
-        linear-gradient(
-          180deg,
-          rgb(245 241 232 / 0.14) 0%,
-          rgb(245 241 232 / 0.04) 50%,
-          rgb(245 241 232 / 0.10) 100%
-        );
       box-shadow:
-        0 32px 64px -18px rgb(0 0 0 / 0.68),
-        0 12px 22px -10px rgb(0 0 0 / 0.50),
-        0 0 0 1px rgb(245 241 232 / 0.20),
-        inset 0 1.5px 0 rgb(255 255 255 / 0.50),
-        inset 0 5px 12px -4px rgb(255 255 255 / 0.26),
-        inset 0 -1.5px 0 rgb(255 255 255 / 0.24),
-        inset 0 -8px 16px -10px rgb(0 0 0 / 0.42),
-        inset 2px 0 4px -3px rgb(255 255 255 / 0.14),
-        inset -2px 0 4px -3px rgb(255 255 255 / 0.14);
+        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.22),
+        inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
+        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.35),
+        0 3rem 3rem rgb(0 0 0 / 0.30),
+        0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
+
+      &::before {
+        transform: translateY(-5%);
+      }
+      &::after {
+        opacity: 0.4;
+        transform: translateY(5%);
+      }
     }
   }
 
-  // Tap feedback — funciona en mouse y touch (no gateado).
   &:active {
-    transform: translateY(0) scale(0.98);
-    transition: transform 120ms var(--ease-fluid);
+    transform: translateY(4px);
+    box-shadow:
+      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.26),
+      inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.80),
+      inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.20),
+      0 3rem 3rem rgb(0 0 0 / 0.30),
+      0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
+    transition: transform 120ms ease;
   }
 }
 
 // ---- glass-button-icon ---------------------------------------------------
-// Esferita interior para el icono dentro de un `.glass-button`. Mismo
-// lenguaje (luz en bordes, no en puntos), más concentrado por tamaño chico.
+// Esferita Pearl — flecha trailing del pill-button. Misma receta del
+// glass-button pero proporcional a un círculo pequeño. Misma firma:
+// top inner glow + bottom WHITE rim glow (la marca del Pearl Button) +
+// dome ::before + cresta ::after.
 .glass-button-icon {
   position: relative;
-  background:
-    linear-gradient(
-      180deg,
-      rgb(245 241 232 / 0.16) 0%,
-      rgb(245 241 232 / 0.06) 50%,
-      rgb(245 241 232 / 0.10) 100%
-    );
+  isolation: isolate;
+  overflow: hidden;
+
+  background-color: #080808;
+  color: rgb(245 241 232 / 0.95);
+
+  // Mismos valores reducidos que .glass-button para que se lea premium
+  // contra el fondo abyss sin halo dramático.
   box-shadow:
-    inset 0 1.5px 0 rgb(255 255 255 / 0.42),
-    inset 0 3px 8px -3px rgb(255 255 255 / 0.22),
-    inset 0 -1.5px 0 rgb(255 255 255 / 0.20),
-    inset 0 -4px 8px -5px rgb(0 0 0 / 0.32),
-    0 0 0 1px rgb(245 241 232 / 0.18),
-    0 4px 10px -3px rgb(6 9 26 / 0.45);
+    inset 0 0.2rem 0.4rem rgb(255 255 255 / 0.16),
+    inset 0 -0.08rem 0.2rem rgb(0 0 0 / 0.70),
+    inset 0 -0.25rem 0.4rem rgb(255 255 255 / 0.25),
+    0 1rem 1rem rgb(0 0 0 / 0.30),
+    0 0.4rem 0.5rem -0.25rem rgb(0 0 0 / 0.80);
+
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -15%;
+    right: -15%;
+    top: -100%;
+    bottom: 25%;
+    border-radius: 50%;
+    background-color: rgb(255 255 255 / 0.06);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    top: 12%;
+    bottom: 45%;
+    border-radius: 50%;
+    box-shadow: inset 0 5px 4px -5px rgb(255 255 255 / 0.45);
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.14) 0%,
+      rgb(0 0 0 / 0) 50%,
+      rgb(0 0 0 / 0) 100%
+    );
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 }
 
 // ---- glass-bubble-icon ---------------------------------------------------
