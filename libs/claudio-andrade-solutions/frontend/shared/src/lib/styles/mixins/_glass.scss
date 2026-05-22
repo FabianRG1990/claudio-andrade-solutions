@@ -229,17 +229,23 @@
   isolation: isolate;
   overflow: hidden;
 
+  // Pearl Button negro + lightning eléctrico (DodgerBlue territory).
+  // En las pricing cards el lightning se MUEVE al CTA highlight; los
+  // CTAs no-highlight de esa sección lo overriden a Pearl puro vía
+  // .engagement-card__cta.glass-button. El resto del sitio mantiene
+  // este look (Pearl + lightning) como default.
   background-color: #080808;
   color: rgb(245 241 232 / 0.85);
 
-  // Iteración 2: el demo de Uiverse vive sobre fondo gris claro — sus
-  // blancos pierden visibilidad por similitud con el bg. Contra abyss
-  // (casi negro), los MISMOS valores de blanco se vuelven dramáticos.
-  // Bajados ~50% para mantener la proporción visual del original.
   box-shadow:
     inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.16),
     inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
     inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.25),
+    0 0 0 1px rgb(160 210 255 / 0.65),
+    0 0 0.4rem rgb(180 220 255 / 0.32),
+    0 0 0.9rem rgb(80 160 255 / 0.48),
+    0 0 1.7rem rgb(40 120 255 / 0.55),
+    0 0 2.6rem rgb(20 90 255 / 0.42),
     0 3rem 3rem rgb(0 0 0 / 0.30),
     0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
 
@@ -248,8 +254,7 @@
     box-shadow 200ms ease;
   touch-action: manipulation;
 
-  // ::before — dome highlight desde arriba (clipped por overflow). Bajado
-  // 0.12 → 0.05 — el original casi no se ve en la imagen de referencia.
+  // Pearl dome ::before — IDÉNTICO al negro.
   &::before {
     content: '';
     position: absolute;
@@ -264,8 +269,7 @@
     transition: transform 300ms ease;
   }
 
-  // ::after — cresta glossy del top. Gradient 0.30 → 0.14, meniscus
-  // 0.80 → 0.45 para que el "wet look" sea sutil, no un destello.
+  // Pearl cresta ::after — IDÉNTICO al negro.
   &::after {
     content: '';
     position: absolute;
@@ -299,6 +303,11 @@
         inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.22),
         inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
         inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.35),
+        0 0 0 1px rgb(180 220 255 / 0.80),
+        0 0 0.5rem rgb(200 230 255 / 0.45),
+        0 0 1.1rem rgb(110 180 255 / 0.62),
+        0 0 2.1rem rgb(50 130 255 / 0.70),
+        0 0 3.2rem rgb(25 95 255 / 0.55),
         0 3rem 3rem rgb(0 0 0 / 0.30),
         0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
 
@@ -318,6 +327,11 @@
       inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.26),
       inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.80),
       inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.20),
+      0 0 0 1px rgb(160 210 255 / 0.70),
+      0 0 0.4rem rgb(180 220 255 / 0.38),
+      0 0 0.9rem rgb(80 160 255 / 0.55),
+      0 0 1.6rem rgb(40 120 255 / 0.60),
+      0 0 2.4rem rgb(20 90 255 / 0.48),
       0 3rem 3rem rgb(0 0 0 / 0.30),
       0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
     transition: transform 120ms ease;
@@ -334,11 +348,14 @@
   isolation: isolate;
   overflow: hidden;
 
+  // TEST accent eléctrico: Pearl negro intacto + electric blue accents
+  // (mismo palette DodgerBlue del .glass-button, proporcional al circle).
   background-color: #080808;
   color: rgb(245 241 232 / 0.95);
 
-  // Mismos valores reducidos que .glass-button para que se lea premium
-  // contra el fondo abyss sin halo dramático.
+  // Pearl negro puro — sin lightning. El halo eléctrico se reserva al
+  // .glass-button principal (CTA); el icon-pill chico no compite por
+  // atención.
   box-shadow:
     inset 0 0.2rem 0.4rem rgb(255 255 255 / 0.16),
     inset 0 -0.08rem 0.2rem rgb(0 0 0 / 0.70),
