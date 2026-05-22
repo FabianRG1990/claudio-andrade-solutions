@@ -23,15 +23,10 @@
     <div class="services-marquee__reel animate-marquee">
       @for (sp of reel(); track sp.reelKey) {
         <article
-          class="service-card glass-shell glass-shell-hover"
+          class="service-card"
           [attr.data-accent]="sp.accent || 'lagoon'"
         >
-          <div class="service-card__inner glass-core">
-            <!-- Halo de color por categoría — vive bajo el contenido como
-                 capa cero. `.glass-core` ya tiene overflow:hidden, así que
-                 el resplandor se recorta limpio al borde de la card. -->
-            <span class="service-card__glow" aria-hidden="true"></span>
-
+          <div class="service-card__inner">
             <!-- HEAD: icono protagonista + secuencia editorial + status -->
             <header class="service-card__hero">
               <span class="service-card__icon" [style.--icon-color]="sp.iconColor">

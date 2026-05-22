@@ -1,17 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  phosphorBrainBold,
+  phosphorBracketsCurlyBold,
   phosphorBrowsersBold,
-  phosphorChartLineUpBold,
+  phosphorChartScatterBold,
   phosphorCheckBold,
-  phosphorCloudCheckBold,
-  phosphorDeviceMobileBold,
-  phosphorGearBold,
-  phosphorPackageBold,
-  phosphorPulseBold,
+  phosphorCloudArrowUpBold,
+  phosphorCpuBold,
+  phosphorDatabaseBold,
+  phosphorDevicesBold,
+  phosphorFileCodeBold,
+  phosphorGearSixBold,
   phosphorRobotBold,
-  phosphorTerminalWindowBold,
 } from '@ng-icons/phosphor-icons/bold';
 import { phosphorClock } from '@ng-icons/phosphor-icons/regular';
 
@@ -59,18 +59,18 @@ interface ReelItem extends Service {
   imports: [Eyebrow, NgIcon, RevealDirective],
   providers: [
     provideIcons({
-      phosphorBrainBold,
+      phosphorBracketsCurlyBold,
       phosphorBrowsersBold,
-      phosphorChartLineUpBold,
+      phosphorChartScatterBold,
       phosphorCheckBold,
       phosphorClock,
-      phosphorCloudCheckBold,
-      phosphorDeviceMobileBold,
-      phosphorGearBold,
-      phosphorPackageBold,
-      phosphorPulseBold,
+      phosphorCloudArrowUpBold,
+      phosphorCpuBold,
+      phosphorDatabaseBold,
+      phosphorDevicesBold,
+      phosphorFileCodeBold,
+      phosphorGearSixBold,
       phosphorRobotBold,
-      phosphorTerminalWindowBold,
     }),
   ],
   templateUrl: './services-marquee.html',
