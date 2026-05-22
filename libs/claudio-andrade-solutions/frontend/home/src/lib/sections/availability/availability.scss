@@ -276,6 +276,32 @@
   > li:last-child {
     border-bottom: 0;
   }
+
+  // Desktop: grid 2-col (día | hora) para que las horas se alineen en su
+  // propio segmento entre todas las filas. `display: contents` en cada li
+  // hace que sus dos spans pasen a ser items directos del grid del ul —
+  // sin esto, cada li sería un único item de una columna. Como el li
+  // pierde su box, los borders y padding-block se mueven a los spans.
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 1.5rem;
+    align-items: baseline;
+
+    > li {
+      display: contents;
+      border-bottom: 0;
+    }
+    > li > .info-row__hour-day,
+    > li > .info-row__hour-value {
+      padding-block: 0.75rem;
+      border-bottom: 1px solid rgb(var(--foam) / 0.08);
+    }
+    > li:last-child > .info-row__hour-day,
+    > li:last-child > .info-row__hour-value {
+      border-bottom: 0;
+    }
+  }
 }
 
 .info-row__hour {
@@ -283,13 +309,6 @@
   flex-direction: column;
   gap: 0.25rem;
   padding-block: 0.75rem;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1.5rem;
-  }
 }
 
 .info-row__hour-day {
