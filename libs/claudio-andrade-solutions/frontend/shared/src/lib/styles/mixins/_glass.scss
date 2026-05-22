@@ -273,11 +273,19 @@
   &::after {
     content: '';
     position: absolute;
-    left: 6%;
-    right: 6%;
-    top: 12%;
-    bottom: 40%;
-    border-radius: 22px 22px 0 0;
+    // Offsets en pixels (no %) — antes en % la cresta se alejaba del
+    // borde en botones anchos (full-width CTAs ~280px → 17px de offset)
+    // y el texto nacía justo en el borde de la cresta. En pixels la
+    // distancia es consistente entre el borde externo y la cápsula
+    // interna sin importar el ancho del botón.
+    left: 12px;
+    right: 12px;
+    top: 6px;
+    bottom: 18px;
+    // Radio menor que el wrapper (14px) para que la cresta interna se
+    // "lea" contenida por el borde — Pearl coherente con la nueva
+    // geometría rectangular.
+    border-radius: 8px 8px 0 0;
     box-shadow: inset 0 10px 8px -10px rgb(255 255 255 / 0.45);
     background: linear-gradient(
       180deg,
