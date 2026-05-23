@@ -411,7 +411,7 @@
 // pequeño, con line-through. Color foam tenue para que el cerebro compare
 // sin que compita con el precio vigente.
 .engagement-card__price-original {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 0.95rem;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam) / 0.40);
@@ -421,8 +421,9 @@
 }
 
 .engagement-card__price {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: var(--type-mono-xl);
+  font-weight: 500;
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
   font-variant-numeric: tabular-nums;
@@ -448,7 +449,7 @@
 // fricción al procesar la cifra grande.
 .engagement-card__price-breakdown {
   margin-top: 0.375rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.02em;
   color: rgb(var(--foam) / 0.50);
