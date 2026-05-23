@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { phosphorWhatsappLogoBold } from '@ng-icons/phosphor-icons/bold';
+import {
+  phosphorArrowUpRightBold,
+  phosphorWhatsappLogoBold,
+} from '@ng-icons/phosphor-icons/bold';
 
 import { EmblemMark } from '../../components/brand-mark/emblem-mark';
 
@@ -10,26 +13,51 @@ interface NavLink {
   readonly href: string;
 }
 
-/**
- * Footer — shell inferior compacto. Brand reducido a emblema + meta inline,
- * nav horizontal y bottom bar de una línea (en desktop). Antes usaba el
- * BrandLockup 150×180 — sumaba ~180px de altura solo por la marca; el
- * emblema 36px transmite la misma identidad ocupando 5× menos espacio.
- */
+interface WhatsappContact {
+  readonly id: string;
+  readonly name: string;
+  readonly href: string | null;
+  readonly aria: string;
+}
+
 @Component({
   selector: 'app-footer',
   imports: [RouterLink, NgIcon, EmblemMark],
-  providers: [provideIcons({ phosphorWhatsappLogoBold })],
+  providers: [
+    provideIcons({ phosphorWhatsappLogoBold, phosphorArrowUpRightBold }),
+  ],
   templateUrl: './footer.html',
   styleUrl: './footer.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Footer {
   protected readonly currentYear = new Date().getFullYear();
-  // Número de WhatsApp del negocio. wa.me requiere el formato sin "+" ni
-  // espacios — el display sí los lleva para legibilidad.
-  protected readonly whatsappNumber = '+506 7209 1418';
-  protected readonly whatsappHref = 'https://wa.me/50672091418';
+
+  // Tres contactos de WhatsApp para el footer. Por ahora solo el primero
+  // está ligado (Claudio Andrade). Los otros dos se completarán cuando el
+  // usuario provea los números — `href: null` los marca como pendientes y
+  // el template los renderiza sin atributo `href` (no son clicables) pero
+  // mantienen el estilo del card.
+  protected readonly whatsappContacts: readonly WhatsappContact[] = [
+    {
+      id: 'claudio',
+      name: 'Claudio Andrade',
+      href: 'https://wa.me/50672091418',
+      aria: 'Contactar a Claudio Andrade por WhatsApp',
+    },
+    {
+      id: 'contact-2',
+      name: 'Próximamente',
+      href: null,
+      aria: 'Contacto de WhatsApp próximamente',
+    },
+    {
+      id: 'contact-3',
+      name: 'Próximamente',
+      href: null,
+      aria: 'Contacto de WhatsApp próximamente',
+    },
+  ];
 
   protected readonly navLinks: readonly NavLink[] = [
     { label: 'Productos', href: '/productos' },

@@ -107,39 +107,51 @@
   }
 }
 
-// ─── WhatsApp pill ───────────────────────────────────────────────────────────
-// CTA de contacto rápido en la columna derecha del footer (encima del nav).
-// Estilo pill glass sutil, con tinte lagoon que se intensifica en hover.
-.footer__whatsapp {
+// ─── WhatsApp hub ────────────────────────────────────────────────────────────
+// Trigger único circular WhatsApp-green con dos anillos pulse en loop para
+// llamar la atención sin invadir. En hover/focus-within despliega un popover
+// con la lista de contactos. Diseñado para anclarse al borde derecho del
+// footer y abrir hacia arriba alineado al borde derecho del trigger (right:0,
+// bottom: 100%) — no se sale del viewport ni rompe el flujo del footer.
+.footer__whatsapp-hub {
+  position: relative;
+  align-self: flex-end;
+  margin-top: 0.5rem;
+}
+
+// Trigger circular — 40×40, gradiente WhatsApp + sombra verde + relieve.
+// Es el ancla del popover; mantiene su forma constante (no hace lift), el
+// que se mueve es el popover.
+.footer__whatsapp-trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  padding: 0.3125rem 0.75rem 0.3125rem 0.3125rem;
-  border-radius: 14px;
-  background: rgb(var(--foam) / 0.04);
-  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.10);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.005em;
-  color: rgb(var(--foam) / 0.85);
-  white-space: nowrap;
-  // Touch target AAA — la pill total medía 34px alto (icon 1.5rem + padding
-  // 0.3125rem×2). Forzamos 44px para que sea cómodo de tappear en phones.
-  min-height: 44px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow:
+    0 6px 16px rgb(37 211 102 / 0.40),
+    inset 0 1px 0 rgb(255 255 255 / 0.30),
+    inset 0 -1px 0 rgb(0 0 0 / 0.20),
+    inset 0 0 0 1px rgb(255 255 255 / 0.08);
   transition:
-    background 400ms var(--ease-fluid),
-    box-shadow 400ms var(--ease-fluid),
-    color 400ms var(--ease-fluid),
-    transform 400ms var(--ease-fluid);
+    transform 280ms var(--ease-fluid),
+    box-shadow 280ms var(--ease-fluid),
+    background 280ms var(--ease-fluid);
 
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      background: rgb(var(--lagoon) / 0.12);
-      box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.32);
-      color: rgb(var(--foam));
-      transform: translateY(-1px);
-    }
+  &:hover {
+    background: linear-gradient(135deg, #2fdb6c 0%, #15a08f 100%);
+    transform: translateY(-2px);
+    box-shadow:
+      0 10px 22px rgb(37 211 102 / 0.55),
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      inset 0 -1px 0 rgb(0 0 0 / 0.18);
   }
 
   &:active {
@@ -147,31 +159,245 @@
   }
 
   &:focus-visible {
-    outline: 2px solid rgb(var(--lagoon));
+    outline: 2px solid #25d366;
     outline-offset: 3px;
   }
 }
 
-.footer__whatsapp-icon {
+// Icon del trigger — encima de los rings (z 2).
+.footer__whatsapp-trigger-icon {
+  position: relative;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 9999px;
-  background: rgb(var(--lagoon) / 0.20);
-  color: rgb(var(--bioluminescent));
-  box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.30);
-  transition:
-    background 400ms var(--ease-fluid),
-    color 400ms var(--ease-fluid),
-    box-shadow 400ms var(--ease-fluid);
+  line-height: 0;
 }
 
-.footer__whatsapp:hover .footer__whatsapp-icon {
-  background: rgb(var(--lagoon) / 0.40);
-  color: rgb(var(--foam));
-  box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.55);
+// Pulse rings — dos anillos en loop que se expanden hacia afuera para
+// llamar la atención. Se ocultan en `prefers-reduced-motion` para no
+// molestar a quien limita animaciones.
+.footer__whatsapp-trigger-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgb(37 211 102 / 0.55);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  animation: footer-wa-pulse 2.6s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+
+  &--delay {
+    animation-delay: 1.3s;
+  }
+}
+
+@keyframes footer-wa-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.6;
+  }
+  70% {
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer__whatsapp-trigger-ring {
+    animation: none;
+    display: none;
+  }
+}
+
+// Popover con la lista de contactos. Cerrado por default (opacity 0,
+// translateY 6, scale 0.97). El estado abierto se gatilla por :hover en el
+// hub Y :focus-within (teclado + touch focus después del tap). El hub
+// también queda visible durante el hover sobre el popover gracias al gap
+// virtual creado con padding-bottom (0.625rem) — sin eso, salir del
+// trigger hacia el popover cierra el menu prematuramente.
+.footer__whatsapp-menu {
+  position: absolute;
+  bottom: calc(100% + 0.75rem);
+  right: -0.25rem;
+  width: 17.5rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 90% 0%, rgb(37 211 102 / 0.10), transparent 60%),
+    rgb(var(--abyss) / 0.88);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.06),
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 12px 32px -8px rgb(0 0 0 / 0.55),
+    0 0 24px rgb(37 211 102 / 0.10);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px) scale(0.97);
+  transform-origin: bottom right;
+  pointer-events: none;
+  transition:
+    opacity 220ms var(--ease-fluid),
+    transform 280ms var(--ease-spring),
+    visibility 0s linear 240ms;
+  z-index: 50;
+
+  // Caret diamante apuntando al trigger (esquina inferior derecha del
+  // popover). Se posiciona justo encima del trigger.
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 14px;
+    width: 10px;
+    height: 10px;
+    margin-top: -6px;
+    background: rgb(var(--abyss) / 0.88);
+    box-shadow:
+      inset 1px 1px 0 rgb(255 255 255 / 0.04);
+    transform: rotate(45deg);
+    border-right: 1px solid rgb(255 255 255 / 0.06);
+    border-bottom: 1px solid rgb(255 255 255 / 0.06);
+  }
+}
+
+// Apertura: hover sobre el hub o foco dentro del hub. focus-within cubre
+// el caso teclado (tab al trigger) y el caso touch (tap = foco al button).
+.footer__whatsapp-hub:hover .footer__whatsapp-menu,
+.footer__whatsapp-hub:focus-within .footer__whatsapp-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition:
+    opacity 220ms var(--ease-fluid),
+    transform 320ms var(--ease-spring),
+    visibility 0s linear 0s;
+}
+
+// Eyebrow del menu — pequeño label en uppercase con tracking eyebrow.
+.footer__whatsapp-menu-eyebrow {
+  margin: 0.125rem 0.375rem 0.5rem;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(37 211 102 / 0.80);
+}
+
+.footer__whatsapp-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+// Cada item del menu — fila con icon circular verde + nombre + arrow.
+// Hover sutil con tinte verde, sin colores agresivos para mantener
+// elegancia. El item--pending se opaca y muestra "Pronto" en lugar del
+// arrow.
+.footer__whatsapp-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 10px;
+  color: rgb(var(--foam) / 0.92);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-decoration: none;
+  transition:
+    background 220ms var(--ease-fluid),
+    color 220ms var(--ease-fluid),
+    transform 220ms var(--ease-fluid);
+
+  &:hover {
+    background: rgb(37 211 102 / 0.10);
+    color: rgb(var(--foam));
+    transform: translateX(2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #25d366;
+    outline-offset: 2px;
+  }
+
+  &--pending {
+    cursor: not-allowed;
+    opacity: 0.55;
+
+    &:hover {
+      background: transparent;
+      transform: none;
+      color: rgb(var(--foam) / 0.92);
+    }
+  }
+}
+
+.footer__whatsapp-menu-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    inset 0 -1px 0 rgb(0 0 0 / 0.15);
+}
+
+.footer__whatsapp-menu-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer__whatsapp-menu-item-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: rgb(var(--foam) / 0.06);
+  color: rgb(var(--foam) / 0.65);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.10);
+  transition:
+    background 220ms var(--ease-fluid),
+    color 220ms var(--ease-fluid),
+    transform 220ms var(--ease-fluid);
+}
+
+.footer__whatsapp-menu-item:hover .footer__whatsapp-menu-item-arrow {
+  background: rgb(37 211 102 / 0.20);
+  color: #ffffff;
+  transform: rotate(0) translate(1px, -1px);
+}
+
+.footer__whatsapp-menu-item-status {
+  flex-shrink: 0;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  background: rgb(var(--foam) / 0.06);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: rgb(var(--foam) / 0.5);
 }
 
 // Nav horizontal: lista en una línea con separador visual `·` (vía
