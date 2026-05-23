@@ -68,9 +68,10 @@
           <article
             appReveal
             [delay]="0.05 * i"
-            class="tech-card glass-shell glass-shell-hover"
+            class="tech-card glass-shell"
             [attr.data-accent]="t.accent"
           >
+            <span class="tech-card__edge" aria-hidden="true"></span>
             <div class="tech-card__inner glass-core">
               <span class="tech-card__glow" aria-hidden="true"></span>
               <header class="tech-card__head">

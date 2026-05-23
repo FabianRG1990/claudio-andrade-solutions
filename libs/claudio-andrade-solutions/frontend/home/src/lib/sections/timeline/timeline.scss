@@ -259,12 +259,55 @@
   }
 }
 
+// Cards 3D estáticos — sin animaciones hover. La sensación de profundidad
+// viene del modelado de luz (no de la interacción): key cenital + fills
+// laterales + ambient occlusion + bevels en el borde + sombras
+// atmosféricas multi-capa. Mismo enfoque que premium cards de Linear /
+// Stripe / Vercel cuando no usan tilt 3D.
 .tech-card {
   position: relative;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-squircle);
   padding: 0.5rem;
+  isolation: isolate;
+
+  // Sombras atmosféricas multi-capa — el card flota físicamente a varios
+  // cm sobre el fondo. 3 niveles (alta diffusa + media + tight definition)
+  // imitan el comportamiento de luz real: una pieza física a cierta
+  // distancia produce tres tipos de sombra simultánea según la distancia.
+  // Override de la box-shadow del glass-shell, que era plana (1 layer).
+  box-shadow:
+    0 32px 64px -24px rgb(6 9 26 / 0.78),
+    0 14px 28px -10px rgb(6 9 26 / 0.52),
+    0 4px 8px -2px rgb(6 9 26 / 0.36),
+    inset 0 0 0 1px rgb(245 241 232 / 0.06);
+}
+
+// Borde con gradient directional via mask-composite. Esto es lo que más
+// se "lee" como 3D real: un chamfer biselado donde la luz cenital golpea
+// el borde superior (specular brillante) y la base queda en penumbra
+// (deep blue). Sin esto el card se siente "pegado al fondo".
+.tech-card__edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    158deg,
+    rgb(255 255 255 / 0.35) 0%,
+    rgb(255 255 255 / 0.14) 18%,
+    rgb(255 255 255 / 0.05) 42%,
+    rgb(0 0 0 / 0.18) 72%,
+    rgb(0 0 0 / 0.32) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .tech-card__inner {
@@ -275,6 +318,41 @@
   border-radius: calc(var(--radius-squircle) - 0.5rem);
   padding: 1.5rem 1.5rem 1.625rem;
   gap: 1rem;
+
+  // Surface 3D estática — opaca cool con 5-layer radial light modeling.
+  // Override de glass-core, que era foam-translúcido 0.55-0.80 (dejaba
+  // bleed del bg animado → "tierroso"). Acá la superficie es 96-99 %
+  // opaca y la luz vive en gradients superpuestos: key cenital + dos
+  // fills laterales + ambient occlusion inferior + base directional.
+  background:
+    // Key light cenital (centro-arriba) — luz principal cae sobre el card
+    radial-gradient(ellipse 125% 50% at 50% -8%, rgb(255 255 255 / 0.10) 0%, rgb(255 255 255 / 0.025) 32%, transparent 62%),
+    // Fill left top — ambient suave foam, simula bounce light izquierdo
+    radial-gradient(ellipse 65% 38% at 12% 0%, rgb(255 255 255 / 0.055) 0%, transparent 50%),
+    // Fill right top — ambient cool, bounce light derecho con tinte azul
+    radial-gradient(ellipse 65% 38% at 88% 0%, rgb(180 210 240 / 0.05) 0%, transparent 50%),
+    // Ambient occlusion bottom — la "mesa" debajo del card oscurece la base
+    radial-gradient(ellipse 100% 50% at 50% 105%, rgb(0 0 0 / 0.42) 0%, transparent 64%),
+    // Base directional 168° — diagonal cool, abyss más profundo abajo-derecha
+    linear-gradient(168deg, rgb(14 20 44 / 0.97) 0%, rgb(10 14 32 / 0.98) 60%, rgb(6 9 22 / 0.99) 100%);
+
+  // Bevels inset — el borde del inner se "extruye": specular rim top
+  // brillante (luz cenital golpea el filo), luz que sangra desde el borde
+  // hacia adentro, ambient occlusion en la base, definition oscura
+  // inferior y rim suaves laterales.
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.22),
+    inset 0 12px 24px -12px rgb(255 255 255 / 0.07),
+    inset 0 -22px 44px -18px rgb(0 0 0 / 0.50),
+    inset 0 -1px 0 rgb(0 0 0 / 0.42),
+    inset 1px 0 0 rgb(255 255 255 / 0.04),
+    inset -1px 0 0 rgb(255 255 255 / 0.04);
+
+  // Noise del glass-core atenuado — sobre la surface opaca compite con el
+  // modelado de luz. Lo dejamos en mínimo (anti-banding) sin que se note.
+  &::before {
+    opacity: 0.015;
+  }
 }
 
 // Halo de color por accent — copia de service-card. Un sibling absoluto en
@@ -288,11 +366,8 @@
   border-radius: 9999px;
   pointer-events: none;
   filter: blur(26px);
-  opacity: 0.55;
+  opacity: 0.62;
   z-index: 0;
-  transition:
-    opacity 800ms var(--ease-fluid),
-    transform 800ms var(--ease-fluid);
 }
 
 .tech-card[data-accent='lagoon'] .tech-card__glow {
@@ -326,13 +401,6 @@
     rgb(var(--bioluminescent) / 0.10) 38%,
     transparent 72%
   );
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .tech-card:hover .tech-card__glow {
-    opacity: 0.82;
-    transform: scale(1.06);
-  }
 }
 
 // Hijos sobre el halo
