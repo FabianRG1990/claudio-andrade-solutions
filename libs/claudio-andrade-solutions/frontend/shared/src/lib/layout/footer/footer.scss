@@ -223,7 +223,7 @@
   position: absolute;
   bottom: calc(100% + 0.75rem);
   right: -0.25rem;
-  width: 17.5rem;
+  width: 19.5rem;
   padding: 0.75rem;
   border-radius: 14px;
   background:
@@ -280,14 +280,38 @@
     visibility 0s linear 0s;
 }
 
-// Eyebrow del menu — pequeño label en uppercase con tracking eyebrow.
+// Eyebrow del menu — uppercase + dot bioluminescent pulsante a la izquierda
+// como señal editorial premium de "estamos online / disponibles ahora".
 .footer__whatsapp-menu-eyebrow {
-  margin: 0.125rem 0.375rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin: 0.125rem 0.375rem 0.625rem;
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(37 211 102 / 0.80);
+  color: rgb(37 211 102 / 0.85);
+}
+
+.footer__whatsapp-menu-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #7fe3d6;
+  box-shadow: 0 0 8px rgb(127 227 214 / 0.6);
+  animation: footer-wa-eyebrow-dot 2.2s ease-in-out infinite;
+}
+
+@keyframes footer-wa-eyebrow-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
 }
 
 .footer__whatsapp-menu-list {
@@ -299,30 +323,26 @@
   gap: 0.125rem;
 }
 
-// Cada item del menu — fila con icon circular verde + nombre + arrow.
-// Hover sutil con tinte verde, sin colores agresivos para mantener
-// elegancia. El item--pending se opaca y muestra "Pronto" en lugar del
-// arrow.
+// Card premium del item — layout horizontal: avatar (38px) | nombre/role
+// stack | arrow o pending-tag. Hover con tinte verde sutil + traslación
+// horizontal de 2px. El item--pending se renderiza con avatar muted (sin
+// gradient, sin status dot) y texto reducido en opacidad — sigue legible
+// pero comunica "slot por completar".
 .footer__whatsapp-menu-item {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.625rem;
+  gap: 0.6875rem;
+  padding: 0.4375rem 0.5rem;
   border-radius: 10px;
   color: rgb(var(--foam) / 0.92);
   font-family: var(--font-display);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: -0.005em;
   text-decoration: none;
   transition:
     background 220ms var(--ease-fluid),
-    color 220ms var(--ease-fluid),
     transform 220ms var(--ease-fluid);
 
   &:hover {
     background: rgb(37 211 102 / 0.10);
-    color: rgb(var(--foam));
     transform: translateX(2px);
   }
 
@@ -333,38 +353,142 @@
 
   &--pending {
     cursor: not-allowed;
-    opacity: 0.55;
 
     &:hover {
       background: transparent;
       transform: none;
-      color: rgb(var(--foam) / 0.92);
     }
   }
 }
 
-.footer__whatsapp-menu-item-icon {
+// Avatar — círculo 38px con gradiente radial verde (highlight en 30/30),
+// sombra interna doble (white top + black bottom) e glow externo verde de
+// presencia. Más rico que un icono plano: se siente como un retrato.
+.footer__whatsapp-menu-item-avatar {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 38px;
+  height: 38px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  background:
+    radial-gradient(circle at 30% 30%, #4ae285 0%, #25d366 45%, #128c7e 100%);
   color: #ffffff;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.25),
-    inset 0 -1px 0 rgb(0 0 0 / 0.15);
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(0 0 0 / 0.18),
+    inset 0 0 0 1px rgb(255 255 255 / 0.10),
+    0 4px 14px rgb(37 211 102 / 0.32);
+}
+
+// Variante pending — sin gradient verde, círculo muted que comunica
+// "slot vacío" sin gritar. El "+" como inicial sugiere "se sumará pronto".
+.footer__whatsapp-menu-item--pending .footer__whatsapp-menu-item-avatar {
+  background: rgb(var(--foam) / 0.04);
+  color: rgb(var(--foam) / 0.42);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.14);
+}
+
+.footer__whatsapp-menu-item-initial {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+// Status dot — bioluminescent (cyan-verde) en la esquina inferior derecha
+// del avatar, con anillo abyss de 2px que lo "perfora" sobre el avatar
+// verde. Pulsa suave (escala + glow intensificado) para señalar
+// "disponible / online" sin distraer. Solo aparece en items ligados.
+.footer__whatsapp-menu-item-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 9999px;
+  background: #7fe3d6;
+  box-shadow:
+    0 0 0 2px rgb(var(--abyss)),
+    0 0 8px rgb(127 227 214 / 0.55);
+  animation: footer-wa-status 2.4s ease-in-out infinite;
+}
+
+@keyframes footer-wa-status {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 2px rgb(var(--abyss)),
+      0 0 8px rgb(127 227 214 / 0.55);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow:
+      0 0 0 2px rgb(var(--abyss)),
+      0 0 12px rgb(127 227 214 / 0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer__whatsapp-menu-eyebrow-dot,
+  .footer__whatsapp-menu-item-status {
+    animation: none;
+  }
+}
+
+// Stack nombre + role, alineado a la izquierda. min-width:0 + flex:1
+// permite ellipsis si el nombre es largo.
+.footer__whatsapp-menu-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .footer__whatsapp-menu-item-name {
-  flex: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgb(var(--foam));
+  letter-spacing: -0.005em;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.footer__whatsapp-menu-item-role {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  font-style: italic;
+  color: rgb(var(--foam) / 0.58);
+  letter-spacing: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Items pending — opacar nombre/role para comunicar "todavía no activo"
+// sin esconder el slot.
+.footer__whatsapp-menu-item--pending .footer__whatsapp-menu-item-name {
+  color: rgb(var(--foam) / 0.62);
+}
+
+.footer__whatsapp-menu-item--pending .footer__whatsapp-menu-item-role {
+  color: rgb(var(--foam) / 0.42);
+}
+
+// Arrow al borde derecho — círculo 22px con flecha. Hover intensifica el
+// tinte verde y desplaza la flecha arriba-derecha (mismo idioma que
+// glass-button-icon del resto del sitio).
 .footer__whatsapp-menu-item-arrow {
   display: inline-flex;
   align-items: center;
@@ -385,10 +509,12 @@
 .footer__whatsapp-menu-item:hover .footer__whatsapp-menu-item-arrow {
   background: rgb(37 211 102 / 0.20);
   color: #ffffff;
-  transform: rotate(0) translate(1px, -1px);
+  transform: translate(1px, -1px);
 }
 
-.footer__whatsapp-menu-item-status {
+// Tag "Pronto" para items pendientes — pill discreta que reemplaza la
+// flecha. Letras tracking-eyebrow + uppercase para sentido editorial.
+.footer__whatsapp-menu-item-pending-tag {
   flex-shrink: 0;
   padding: 0.125rem 0.375rem;
   border-radius: 9999px;

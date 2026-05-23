@@ -16,6 +16,12 @@ interface NavLink {
 interface WhatsappContact {
   readonly id: string;
   readonly name: string;
+  // Rol o descripción corta del contacto — sale debajo del nombre en
+  // itálica dentro del popover (ej. "CEO y desarrollador").
+  readonly role: string;
+  // Inicial del contacto para el avatar circular (1-2 letras). Mantener
+  // en mayúscula para que el círculo se vea consistente.
+  readonly initial: string;
   readonly href: string | null;
   readonly aria: string;
 }
@@ -33,29 +39,36 @@ interface WhatsappContact {
 export class Footer {
   protected readonly currentYear = new Date().getFullYear();
 
-  // Tres contactos de WhatsApp para el footer. Por ahora solo el primero
-  // está ligado (Claudio Andrade). Los otros dos se completarán cuando el
-  // usuario provea los números — `href: null` los marca como pendientes y
-  // el template los renderiza sin atributo `href` (no son clicables) pero
-  // mantienen el estilo del card.
+  // Tres contactos de WhatsApp para el footer. Cada contacto se renderiza
+  // dentro del popover como un card premium: avatar circular con inicial +
+  // status dot bioluminescent, nombre, rol en itálica, y flecha (si está
+  // ligado) o tag "Pronto" (si está pendiente). Solo el primero está
+  // ligado por ahora; los otros dos se completan cuando el usuario provea
+  // los números.
   protected readonly whatsappContacts: readonly WhatsappContact[] = [
     {
       id: 'claudio',
       name: 'Claudio Andrade',
+      role: 'CEO y desarrollador',
+      initial: 'C',
       href: 'https://wa.me/50672091418',
       aria: 'Contactar a Claudio Andrade por WhatsApp',
     },
     {
-      id: 'contact-2',
-      name: 'Próximamente',
-      href: null,
-      aria: 'Contacto de WhatsApp próximamente',
+      id: 'fabian',
+      name: 'Fabián Rodríguez',
+      role: 'Diseñador y desarrollador',
+      initial: 'F',
+      href: 'https://wa.me/50689836762',
+      aria: 'Contactar a Fabián Rodríguez por WhatsApp',
     },
     {
-      id: 'contact-3',
-      name: 'Próximamente',
-      href: null,
-      aria: 'Contacto de WhatsApp próximamente',
+      id: 'krissia',
+      name: 'Krissia Bolaños',
+      role: 'Agente de ventas',
+      initial: 'K',
+      href: 'https://wa.me/50688780709',
+      aria: 'Contactar a Krissia Bolaños por WhatsApp',
     },
   ];
 
