@@ -19,6 +19,7 @@ export { Eyebrow } from './lib/components/eyebrow/eyebrow';
 export { PillButton } from './lib/components/pill-button/pill-button';
 export { PageHeader } from './lib/components/page-header/page-header';
 export { SectionHeading } from './lib/components/section-heading/section-heading';
+export { WhatsappHub } from './lib/components/whatsapp-hub/whatsapp-hub';
 
 // ─── Directives ────────────────────────────────────────────────────────────
 export { RevealDirective } from './lib/directives/reveal/reveal.directive';

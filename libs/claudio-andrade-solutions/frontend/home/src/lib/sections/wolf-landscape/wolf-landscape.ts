@@ -3,6 +3,8 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { phosphorArrowDown } from '@ng-icons/phosphor-icons/regular';
 import { phosphorSparkleBold } from '@ng-icons/phosphor-icons/bold';
 
+import { WhatsappHub } from '@cas-ui-shared/components/whatsapp-hub/whatsapp-hub';
+
 import { WolfLakeCanvas } from './wolf-lake-canvas';
 import { WolfLakeFlow } from './wolf-lake-flow';
 import { WolfSky } from './wolf-sky';
@@ -28,7 +30,7 @@ import { WolfSky } from './wolf-sky';
  */
 @Component({
   selector: 'app-wolf-landscape',
-  imports: [NgIcon, WolfLakeCanvas, WolfLakeFlow, WolfSky],
+  imports: [NgIcon, WolfLakeCanvas, WolfLakeFlow, WolfSky, WhatsappHub],
   providers: [provideIcons({ phosphorArrowDown, phosphorSparkleBold })],
   templateUrl: './wolf-landscape.html',
   styleUrl: './wolf-landscape.scss',

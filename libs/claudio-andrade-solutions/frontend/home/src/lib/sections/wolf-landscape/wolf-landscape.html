@@ -201,7 +201,15 @@
             </span>
             Continuá
           </div>
-          <div class="hero__pagination">01 / 05</div>
+          <!-- WhatsApp hub variante sm — lockup espejo del scroll-cue de
+               la izquierda: label "Hablemos" + ícono circular 32px.
+               Misma funcionalidad que el del footer (popover con
+               contactos), pero contenida en formato editorial inline
+               para que el peso visual cuadre con el cue de scroll. -->
+          <div class="hero__whatsapp-cue">
+            <span class="hero__whatsapp-label">Hablemos</span>
+            <app-whatsapp-hub size="sm" class="hero__whatsapp" />
+          </div>
         </div>
       </div>
     </div>

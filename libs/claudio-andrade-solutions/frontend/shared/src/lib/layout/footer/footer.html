@@ -33,73 +33,10 @@
           </ul>
         </nav>
 
-        <!-- Hub WhatsApp — trigger único circular que en hover/focus
-             despliega un popover con los 3 contactos. Diseñado para que
-             ocupe poco espacio (el trigger es 40px) y se ancle al borde
-             derecho del footer. El popover abre hacia arriba alineado al
-             borde derecho del trigger. -->
-        <div
-          class="footer__whatsapp-hub"
-          [class.is-open]="whatsappOpen()"
-          #whatsappHub
-        >
-          <button
-            type="button"
-            class="footer__whatsapp-trigger"
-            aria-haspopup="menu"
-            [attr.aria-expanded]="whatsappOpen()"
-            aria-label="Mostrar contactos de WhatsApp"
-            (click)="toggleWhatsapp($event)"
-          >
-            <span class="footer__whatsapp-trigger-ring" aria-hidden="true"></span>
-            <span class="footer__whatsapp-trigger-ring footer__whatsapp-trigger-ring--delay" aria-hidden="true"></span>
-            <span class="footer__whatsapp-trigger-icon" aria-hidden="true">
-              <ng-icon name="phosphorWhatsappLogoBold" size="20" />
-            </span>
-          </button>
-
-          <div class="footer__whatsapp-menu" role="menu">
-            <p class="footer__whatsapp-menu-eyebrow">
-              <span class="footer__whatsapp-menu-eyebrow-dot" aria-hidden="true"></span>
-              Hablemos por WhatsApp
-            </p>
-            <ul class="footer__whatsapp-menu-list">
-              @for (contact of whatsappContacts; track contact.id) {
-                <li role="none">
-                  <a
-                    class="footer__whatsapp-menu-item"
-                    [class.footer__whatsapp-menu-item--pending]="!contact.href"
-                    [attr.href]="contact.href"
-                    [attr.target]="contact.href ? '_blank' : null"
-                    [attr.rel]="contact.href ? 'noopener noreferrer' : null"
-                    [attr.aria-label]="contact.aria"
-                    [attr.aria-disabled]="contact.href ? null : 'true'"
-                    [attr.tabindex]="contact.href ? '0' : '-1'"
-                    role="menuitem"
-                  >
-                    <span class="footer__whatsapp-menu-item-avatar" aria-hidden="true">
-                      <span class="footer__whatsapp-menu-item-initial">{{ contact.initial }}</span>
-                      @if (contact.href) {
-                        <span class="footer__whatsapp-menu-item-status"></span>
-                      }
-                    </span>
-                    <div class="footer__whatsapp-menu-item-meta">
-                      <p class="footer__whatsapp-menu-item-name">{{ contact.name }}</p>
-                      <p class="footer__whatsapp-menu-item-role">{{ contact.role }}</p>
-                    </div>
-                    @if (contact.href) {
-                      <span class="footer__whatsapp-menu-item-arrow" aria-hidden="true">
-                        <ng-icon name="phosphorArrowUpRightBold" size="11" />
-                      </span>
-                    } @else {
-                      <span class="footer__whatsapp-menu-item-pending-tag">Pronto</span>
-                    }
-                  </a>
-                </li>
-              }
-            </ul>
-          </div>
-        </div>
+        <!-- Hub WhatsApp — trigger único circular que despliega un popover
+             con los 3 contactos. Componente compartido: misma pieza se usa
+             en el hero como CTA inline (variante sm). -->
+        <app-whatsapp-hub class="footer__whatsapp-hub" />
       </div>
     </div>
 

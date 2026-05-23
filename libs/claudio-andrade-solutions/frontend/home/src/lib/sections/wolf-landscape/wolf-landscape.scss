@@ -626,10 +626,30 @@
   box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.18);
 }
 
-.hero__pagination {
+// Lockup WhatsApp — espejo de `.hero__scroll-cue` en el lado derecho del
+// scroll-hint: label "Hablemos" + ícono circular 32px. El gap 0.75rem
+// matchea el del cue izquierdo para que ambos lockups respiren igual y
+// se lean como par editorial.
+.hero__whatsapp-cue {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  // Inset desde el borde derecho del card para que el halo verde no
+  // toque el límite del wave-card encima. Sin esto el trigger queda
+  // visualmente "saliéndose" del card aunque numéricamente esté contenido.
+  padding-right: 0.25rem;
+}
+
+.hero__whatsapp-label {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.6);
+}
+
+.hero__whatsapp {
+  display: flex;
+  align-items: center;
 }
 
 // ─── Mobile fine-tuning ──────────────────────────────────────────────────────
