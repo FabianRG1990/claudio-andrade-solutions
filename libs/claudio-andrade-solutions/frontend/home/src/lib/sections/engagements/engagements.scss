@@ -287,32 +287,26 @@
       rgb(180 210 240 / 0.02) 0%,
       transparent 55%
     ),
-    // 4. AO direccional bottom-right — intacto (da volumen)
-    radial-gradient(
-      ellipse 85% 65% at 75% 108%,
-      rgb(0 0 0 / 0.48) 0%,
-      rgb(0 0 0 / 0.18) 45%,
-      transparent 70%
-    ),
-    // 5. Surface base — ladder shoal→tide→ink
+    // 4. Surface base — ladder shoal→tide. Antes terminaba en `--ink` (#0A0D26)
+    //    a 100%, casi indistinguible de `--abyss` (#06091A, fondo de página),
+    //    así que el pie del card se fundía con el bg. Ahora el endpoint queda
+    //    en `--tide` (#0F1338), ~12 luminance units más claro que el bg.
     linear-gradient(
       162deg,
       rgb(var(--shoal) / 0.96) 0%,
-      rgb(var(--tide) / 0.98) 38%,
-      rgb(var(--ink) / 0.99) 100%
+      rgb(var(--tide) / 0.98) 100%
     );
 
-  // Box-shadow con top rim discreto — bright 42→20%, shadow 10→5%.
-  // Inner glow del top 10→5%. Side edges restored a su nivel original.
+  // Box-shadow sin fade negro al pie: removidos `inset 0 -28px 56px -22px
+  // rgb(0 0 0 / 0.58)` y `inset 0 -1px 0 rgb(0 0 0 / 0.48)` que fundían el
+  // bottom del card en negro. Mantengo top rim, inner glow top, side edges
+  // y trim brass exterior — esos modelan sin tapar la base.
   box-shadow:
     // Top rim asimétrico discreto — bright en lit-side, dim en shadow-side
     inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.20),
     inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.05),
     // Soft inner glow del top — extiende la specular hacia abajo
     inset 0 14px 28px -14px rgb(255 255 255 / 0.05),
-    // Ambient inner shadow inferior — define el filo bajo (intacto)
-    inset 0 -28px 56px -22px rgb(0 0 0 / 0.58),
-    inset 0 -1px 0 rgb(0 0 0 / 0.48),
     // Side edges asimétricos — lit-left bright, shadow-right dark
     inset 1px 0 0 rgb(255 255 255 / 0.08),
     inset -1px 0 0 rgb(0 0 0 / 0.16),
@@ -579,20 +573,17 @@
       rgb(40 120 255 / 0.025) 35%,
       transparent 70%
     ),
-    // AO direccional bottom-right
-    radial-gradient(
-      ellipse 85% 65% at 75% 108%,
-      rgb(0 0 0 / 0.42) 0%,
-      rgb(0 0 0 / 0.14) 45%,
-      transparent 70%
-    ),
+    // (AO direccional bottom-right removido — fundía el pie del card en negro.
+    // Mismo cleanup que en `.engagement-card__inner` base, info-row y tech-card.)
     // Surface highlight — un peldaño más claro que el non-highlight con
     // tinte cool sutil
+    // Surface highlight — endpoint subido para que el pie del card destacado
+    // no caiga a #101840 (luminance ~22, demasiado cerca de --abyss del bg).
+    // Ahora el bottom queda en #18245A (luminance ~30), borde inferior visible.
     linear-gradient(
       162deg,
       rgb(36 50 120 / 0.94) 0%,
-      rgb(24 36 90 / 0.97) 38%,
-      rgb(16 24 64 / 0.99) 100%
+      rgb(24 36 90 / 0.97) 100%
     );
 }
 

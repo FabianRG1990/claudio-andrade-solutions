@@ -158,20 +158,21 @@
       rgb(180 210 240 / 0.02) 0%,
       transparent 55%
     ),
-    radial-gradient(
-      ellipse 85% 65% at 75% 108%,
-      rgb(0 0 0 / 0.48) 0%,
-      rgb(0 0 0 / 0.18) 45%,
-      transparent 70%
-    ),
-    linear-gradient(162deg, rgb(var(--shoal) / 0.96) 0%, rgb(var(--tide) / 0.98) 38%, rgb(var(--ink) / 0.99) 100%);
+    // Surface base — antes terminaba en `--ink` (#0A0D26), a solo ~4 unidades
+    // de luminancia de `--abyss` (#06091A, fondo de página). El pie del card
+    // se fundía con el bg. Ahora el endpoint queda en `--tide` (#0F1338) —
+    // ~12 unidades de luminancia más claro que el bg, borde inferior visible.
+    linear-gradient(162deg, rgb(var(--shoal) / 0.96) 0%, rgb(var(--tide) / 0.98) 100%);
 
+  // Sin oscurecimiento al pie: antes había un radial-gradient negro en 75% 108%
+  // + un inset shadow grueso (inset 0 -28px 56px -22px) + 1px dark line abajo
+  // que hacían que el borde inferior del card se fundiera en negro. Ahora la
+  // superficie inferior mantiene su tono `--ink` del linear-gradient y el
+  // borde se ve completo.
   box-shadow:
     inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.20),
     inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.05),
     inset 0 14px 28px -14px rgb(255 255 255 / 0.05),
-    inset 0 -28px 56px -22px rgb(0 0 0 / 0.58),
-    inset 0 -1px 0 rgb(0 0 0 / 0.48),
     inset 1px 0 0 rgb(255 255 255 / 0.08),
     inset -1px 0 0 rgb(0 0 0 / 0.16),
     0 0 0 1px rgb(var(--brass) / 0.10);
