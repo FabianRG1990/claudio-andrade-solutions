@@ -120,15 +120,45 @@
 .info-row {
   position: relative;
   border-radius: var(--radius-squircle);
-  padding: 0.5rem;
+  isolation: isolate;
+
+  // Drop shadows atmosféricas para que el card flote físicamente sobre
+  // el fondo (mismo lenguaje que .tech-card / .engagement-card).
+  box-shadow:
+    0 32px 64px -24px rgb(6 9 26 / 0.78),
+    0 14px 28px -10px rgb(6 9 26 / 0.52),
+    0 4px 8px -2px rgb(6 9 26 / 0.36);
 }
 
 .info-row__inner {
   position: relative;
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  border-radius: var(--radius-squircle);
   // Padding inner fluido — 1.25rem en phones (más aire entre contenido y
   // borde sin gastar mucho), 1.75rem en desktop.
   padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+
+  // Surface 3D opaca — sin el glass-shell envolvente, el glass-core base
+  // (55-80 % transparente) se leía translúcido sobre el fondo animado.
+  // Mismo modelado de luz que .tech-card__inner: key cenital + fills
+  // laterales + ambient occlusion + base directional 168°.
+  background:
+    radial-gradient(ellipse 125% 50% at 50% -8%, rgb(255 255 255 / 0.10) 0%, rgb(255 255 255 / 0.025) 32%, transparent 62%),
+    radial-gradient(ellipse 65% 38% at 12% 0%, rgb(255 255 255 / 0.055) 0%, transparent 50%),
+    radial-gradient(ellipse 65% 38% at 88% 0%, rgb(180 210 240 / 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 50% at 50% 105%, rgb(0 0 0 / 0.42) 0%, transparent 64%),
+    linear-gradient(168deg, rgb(14 20 44 / 0.97) 0%, rgb(10 14 32 / 0.98) 60%, rgb(6 9 22 / 0.99) 100%);
+
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.22),
+    inset 0 12px 24px -12px rgb(255 255 255 / 0.07),
+    inset 0 -22px 44px -18px rgb(0 0 0 / 0.50),
+    inset 0 -1px 0 rgb(0 0 0 / 0.42),
+    inset 1px 0 0 rgb(255 255 255 / 0.04),
+    inset -1px 0 0 rgb(255 255 255 / 0.04);
+
+  &::before {
+    opacity: 0.015;
+  }
 }
 
 // ─── Halo de color por accent ────────────────────────────────────────────────

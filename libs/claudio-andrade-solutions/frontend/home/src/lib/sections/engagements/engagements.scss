@@ -105,20 +105,13 @@
   height: 100%;
   overflow: hidden;
   border-radius: var(--radius-squircle);
-  padding: 0.5rem;
-  // Override del shadow base de glass-shell con un stack más profundo:
-  // drops atmosféricas en dos capas + top highlight más vivo (1.5px en
-  // 0.30 vs el 1px / 0.20 del default). El efecto "premium top tier" en
-  // pricing cards (Linear/Stripe/Vercel) viene de la luz cenital sobre
-  // el rim superior + la profundidad atmosférica, no de bordes saturados.
+  // Sin glass-shell, sin padding 0.5rem, sin insets rim: el wrapper deja
+  // de ser un chasis visual y solo aporta las drop shadows atmosféricas
+  // que hacen flotar el card. El borde y el modelado viven en
+  // .engagement-card__inner (un único borde visible).
   box-shadow:
     0 48px 96px -32px rgb(6 9 26 / 0.85),
-    0 18px 36px -14px rgb(6 9 26 / 0.55),
-    0 0 0 1px rgb(245 241 232 / 0.10),
-    inset 0 1.5px 0 rgb(245 241 232 / 0.30),
-    inset 0 -1px 0 rgb(6 9 26 / 0.55),
-    inset 1px 0 0 rgb(245 241 232 / 0.05),
-    inset -1px 0 0 rgb(245 241 232 / 0.05);
+    0 18px 36px -14px rgb(6 9 26 / 0.55);
   transition:
     transform 600ms var(--ease-fluid),
     box-shadow 600ms var(--ease-fluid);
@@ -128,47 +121,32 @@
   }
 
   // Hover lift exclusivo de cards no-highlight — la highlight ya viene
-  // elevada por su translateY/scale y compite si también se la hace lift.
-  // El no-highlight gana drop más profunda + top highlight más brillante.
+  // elevada por su translateY/scale.
   @media (hover: hover) and (pointer: fine) {
     &:not(.engagement-card--highlight):hover {
       transform: translateY(-2px);
       box-shadow:
         0 60px 120px -32px rgb(6 9 26 / 0.95),
-        0 24px 48px -14px rgb(6 9 26 / 0.65),
-        0 0 0 1px rgb(245 241 232 / 0.16),
-        inset 0 1.5px 0 rgb(245 241 232 / 0.42),
-        inset 0 -1px 0 rgb(6 9 26 / 0.60),
-        inset 1px 0 0 rgb(245 241 232 / 0.08),
-        inset -1px 0 0 rgb(245 241 232 / 0.08);
+        0 24px 48px -14px rgb(6 9 26 / 0.65);
     }
   }
 }
 
 .engagement-card--highlight {
-  // El Pearl + lightning del CTA proyectado a escala de tarjeta: borde
-  // fino azul eléctrico + 3 capas de halo atmosférico (mucho más suaves
-  // que en el botón, porque la card es ~30× más grande — la misma
-  // intensidad sería ofensiva). Card y CTA se leen como una sola pieza
-  // energizada, no botón pegado encima de card neutra.
+  // El Pearl + lightning del CTA proyectado a escala de tarjeta: drops
+  // profundas + halos eléctricos azules. Sin insets rim (los quitamos
+  // junto al glass-shell para evitar doble-borde con el inner).
   box-shadow:
     // Drops atmosféricas — esta es la hero del set, más profundas que
     // las non-highlight
     0 60px 120px -32px rgb(6 9 26 / 0.92),
     0 24px 48px -16px rgb(6 9 26 / 0.65),
-    // Borde fino azul (reemplaza el ring lagoon flat de 2px)
+    // Borde fino azul + halos eléctricos concéntricos (atmosféricos, no
+    // chasis — viven fuera del card, no en su borde)
     0 0 0 1px rgb(160 210 255 / 0.45),
-    // Halo eléctrico — 3 capas concéntricas
     0 0 0 2px rgb(80 160 255 / 0.18),
     0 0 24px -4px rgb(80 160 255 / 0.28),
-    0 0 60px -16px rgb(40 120 255 / 0.40),
-    // Insets premium (mismo lenguaje que el non-highlight pero más vivo)
-    inset 0 1.5px 0 rgb(245 241 232 / 0.35),
-    inset 0 -1px 0 rgb(6 9 26 / 0.55),
-    inset 1px 0 0 rgb(245 241 232 / 0.06),
-    inset -1px 0 0 rgb(245 241 232 / 0.06),
-    // Tint azul interno desde el top — refuerza "luz cenital eléctrica"
-    inset 0 12px 32px -12px rgb(80 160 255 / 0.14);
+    0 0 60px -16px rgb(40 120 255 / 0.40);
 
   @media (min-width: 1024px) {
     opacity: 1;
@@ -239,7 +217,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  border-radius: var(--radius-squircle);
   // padding compactado de 1.75rem → 1.5rem (top/bottom): ahorra ~0.5rem
   // de altura sin que las cards se sientan cramped.
   padding: 1.5rem 1.5rem 1.25rem;

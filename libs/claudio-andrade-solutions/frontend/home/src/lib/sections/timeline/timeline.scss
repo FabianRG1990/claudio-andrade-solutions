@@ -269,45 +269,16 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-squircle);
-  padding: 0.5rem;
   isolation: isolate;
 
-  // Sombras atmosféricas multi-capa — el card flota físicamente a varios
-  // cm sobre el fondo. 3 niveles (alta diffusa + media + tight definition)
-  // imitan el comportamiento de luz real: una pieza física a cierta
-  // distancia produce tres tipos de sombra simultánea según la distancia.
-  // Override de la box-shadow del glass-shell, que era plana (1 layer).
+  // Sin glass-shell (quitado el doble-borde): el wrapper deja de ser un
+  // chasis visual y solo aporta las drop shadows atmosféricas que hacen
+  // flotar el card. El borde y el modelado viven exclusivamente en
+  // .tech-card__inner — un único borde visible.
   box-shadow:
     0 32px 64px -24px rgb(6 9 26 / 0.78),
     0 14px 28px -10px rgb(6 9 26 / 0.52),
-    0 4px 8px -2px rgb(6 9 26 / 0.36),
-    inset 0 0 0 1px rgb(245 241 232 / 0.06);
-}
-
-// Borde con gradient directional via mask-composite. Esto es lo que más
-// se "lee" como 3D real: un chamfer biselado donde la luz cenital golpea
-// el borde superior (specular brillante) y la base queda en penumbra
-// (deep blue). Sin esto el card se siente "pegado al fondo".
-.tech-card__edge {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    158deg,
-    rgb(255 255 255 / 0.35) 0%,
-    rgb(255 255 255 / 0.14) 18%,
-    rgb(255 255 255 / 0.05) 42%,
-    rgb(0 0 0 / 0.18) 72%,
-    rgb(0 0 0 / 0.32) 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
-  pointer-events: none;
-  z-index: 2;
+    0 4px 8px -2px rgb(6 9 26 / 0.36);
 }
 
 .tech-card__inner {
@@ -315,7 +286,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  border-radius: var(--radius-squircle);
   padding: 1.5rem 1.5rem 1.625rem;
   gap: 1rem;
 
