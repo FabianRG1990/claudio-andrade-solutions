@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -38,6 +45,42 @@ interface WhatsappContact {
 })
 export class Footer {
   protected readonly currentYear = new Date().getFullYear();
+
+  // Estado del popover de WhatsApp. Antes la apertura era CSS-only via
+  // `:hover` + `:focus-within`, pero en touch el segundo tap no cerraba el
+  // menu porque el button conservaba el foco y `:focus-within` seguía true.
+  // Ahora el click es la fuente de verdad — toggle limpio en cualquier
+  // dispositivo. El hover sigue funcionando en desktop (regla `:hover` en
+  // SCSS) como apertura sin click; el cierre por hover-out lo gestiona la
+  // misma regla CSS. En touch solo aplica el toggle.
+  protected readonly whatsappOpen = signal(false);
+  private readonly whatsappHub =
+    viewChild<ElementRef<HTMLElement>>('whatsappHub');
+
+  protected toggleWhatsapp(event: Event): void {
+    event.stopPropagation();
+    this.whatsappOpen.update((v) => !v);
+  }
+
+  protected closeWhatsapp(): void {
+    if (this.whatsappOpen()) this.whatsappOpen.set(false);
+  }
+
+  // Click fuera del hub cierra el popover. Click dentro (incluso en un
+  // contact link <a>) no cierra — el target del link es manejado por su
+  // propio comportamiento (abre WhatsApp en nueva pestaña).
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (!this.whatsappOpen()) return;
+    const hub = this.whatsappHub()?.nativeElement;
+    if (hub && hub.contains(event.target as Node)) return;
+    this.whatsappOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.closeWhatsapp();
+  }
 
   // Tres contactos de WhatsApp para el footer. Cada contacto se renderiza
   // dentro del popover como un card premium: avatar circular con inicial +

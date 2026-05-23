@@ -38,12 +38,18 @@
              ocupe poco espacio (el trigger es 40px) y se ancle al borde
              derecho del footer. El popover abre hacia arriba alineado al
              borde derecho del trigger. -->
-        <div class="footer__whatsapp-hub">
+        <div
+          class="footer__whatsapp-hub"
+          [class.is-open]="whatsappOpen()"
+          #whatsappHub
+        >
           <button
             type="button"
             class="footer__whatsapp-trigger"
             aria-haspopup="menu"
+            [attr.aria-expanded]="whatsappOpen()"
             aria-label="Mostrar contactos de WhatsApp"
+            (click)="toggleWhatsapp($event)"
           >
             <span class="footer__whatsapp-trigger-ring" aria-hidden="true"></span>
             <span class="footer__whatsapp-trigger-ring footer__whatsapp-trigger-ring--delay" aria-hidden="true"></span>

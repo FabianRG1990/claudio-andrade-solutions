@@ -266,10 +266,15 @@
   }
 }
 
-// Apertura: hover sobre el hub o foco dentro del hub. focus-within cubre
-// el caso teclado (tab al trigger) y el caso touch (tap = foco al button).
-.footer__whatsapp-hub:hover .footer__whatsapp-menu,
-.footer__whatsapp-hub:focus-within .footer__whatsapp-menu {
+// Apertura: solo via clase `.is-open` que aplica el componente al clickear
+// el trigger. Antes había también `:hover` (apertura desktop) + `:focus-within`
+// (touch/teclado), pero ambos peleaban con el toggle: el hover mantenía el
+// menu abierto aunque el click pusiera `is-open=false` (cursor sobre el icono
+// = hover true), y el focus-within hacía que el segundo tap en touch no
+// cerrara el menu (button conservaba foco). Ahora el click es la única
+// fuente de verdad — patrón estándar de menús (Linear/Slack/Gmail).
+// Teclado: Enter/Space sobre el button dispara `(click)` que hace el toggle.
+.footer__whatsapp-hub.is-open .footer__whatsapp-menu {
   opacity: 1;
   visibility: visible;
   transform: translateY(0) scale(1);
