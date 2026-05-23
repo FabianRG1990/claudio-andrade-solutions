@@ -7,7 +7,10 @@
 .timeline {
   position: relative;
   padding-block: clamp(4rem, 5vw + 3rem, 10rem);
-  border-top: 1px solid rgb(var(--foam) / 0.05);
+  // Section divider brass — antes foam/0.05 era una línea fantasma que no
+  // separaba nada. Brass tenue convierte cada transición de sección en un
+  // hairline editorial dorado, como las reglas de las revistas premium.
+  border-top: 1px solid rgb(var(--brass) / 0.18);
 }
 
 .timeline__container {
@@ -66,7 +69,9 @@
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
-  color: rgb(var(--foam) / 0.78);
+  // Italic editorial brass — coherente con section-heading__italic, marca
+  // la "voz editorial" del título de la sección como un acento dorado.
+  color: rgb(var(--brass) / 0.92);
 }
 
 .timeline__lead {
@@ -88,8 +93,13 @@
   gap: 2.5rem 1.5rem;
   margin: 0;
   padding-block: 2.5rem;
-  border-top: 1px solid rgb(var(--foam) / 0.08);
-  border-bottom: 1px solid rgb(var(--foam) / 0.08);
+  // Hairlines brass en lugar de foam invisible. Antes `foam/0.08` era una
+  // línea que prácticamente no existía — la zona de stats hero quedaba
+  // visualmente "sin marco". Brass/0.22 + brass/0.10 abajo enmarca la
+  // zona como una banda editorial: arriba más presente, abajo más sutil
+  // para que el ojo continúe hacia los hitos.
+  border-top: 1px solid rgb(var(--brass) / 0.22);
+  border-bottom: 1px solid rgb(var(--brass) / 0.10);
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(4, 1fr);
@@ -120,7 +130,13 @@
   font-weight: 400;
   line-height: 1;
   letter-spacing: var(--tracking-tight);
-  color: rgb(var(--foam));
+  // Color brass — cifras grandes son el foco visual de la zona stats hero.
+  // Antes foam blanco puro las hacía "altas pero anónimas"; brass apagado
+  // las convierte en señales editoriales con peso de marca. Patrón usado
+  // por Stripe, Apple investor relations y editoriales de lujo para cifras
+  // que tienen que recordarse. NO usar gold flashy — el champagne #C6A15B
+  // mantiene la quietud premium.
+  color: rgb(var(--brass));
   font-variant-numeric: tabular-nums;
   order: 1;
 }
@@ -232,7 +248,11 @@
   font-size: clamp(1.625rem, 1.5rem + 0.55vw, 1.875rem);
   line-height: 1;
   letter-spacing: var(--tracking-tight);
-  color: rgb(var(--foam));
+  // Año en brass — el año es la marca temporal de cada hito, el ojo lo
+  // busca primero al escanear la línea de tiempo. Brass apagado le da
+  // protagonismo editorial sin gritar. Mismo color que las cifras de
+  // stats hero arriba — coherencia interna de la sección.
+  color: rgb(var(--brass));
   font-variant-numeric: tabular-nums;
 }
 
@@ -290,39 +310,50 @@
   padding: 1.5rem 1.5rem 1.625rem;
   gap: 1rem;
 
-  // Surface 3D estática — opaca cool con 5-layer radial light modeling.
-  // Override de glass-core, que era foam-translúcido 0.55-0.80 (dejaba
-  // bleed del bg animado → "tierroso"). Acá la superficie es 96-99 %
-  // opaca y la luz vive en gradients superpuestos: key cenital + dos
-  // fills laterales + ambient occlusion inferior + base directional.
+  // LUZ DISCRETA — modelado direccional top-left bajado ~50% del original.
+  // Mismo patrón que engagement-card e info-row. Specular 14%, key light
+  // 4%, fill 2%. Suficiente para material físico, no destello.
   background:
-    // Key light cenital (centro-arriba) — luz principal cae sobre el card
-    radial-gradient(ellipse 125% 50% at 50% -8%, rgb(255 255 255 / 0.10) 0%, rgb(255 255 255 / 0.025) 32%, transparent 62%),
-    // Fill left top — ambient suave foam, simula bounce light izquierdo
-    radial-gradient(ellipse 65% 38% at 12% 0%, rgb(255 255 255 / 0.055) 0%, transparent 50%),
-    // Fill right top — ambient cool, bounce light derecho con tinte azul
-    radial-gradient(ellipse 65% 38% at 88% 0%, rgb(180 210 240 / 0.05) 0%, transparent 50%),
-    // Ambient occlusion bottom — la "mesa" debajo del card oscurece la base
-    radial-gradient(ellipse 100% 50% at 50% 105%, rgb(0 0 0 / 0.42) 0%, transparent 64%),
-    // Base directional 168° — diagonal cool, abyss más profundo abajo-derecha
-    linear-gradient(168deg, rgb(14 20 44 / 0.97) 0%, rgb(10 14 32 / 0.98) 60%, rgb(6 9 22 / 0.99) 100%);
+    radial-gradient(
+      ellipse 18% 14% at 22% 6%,
+      rgb(255 255 255 / 0.14) 0%,
+      rgb(255 255 255 / 0.04) 40%,
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 110% 42% at 38% -6%,
+      rgb(245 232 200 / 0.04) 0%,
+      rgb(245 232 200 / 0.01) 35%,
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 55% 32% at 86% 8%,
+      rgb(180 210 240 / 0.02) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 85% 65% at 75% 108%,
+      rgb(0 0 0 / 0.48) 0%,
+      rgb(0 0 0 / 0.18) 45%,
+      transparent 70%
+    ),
+    linear-gradient(162deg, rgb(var(--shoal) / 0.96) 0%, rgb(var(--tide) / 0.98) 38%, rgb(var(--ink) / 0.99) 100%);
 
-  // Bevels inset — el borde del inner se "extruye": specular rim top
-  // brillante (luz cenital golpea el filo), luz que sangra desde el borde
-  // hacia adentro, ambient occlusion en la base, definition oscura
-  // inferior y rim suaves laterales.
+  // Top rim asimétrico discreto + side edges + ring brass.
   box-shadow:
-    inset 0 1.5px 0 rgb(255 255 255 / 0.22),
-    inset 0 12px 24px -12px rgb(255 255 255 / 0.07),
-    inset 0 -22px 44px -18px rgb(0 0 0 / 0.50),
-    inset 0 -1px 0 rgb(0 0 0 / 0.42),
-    inset 1px 0 0 rgb(255 255 255 / 0.04),
-    inset -1px 0 0 rgb(255 255 255 / 0.04);
+    inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.20),
+    inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.05),
+    inset 0 14px 28px -14px rgb(255 255 255 / 0.05),
+    inset 0 -28px 56px -22px rgb(0 0 0 / 0.58),
+    inset 0 -1px 0 rgb(0 0 0 / 0.48),
+    inset 1px 0 0 rgb(255 255 255 / 0.08),
+    inset -1px 0 0 rgb(0 0 0 / 0.16),
+    0 0 0 1px rgb(var(--brass) / 0.10);
 
-  // Noise del glass-core atenuado — sobre la surface opaca compite con el
-  // modelado de luz. Lo dejamos en mínimo (anti-banding) sin que se note.
+  // Noise visible — antes 0.015 era invisible. 0.045 le da textura física
+  // que diferencia "render" de "objeto bajo luz".
   &::before {
-    opacity: 0.015;
+    opacity: 0.045;
   }
 }
 
@@ -394,7 +425,10 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.55);
+  // Categoría tech (FRONTEND / BACKEND / 3D / DATA) en brass — antes foam
+  // tenue se perdía. Brass las eleva a marcadores editoriales tipo magazine
+  // spread. Coherente con case-row__zone y page-header__capitulo.
+  color: rgb(var(--brass));
 }
 
 // Accent dot antes del category — vincula la card al halo cromático.

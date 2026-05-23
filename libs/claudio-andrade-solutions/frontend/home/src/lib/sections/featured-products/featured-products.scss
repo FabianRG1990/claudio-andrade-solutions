@@ -108,15 +108,20 @@
   isolation: isolate;
 
   // Sombras atmosféricas multi-capa — el card flota físicamente sobre el
-  // fondo. Override de la single-layer del glass-shell.
+  // fondo. Ring interior 1px brass tenue + ring foam tenue — marco premium
+  // visible que coordina con el resto del sistema brass del sitio.
   box-shadow:
     0 32px 64px -24px rgb(6 9 26 / 0.78),
     0 14px 28px -10px rgb(6 9 26 / 0.52),
     0 4px 8px -2px rgb(6 9 26 / 0.36),
-    inset 0 0 0 1px rgb(245 241 232 / 0.06);
+    inset 0 0 0 1px rgb(245 241 232 / 0.08),
+    0 0 0 1px rgb(var(--brass) / 0.16);
 
-  // Chamfer biselado via mask-composite — specular top-left → deep
-  // bottom-right. Lo que más "lee" como 3D real.
+  // Chamfer biselado via mask-composite — antes blanco-puro→negro-puro
+  // genérico que se leía como borde de PowerPoint. Ahora brass shimmer
+  // top-left → cream → neutral → deep shadow. Patrón Luxe Hotel Lobby:
+  // luz cálida cae sobre marco metálico, profundidad al bottom-right.
+  // Es lo que separa "div con border" de "marco de cristal premium".
   &::after {
     content: '';
     position: absolute;
@@ -124,12 +129,13 @@
     border-radius: inherit;
     padding: 1px;
     background: linear-gradient(
-      158deg,
-      rgb(255 255 255 / 0.35) 0%,
-      rgb(255 255 255 / 0.14) 18%,
-      rgb(255 255 255 / 0.05) 42%,
-      rgb(0 0 0 / 0.18) 72%,
-      rgb(0 0 0 / 0.32) 100%
+      155deg,
+      rgb(var(--brass) / 0.85) 0%,           // brass shimmer top-left
+      rgb(232 213 175 / 0.45) 14%,           // brass→cream transición
+      rgb(255 255 255 / 0.18) 32%,           // neutral mid
+      rgb(255 255 255 / 0.05) 52%,           // fade
+      rgb(0 0 0 / 0.22) 78%,                 // shadow deepening
+      rgb(0 0 0 / 0.38) 100%                 // deep bottom-right
     );
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,

@@ -22,7 +22,12 @@
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
-  color: rgb(var(--foam) / 0.85);
+  // Italic editorial en brass tenue — el span italic de cada heading es la
+  // "voz editorial" del título (el subtítulo poético dentro del headline).
+  // Antes foam con opacidad reducida = invisible contra el resto foam.
+  // Brass apagado lo separa tipográficamente y crea contraste real entre
+  // la voz "marca" (foam macizo) y la voz "editorial" (brass apagado).
+  color: rgb(var(--brass) / 0.92);
 }
 
 .section-heading__description {

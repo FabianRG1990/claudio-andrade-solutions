@@ -320,7 +320,10 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  // Gap subido de 2px a 6px — antes los items se pegaban entre sí, ahora
+  // respiran. Lo mínimo para que la lista deje de leerse como bloque
+  // monolítico y pase a leerse como items separados.
+  gap: 0.375rem;
 }
 
 // Card premium del item — layout horizontal: avatar (38px) | nombre/role
@@ -331,8 +334,12 @@
 .footer__whatsapp-menu-item {
   display: flex;
   align-items: center;
-  gap: 0.6875rem;
-  padding: 0.4375rem 0.5rem;
+  // Gap avatar↔meta subido de 11px a 13px — más aire entre el círculo
+  // verde y el nombre.
+  gap: 0.8125rem;
+  // Padding interno subido — antes 7px/8px asfixiaba, ahora 9px/10px
+  // da margen táctil + visual al item.
+  padding: 0.5625rem 0.625rem;
   border-radius: 10px;
   color: rgb(var(--foam) / 0.92);
   font-family: var(--font-display);
@@ -444,7 +451,9 @@
 .footer__whatsapp-menu-item-meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  // Gap nombre↔rol subido de 2px a 4px — antes los dos labels se tocaban,
+  // ahora respira el descender del nombre con el cap height del rol.
+  gap: 4px;
   min-width: 0;
   flex: 1;
 }
@@ -452,11 +461,15 @@
 .footer__whatsapp-menu-item-name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  // Nombre: 13→14px, weight 600→500 (medium pesa menos comprimido a este
+  // tamaño), letter-spacing -0.005em (NEGATIVO, comprimía) → 0, line-height
+  // 1.2→1.3. Cuatro cambios que destensan el nombre en conjunto sin
+  // perder la jerarquía respecto al rol italic debajo.
+  font-size: 0.875rem;
+  font-weight: 500;
   color: rgb(var(--foam));
-  letter-spacing: -0.005em;
-  line-height: 1.2;
+  letter-spacing: 0;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -465,12 +478,15 @@
 .footer__whatsapp-menu-item-role {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 0.6875rem;
+  // Rol: 11→12px (a 11px italic + small se lee mate), letter-spacing
+  // 0 → 0.005em (positivo abre apenas el italic), line-height 1.3→1.45
+  // — el italic premium necesita más aire vertical que el regular.
+  font-size: 0.75rem;
   font-weight: 400;
   font-style: italic;
   color: rgb(var(--foam) / 0.58);
-  letter-spacing: 0;
-  line-height: 1.3;
+  letter-spacing: 0.005em;
+  line-height: 1.45;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

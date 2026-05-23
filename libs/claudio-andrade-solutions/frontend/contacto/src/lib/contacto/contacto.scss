@@ -109,7 +109,8 @@
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
-  color: rgb(var(--foam) / 0.85);
+  // Italic editorial brass — coherente con todos los títulos italics del sitio.
+  color: rgb(var(--brass) / 0.92);
 }
 
 // ─── Body: form + info ────────────────────────────────────────────────────

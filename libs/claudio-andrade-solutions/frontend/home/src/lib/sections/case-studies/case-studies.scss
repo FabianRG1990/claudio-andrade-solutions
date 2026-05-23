@@ -93,12 +93,18 @@
   padding: 0.5rem;
   isolation: isolate;
 
+  // Ring brass + ring foam — marco premium visible, no borde fantasma.
+  // Mismo patrón que product-card para coherencia entre cards de imagen.
   box-shadow:
     0 32px 64px -24px rgb(6 9 26 / 0.78),
     0 14px 28px -10px rgb(6 9 26 / 0.52),
     0 4px 8px -2px rgb(6 9 26 / 0.36),
-    inset 0 0 0 1px rgb(245 241 232 / 0.06);
+    inset 0 0 0 1px rgb(245 241 232 / 0.08),
+    0 0 0 1px rgb(var(--brass) / 0.16);
 
+  // Chamfer brass — marco metálico cálido top-left, profundidad bottom-right.
+  // Coherente con product-card. Lo que el ojo lee como "marco de revista
+  // premium" en lugar de "div con border genérico".
   &::after {
     content: '';
     position: absolute;
@@ -106,12 +112,13 @@
     border-radius: inherit;
     padding: 1px;
     background: linear-gradient(
-      158deg,
-      rgb(255 255 255 / 0.35) 0%,
-      rgb(255 255 255 / 0.14) 18%,
-      rgb(255 255 255 / 0.05) 42%,
-      rgb(0 0 0 / 0.18) 72%,
-      rgb(0 0 0 / 0.32) 100%
+      155deg,
+      rgb(var(--brass) / 0.85) 0%,
+      rgb(232 213 175 / 0.45) 14%,
+      rgb(255 255 255 / 0.18) 32%,
+      rgb(255 255 255 / 0.05) 52%,
+      rgb(0 0 0 / 0.22) 78%,
+      rgb(0 0 0 / 0.38) 100%
     );
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
@@ -306,7 +313,11 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--lagoon));
+  // Brass — el "zona" del case study es el sello editorial premium del
+  // bloque (E-COMMERCE / SAAS / PLATAFORMA). Antes en lagoon cyan competía
+  // por temperatura con el resto del lake; brass apagado le da peso
+  // editorial sin saltar a la vista como acento eléctrico.
+  color: rgb(var(--brass));
 }
 
 .case-row__title {
@@ -370,5 +381,8 @@
   line-height: 1;
   letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
-  color: rgb(var(--foam));
+  // Brass — números grandes son focos visuales. Mismo color que las cifras
+  // de timeline stats hero y los años de los hitos. Coherencia editorial
+  // total: todo número que el ojo busca en el sitio brilla brass apagado.
+  color: rgb(var(--brass));
 }

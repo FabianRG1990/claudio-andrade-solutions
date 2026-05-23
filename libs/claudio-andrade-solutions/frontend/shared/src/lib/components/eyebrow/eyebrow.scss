@@ -46,3 +46,20 @@
   border-color: rgb(var(--bioluminescent) / 0.25);
   background: rgb(var(--bioluminescent) / 0.05);
 }
+
+// Brass — premium marker. Usar en eyebrows de secciones donde se quiere
+// señalar "esto es lo destacado / premium" (e.g. CAPÍTULO 03 pricing,
+// case study marker, agenda VIP). El brass apagado + el upper-case tracking
+// del eyebrow se leen como sello editorial sin gritar.
+.eyebrow[data-tone='brass'] {
+  color: rgb(232 213 175);
+  border-color: rgb(var(--brass) / 0.42);
+  background: rgb(var(--brass) / 0.08);
+}
+
+// Electric — para eyebrows que marcan acción / energía / live status.
+.eyebrow[data-tone='electric'] {
+  color: rgb(180 220 255);
+  border-color: rgb(var(--electric) / 0.42);
+  background: rgb(var(--electric) / 0.08);
+}

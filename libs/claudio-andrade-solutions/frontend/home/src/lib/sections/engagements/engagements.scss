@@ -42,7 +42,8 @@
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
-  color: rgb(var(--foam) / 0.8);
+  // Italic editorial brass — mismo idioma que section-heading__italic.
+  color: rgb(var(--brass) / 0.92);
 }
 
 .engagements__lead {
@@ -195,12 +196,17 @@
   // Direccionalidad 155deg: top-left brilla (specular bright white-blue),
   // bottom-right cae a azul profundo. Esto es lo que separa un "tinted
   // ring" de un "physical object under directional light".
+  //
+  // Default (cards no-highlight): luz fría specular → azul profundo. El
+  // highlight tiene su propio override más abajo con tinte brass arriba —
+  // patrón "Luxe Hotel Lobby": luz cálida cayendo sobre cristal frío,
+  // signal premium clásico (navy + brass restrained).
   padding: 1.5px;
   background: linear-gradient(
     155deg,
     rgb(220 235 255 / 0.95) 0%,
     rgb(160 210 255 / 0.62) 20%,
-    rgb(80 160 255 / 0.36) 48%,
+    rgb(var(--electric) / 0.36) 48%,
     rgb(30 70 160 / 0.20) 75%,
     rgb(20 30 70 / 0.12) 100%
   );
@@ -210,6 +216,24 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0.95;
+}
+
+// Override del marco del card destacado — brass shimmer top-left + electric
+// abajo. Es el cambio visual que diferencia "tarjeta de precio premium" de
+// "tarjeta de precio con borde azul". Las 4 referencias premium consultadas
+// (Brass Observatory, Luxe Hotel Lobby, OWDT Millennium, Linear) coinciden:
+// navy + brass apagado en hairlines y trim, electric (o accent equivalente)
+// para acción. Acá el brass es un 5-15% del píxel del marco, no más.
+.engagement-card--highlight .engagement-card__overlay-edge {
+  background: linear-gradient(
+    155deg,
+    rgb(var(--brass) / 0.92) 0%,            // brass specular top-left
+    rgb(230 215 180 / 0.55) 14%,            // brass→cream transición cálida
+    rgb(255 255 255 / 0.32) 32%,            // neutral mid-top
+    rgb(var(--electric) / 0.28) 58%,        // electric vuelve en bottom
+    rgb(30 70 160 / 0.18) 80%,
+    rgb(20 30 70 / 0.12) 100%
+  );
 }
 
 .engagement-card__inner {
@@ -222,69 +246,88 @@
   // de altura sin que las cards se sientan cramped.
   padding: 1.5rem 1.5rem 1.25rem;
 
-  // Override total del background del glass-core. El default leans
-  // 55-80% opacidad sobre abyss + foam wash arriba — la mezcla con el
-  // bg de la página (niebla + agua + fish) se leía como "muddy beige
-  // tinted box" (lo que el user llamó "tierroso/chafa"). Replanteo:
-  // surface opaco frío + light modeling con 3 fuentes radiales — key
-  // cenital + 2 fills laterales — + AO inferior + specular bevel
-  // arriba. Real obsidian glass premium, no tinted box.
+  // Override del background del glass-core — PREMIUM GLASS real.
+  //
+  // Antes el modelado de luz era "PowerPoint": key cenital simétrica + dos
+  // fills idénticos en top-left/top-right + AO radial centrado = forma
+  // geométrica con relleno, no superficie física bajo luz. Patrón "cartón".
+  //
+  // Ahora: una sola FUENTE de luz dominante diagonal arriba-izquierda
+  // (consistente con cómo el ojo lee dirección de luz en occidente: top-left
+  // primero). Eso genera:
+  //   • Key light asimétrica con specular spot brillante puntual
+  //   • Fill secundario más débil top-right (rebote, no luz directa)
+  //   • Ambient occlusion DIAGONAL hacia bottom-right (consistente con la luz)
+  //   • Tinte sutil brass apagado en el upper mid (luz cálida real, no
+  //     blanco puro neón)
+  //   • Stops asimétricos (0/22/45/72/100) — el cerebro lee 0/60/100 como
+  //     "diseño matemático", los stops naturales como "objeto físico"
+  // LUZ DISCRETA — restauramos el modelado direccional top-left pero
+  // bajado ~50% del nivel original. El usuario quería luz pero discreta:
+  // que se sienta material físico bajo luz suave, no destello dramático.
+  // Specular 32→14%, key light 8→4%, fill 4→2%.
   background:
-    // Specular key light — luz cenital tight, ~30% del card
+    // 1. Specular spot top-left — discreto (14% en lugar de 32%)
     radial-gradient(
-      ellipse 130% 50% at 50% -8%,
-      rgb(255 255 255 / 0.11) 0%,
-      rgb(255 255 255 / 0.028) 30%,
-      transparent 60%
+      ellipse 18% 14% at 22% 6%,
+      rgb(255 255 255 / 0.14) 0%,
+      rgb(255 255 255 / 0.04) 40%,
+      transparent 75%
     ),
-    // Fill light esquina top-left (blanco neutro)
+    // 2. Key light brass apagado — discreto (4% en lugar de 8%)
     radial-gradient(
-      ellipse 65% 38% at 12% 0%,
-      rgb(255 255 255 / 0.07) 0%,
-      transparent 50%
+      ellipse 110% 42% at 38% -6%,
+      rgb(245 232 200 / 0.04) 0%,
+      rgb(245 232 200 / 0.01) 35%,
+      transparent 62%
     ),
-    // Fill light esquina top-right (leve cool cast — refleja ambient)
+    // 3. Fill secundario top-right — discreto (2% en lugar de 4%)
     radial-gradient(
-      ellipse 65% 38% at 88% 0%,
-      rgb(180 210 240 / 0.06) 0%,
-      transparent 50%
+      ellipse 55% 32% at 86% 8%,
+      rgb(180 210 240 / 0.02) 0%,
+      transparent 55%
     ),
-    // Ambient occlusion inferior — anchor visual al page
+    // 4. AO direccional bottom-right — intacto (da volumen)
     radial-gradient(
-      ellipse 100% 55% at 50% 105%,
-      rgb(0 0 0 / 0.42) 0%,
-      transparent 65%
+      ellipse 85% 65% at 75% 108%,
+      rgb(0 0 0 / 0.48) 0%,
+      rgb(0 0 0 / 0.18) 45%,
+      transparent 70%
     ),
-    // Surface — abyss saturado, mucho más opaco que el glass-core
-    // default (que dejaba pasar 20-45% del bg page). 95-99% opacity
-    // significa que el backdrop-blur sigue activo en los márgenes
-    // pero el surface es macizo y no se lee tinted.
+    // 5. Surface base — ladder shoal→tide→ink
     linear-gradient(
-      170deg,
-      rgb(16 22 42 / 0.95) 0%,
-      rgb(10 14 30 / 0.97) 50%,
-      rgb(6 10 22 / 0.99) 100%
+      162deg,
+      rgb(var(--shoal) / 0.96) 0%,
+      rgb(var(--tide) / 0.98) 38%,
+      rgb(var(--ink) / 0.99) 100%
     );
 
+  // Box-shadow con top rim discreto — bright 42→20%, shadow 10→5%.
+  // Inner glow del top 10→5%. Side edges restored a su nivel original.
   box-shadow:
-    // Specular bevel arriba — 2px tight rim donde la luz cenital
-    // toca el borde superior del cristal
-    inset 0 1.5px 0 rgb(255 255 255 / 0.22),
+    // Top rim asimétrico discreto — bright en lit-side, dim en shadow-side
+    inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.20),
+    inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.05),
     // Soft inner glow del top — extiende la specular hacia abajo
-    inset 0 12px 24px -12px rgb(255 255 255 / 0.10),
-    // Ambient inner shadow inferior — refuerza profundidad
-    inset 0 -24px 48px -20px rgb(0 0 0 / 0.55),
-    inset 0 -1px 0 rgb(0 0 0 / 0.45),
-    // 1px lit edges laterales — "el filo del vidrio captura luz"
-    inset 1px 0 0 rgb(255 255 255 / 0.05),
-    inset -1px 0 0 rgb(255 255 255 / 0.05);
+    inset 0 14px 28px -14px rgb(255 255 255 / 0.05),
+    // Ambient inner shadow inferior — define el filo bajo (intacto)
+    inset 0 -28px 56px -22px rgb(0 0 0 / 0.58),
+    inset 0 -1px 0 rgb(0 0 0 / 0.48),
+    // Side edges asimétricos — lit-left bright, shadow-right dark
+    inset 1px 0 0 rgb(255 255 255 / 0.08),
+    inset -1px 0 0 rgb(0 0 0 / 0.16),
+    // Trim brass tenue exterior — coordinación con el sistema
+    0 0 0 1px rgb(var(--brass) / 0.10);
 
-  // Noise del glass-core default es overlay-blend a 0.035 — sobre
-  // surfaces opacos cool se lee como ruido sucio. Lo bajo aún más
-  // para que sea apenas perceptible (mantiene la textura de cristal
-  // real sin contaminar el modelado de luz).
+  // Noise visible — antes 0.015 era ruido invisible. 0.045 le da textura
+  // perceptible de cristal real (lo que diferencia "render" de "objeto
+  // físico"). Mismo nivel que el glass-core default que la decisión
+  // anterior había bajado porque "se leía sucio" — pero el problema era
+  // que la surface era translúcida y el noise se mezclaba con el bg
+  // animado. Acá la surface es opaca (96-99%), el noise queda contenido
+  // dentro de la card.
   &::before {
-    opacity: 0.015;
+    opacity: 0.045;
   }
 }
 
@@ -378,7 +421,7 @@
   align-items: center;
   gap: 0.375rem;
   border-radius: 9999px;
-  background: rgb(80 160 255 / 0.18);
+  background: rgb(var(--electric) / 0.18);
   padding: 0.375rem 0.75rem;
   font-size: 10px;
   font-weight: 600;
@@ -387,7 +430,19 @@
   color: rgb(180 220 255);
   box-shadow:
     inset 0 0 0 1px rgb(160 210 255 / 0.45),
-    0 0 20px -2px rgb(80 160 255 / 0.40);
+    0 0 20px -2px rgb(var(--electric) / 0.40);
+}
+
+// Override del tag del card destacado: brass apagado en lugar de electric.
+// Es el "marker" textual que dice "este es el premium" sin necesidad de
+// copy más explícito. La pill brass + el frame brass del overlay-edge
+// trabajan juntos como signal coherente.
+.engagement-card--highlight .engagement-card__tag {
+  background: rgb(var(--brass) / 0.14);
+  color: rgb(232 213 175);  // brass + cream lift, foam para legibilidad
+  box-shadow:
+    inset 0 0 0 1px rgb(var(--brass) / 0.42),
+    0 0 20px -2px rgb(var(--brass) / 0.32);
 }
 
 .engagement-card__tag-pulse {
@@ -395,8 +450,14 @@
   height: 0.375rem;
   border-radius: 9999px;
   background: rgb(180 220 255);
-  box-shadow: 0 0 8px 2px rgb(80 160 255 / 0.55);
+  box-shadow: 0 0 8px 2px rgb(var(--electric) / 0.55);
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+// Pulse dot del card destacado matchea el tag: brass apagado.
+.engagement-card--highlight .engagement-card__tag-pulse {
+  background: rgb(232 213 175);
+  box-shadow: 0 0 8px 2px rgb(var(--brass) / 0.50);
 }
 
 .engagement-card__price-row {
@@ -477,55 +538,61 @@
   }
 }
 
+// Hairline brass que separa el bloque del precio de la lista de features.
+// El default (cards no-highlight) es foam tenue; antes el highlight usaba
+// electric light, ahora pasa a brass. Es el tercer punto donde el brass se
+// "lee" en el highlight: marco (top-left), tag (pill), separator (hairline).
+// Esos tres puntos triangulan visualmente el card como premium sin saturar.
 .engagement-card--highlight .engagement-card__features {
-  border-top-color: rgb(160 210 255 / 0.22);
+  border-top-color: rgb(var(--brass) / 0.32);
 }
 
-// Highlight inner — mismo modelado de luz que el non-highlight pero con
-// cast azul eléctrico en las fuentes radiales + aurora interna concentrada
-// en el upper-third (donde está el precio). Es "obsidian glass iluminado
-// por dentro con electricidad azul", no "tinted box".
+// Highlight inner — luz discreta. Mismo patrón que el non-highlight pero
+// con cast cool azul (en lugar de blanco neutro) + aurora interna sutil
+// concentrada en el upper-third donde está el precio. Todo bajado ~50%
+// del nivel original (key light azul 14→7%, fills 8/7→4/3.5%, aurora 12→6%).
 .engagement-card--highlight .engagement-card__inner {
   background:
-    // Key light con cast azul-blanco
+    // Key light cool discreto (7% en lugar de 14%)
     radial-gradient(
       ellipse 130% 50% at 50% -8%,
-      rgb(220 235 255 / 0.14) 0%,
-      rgb(140 180 255 / 0.05) 30%,
+      rgb(220 235 255 / 0.07) 0%,
+      rgb(140 180 255 / 0.025) 30%,
       transparent 60%
     ),
-    // Fill top-left azul
+    // Fill top-left azul discreto (4% en lugar de 8%)
     radial-gradient(
       ellipse 65% 38% at 12% 0%,
-      rgb(160 200 255 / 0.08) 0%,
+      rgb(160 200 255 / 0.04) 0%,
       transparent 50%
     ),
-    // Fill top-right cool
+    // Fill top-right cool discreto (3.5% en lugar de 7%)
     radial-gradient(
       ellipse 65% 38% at 88% 0%,
-      rgb(180 210 240 / 0.07) 0%,
+      rgb(180 210 240 / 0.035) 0%,
       transparent 50%
     ),
-    // Aurora interna — glow azul difuso en el área del precio
+    // Aurora interna discreta — glow azul difuso en el área del precio (6%)
     radial-gradient(
       ellipse 75% 50% at 50% 28%,
-      rgb(80 160 255 / 0.12) 0%,
-      rgb(40 120 255 / 0.05) 35%,
+      rgb(80 160 255 / 0.06) 0%,
+      rgb(40 120 255 / 0.025) 35%,
       transparent 70%
     ),
-    // AO inferior — misma profundidad que el non-highlight
+    // AO direccional bottom-right
     radial-gradient(
-      ellipse 100% 55% at 50% 105%,
+      ellipse 85% 65% at 75% 108%,
       rgb(0 0 0 / 0.42) 0%,
-      transparent 65%
+      rgb(0 0 0 / 0.14) 45%,
+      transparent 70%
     ),
-    // Surface — abyss con tinte cool blue (no demasiado, sólo lo
-    // suficiente para que se sienta "electrificado por dentro")
+    // Surface highlight — un peldaño más claro que el non-highlight con
+    // tinte cool sutil
     linear-gradient(
-      170deg,
-      rgb(16 26 56 / 0.95) 0%,
-      rgb(10 18 44 / 0.97) 50%,
-      rgb(8 14 36 / 0.99) 100%
+      162deg,
+      rgb(36 50 120 / 0.94) 0%,
+      rgb(24 36 90 / 0.97) 38%,
+      rgb(16 24 64 / 0.99) 100%
     );
 }
 
@@ -634,19 +701,22 @@
 // esa tarjeta "llama" al click. Otros .glass-button del sitio mantienen
 // el lightning default del mixin.
 .engagement-card__cta.glass-button {
+  // Pearl murmullado — sin lightning (este override es para los CTAs
+  // non-highlight de pricing), insets bajados consistentes con el
+  // .glass-button base (0.16→0.09, 0.25→0.13).
   box-shadow:
-    inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.16),
+    inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.09),
     inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-    inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.25),
+    inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.13),
     0 3rem 3rem rgb(0 0 0 / 0.30),
     0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       box-shadow:
-        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.22),
+        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.13),
         inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.35),
+        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.19),
         0 3rem 3rem rgb(0 0 0 / 0.30),
         0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
     }
@@ -654,9 +724,9 @@
 
   &:active {
     box-shadow:
-      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.26),
+      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.16),
       inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.80),
-      inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.20),
+      inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.10),
       0 3rem 3rem rgb(0 0 0 / 0.30),
       0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
   }
@@ -670,20 +740,29 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background-color: #080808;
-  color: rgb(245 241 232 / 0.85);
+  // Pearl NAVY — mismo material que el .glass-button principal.
+  background-color: rgb(8 11 26);
+  background-image: linear-gradient(
+    180deg,
+    rgb(14 18 38) 0%,
+    rgb(8 11 26) 50%,
+    rgb(4 6 18) 100%
+  );
+  color: rgb(245 241 232 / 0.92);
 
   box-shadow:
-    // Pearl inset stack
-    inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.16),
+    // Pearl inset stack MURMULLADO (0.16→0.09, 0.25→0.13) — reflejos
+    // internos discretos, no marcando la forma del botón.
+    inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.09),
     inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-    inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.25),
-    // Lightning multi-layer calibrado — aurora discreta, no neon agresivo.
-    0 0 0 1px rgb(160 210 255 / 0.42),
-    0 0 0.5rem rgb(140 190 255 / 0.22),
-    0 0 1.1rem rgb(80 160 255 / 0.28),
-    0 0 1.9rem rgb(40 120 255 / 0.28),
-    0 0 2.8rem rgb(20 90 255 / 0.16),
+    inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.13),
+    // Brass ring + primer halo (luz cálida exterior) + electric halos
+    // profundos (energía interior).
+    0 0 0 1px rgb(var(--brass) / 0.55),
+    0 0 0.5rem rgb(232 213 175 / 0.22),
+    0 0 1.1rem rgb(var(--electric) / 0.26),
+    0 0 1.9rem rgb(var(--electric) / 0.26),
+    0 0 2.8rem rgb(20 90 255 / 0.14),
     // Drop shadow Pearl
     0 3rem 3rem rgb(0 0 0 / 0.30),
     0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
@@ -707,19 +786,19 @@
     transition: transform 300ms ease;
   }
 
-  // Pearl cresta ::after
+  // Pearl cresta ::after MURMULLADA (0.45→0.22, 0.14→0.07, bottom 18→30px).
   &::after {
     content: '';
     position: absolute;
     left: 12px;
     right: 12px;
     top: 6px;
-    bottom: 18px;
+    bottom: 30px;
     border-radius: 8px 8px 0 0;
-    box-shadow: inset 0 10px 8px -10px rgb(255 255 255 / 0.45);
+    box-shadow: inset 0 10px 8px -10px rgb(255 255 255 / 0.22);
     background: linear-gradient(
       180deg,
-      rgb(255 255 255 / 0.14) 0%,
+      rgb(255 255 255 / 0.07) 0%,
       rgb(0 0 0 / 0) 50%,
       rgb(0 0 0 / 0) 100%
     );
@@ -735,18 +814,20 @@
     z-index: 1;
   }
 
-  // Hover: aurora se intensifica con elegancia, no enciende letrero.
+  // Hover: Pearl insets murmullados (0.11 / 0.16), halos brass+electric
+  // exteriores sí se intensifican — el botón responde con aura, no con
+  // reflejos internos.
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       box-shadow:
-        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.18),
+        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.11),
         inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.28),
-        0 0 0 1px rgb(170 215 255 / 0.55),
-        0 0 0.7rem rgb(150 200 255 / 0.32),
-        0 0 1.3rem rgb(100 170 255 / 0.40),
-        0 0 2.3rem rgb(50 130 255 / 0.40),
-        0 0 3.4rem rgb(25 95 255 / 0.24),
+        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.16),
+        0 0 0 1px rgb(var(--brass) / 0.72),
+        0 0 0.7rem rgb(232 213 175 / 0.34),
+        0 0 1.3rem rgb(var(--electric) / 0.38),
+        0 0 2.3rem rgb(var(--electric) / 0.38),
+        0 0 3.4rem rgb(25 95 255 / 0.22),
         0 3rem 3rem rgb(0 0 0 / 0.30),
         0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
 
@@ -760,17 +841,19 @@
     }
   }
 
+  // Active: Pearl insets murmullados (0.14 / 0.10) — al hundirse el botón
+  // se siente comprimido, no iluminado por dentro.
   &:active {
     transform: translateY(4px);
     box-shadow:
-      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.24),
+      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.14),
       inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.80),
-      inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.20),
-      0 0 0 1px rgb(160 210 255 / 0.48),
-      0 0 0.5rem rgb(140 190 255 / 0.26),
-      0 0 1.1rem rgb(80 160 255 / 0.32),
-      0 0 1.9rem rgb(40 120 255 / 0.32),
-      0 0 2.8rem rgb(20 90 255 / 0.20),
+      inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.10),
+      0 0 0 1px rgb(var(--brass) / 0.62),
+      0 0 0.5rem rgb(232 213 175 / 0.26),
+      0 0 1.1rem rgb(var(--electric) / 0.32),
+      0 0 1.9rem rgb(var(--electric) / 0.32),
+      0 0 2.8rem rgb(20 90 255 / 0.18),
       0 3rem 3rem rgb(0 0 0 / 0.30),
       0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
     transition: transform 120ms ease;
@@ -797,13 +880,21 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background-color: #080808;
+  // Pearl NAVY — icon-pill coherente con el CTA highlight principal.
+  background-color: rgb(8 11 26);
+  background-image: linear-gradient(
+    180deg,
+    rgb(14 18 38) 0%,
+    rgb(8 11 26) 50%,
+    rgb(4 6 18) 100%
+  );
   color: rgb(245 241 232 / 0.95);
 
+  // Insets murmullados (0.16→0.10, 0.25→0.13) coherentes con el CTA padre.
   box-shadow:
-    inset 0 0.2rem 0.4rem rgb(255 255 255 / 0.16),
+    inset 0 0.2rem 0.4rem rgb(255 255 255 / 0.10),
     inset 0 -0.08rem 0.2rem rgb(0 0 0 / 0.70),
-    inset 0 -0.25rem 0.4rem rgb(255 255 255 / 0.25),
+    inset 0 -0.25rem 0.4rem rgb(255 255 255 / 0.13),
     0 1rem 1rem rgb(0 0 0 / 0.30),
     0 0.4rem 0.5rem -0.25rem rgb(0 0 0 / 0.80);
 
@@ -820,6 +911,7 @@
     pointer-events: none;
   }
 
+  // Cresta murmullada (0.45→0.22, 0.14→0.07).
   &::after {
     content: '';
     position: absolute;
@@ -828,10 +920,10 @@
     top: 12%;
     bottom: 45%;
     border-radius: 50%;
-    box-shadow: inset 0 5px 4px -5px rgb(255 255 255 / 0.45);
+    box-shadow: inset 0 5px 4px -5px rgb(255 255 255 / 0.22);
     background: linear-gradient(
       180deg,
-      rgb(255 255 255 / 0.14) 0%,
+      rgb(255 255 255 / 0.07) 0%,
       rgb(0 0 0 / 0) 50%,
       rgb(0 0 0 / 0) 100%
     );

@@ -103,7 +103,11 @@
   font-size: var(--type-label-sm);
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.45);
+  // CAPÍTULO 01-04 en brass — antes foam/0.45 era prácticamente invisible
+  // contra el lake. Brass los convierte en sellos editoriales: cada página
+  // interna abre con "CAPÍTULO 03 / PRODUCTOS" en dorado apagado, lectura
+  // de revista premium. Misma decisión que case-row__zone y eyebrows brass.
+  color: rgb(var(--brass));
 }
 
 .page-header__stamp {
@@ -139,7 +143,8 @@
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: 300;
-  color: rgb(var(--foam) / 0.8);
+  // Italic editorial brass — coherente con section-heading.
+  color: rgb(var(--brass) / 0.92);
 }
 
 .page-header__description {

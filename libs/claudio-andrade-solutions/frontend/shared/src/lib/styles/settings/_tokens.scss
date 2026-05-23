@@ -20,6 +20,22 @@
   --coral: 216 112 96;         // #D87060 — coral
   --urchin: 58 42 77;          // #3A2A4D — erizo
 
+  // ---- Acentos sistematizados ---------------------------------------------
+  // Electric blue — sistematización del azul que vivía hardcoded en CTA pearl
+  // + highlight ring + halos de pricing card. Mismo valor base que ya usaban
+  // los `rgb(80 160 255)` repartidos por _glass.scss y engagements.scss; ahora
+  // está tokenizado para que un cambio de marca sea un único cambio aquí.
+  --electric: 80 160 255;      // #50A0FF — acción / energía / lightning halos
+  // Brass / champagne apagado — acento cálido premium. Referencias: "Brass
+  // Observatory" + "Luxe Hotel Lobby" (Media.io 2026) + Linear teardown +
+  // OWDT Millennium PetroCapital. El patrón cruzado de las cuatro fuentes:
+  // navy profundo + foam cálido + brass restrained en muy pocos lugares
+  // (≤3% del píxel total). NUNCA como background, jamás en CTA principal.
+  // Solo: trim del card highlight, eyebrow/marcador "RECOMENDADO", underline
+  // sutil del precio destacado, hairlines premium. Si el brass se ve en más
+  // de 3-4 lugares por viewport, está mal usado y deja de ser premium.
+  --brass: 198 161 91;         // #C6A15B — accent cálido premium, uso restringido
+
   // ---- Tipografía ----------------------------------------------------------
   // Principal: Roboto Medium (500) en TODO el contenido textual — títulos,
   // subtítulos, body, botones, eyebrows, links, italics editoriales.
