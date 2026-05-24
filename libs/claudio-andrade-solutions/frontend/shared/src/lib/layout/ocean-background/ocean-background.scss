@@ -29,6 +29,32 @@
   opacity: 0;
   transition: opacity 900ms 350ms var(--ease-fluid);
 
+  // Soft fade en top y bottom — sin esto, cuando el cuerpo de un pez se
+  // extiende más allá del borde del viewport (la cola sale por encima
+  // mientras el head todavía está visible, o viceversa), el canvas recorta
+  // los pixeles al boundary y deja una línea horizontal seca. Con este
+  // mask, los peces se "disuelven" en una franja de 140px contra el borde
+  // — más ancho que el bodyLength máximo de un pez (~100px) para que el
+  // fade cubra todo el cuerpo antes de que toque el corte.
+  //
+  // Sólo enmascara los pixeles del canvas. El hero, los headers de sección
+  // y cualquier otro elemento con bg opaco viven en otras capas del stack
+  // (z-index propios, fuera de .ocean-bg) y NO se ven afectados.
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    rgb(0 0 0) 140px,
+    rgb(0 0 0) calc(100% - 140px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    rgb(0 0 0) 140px,
+    rgb(0 0 0) calc(100% - 140px),
+    transparent 100%
+  );
+
   @media (prefers-reduced-motion: reduce) {
     transition: none;
     opacity: 1;
