@@ -51,6 +51,13 @@
   transform: translate3d(0, 0, 0);
   will-change: transform;
   pointer-events: auto;
+  // visibility:hidden hasta que JS llame a applyTransform() y posicione
+  // el pivot en su lugar correcto. Sin esto, hay UN FRAME post-mount
+  // (cuando @if(activeDockId() !== null) hace render) en el que el pivot
+  // existe a translate3d(0,0,0) — esquina superior izquierda — antes
+  // de que tick() corra applyTransform. applyTransform setea visibility
+  // a 'visible' inline una vez posicionado.
+  visibility: hidden;
   // Entrada coordinada con la cadena de reveal del hero. El último
   // elemento del hero (.hero__scroll-hint) arranca su fade a 1450ms con
   // 600ms duration → settled a 2050ms. El ícono cierra la composición:

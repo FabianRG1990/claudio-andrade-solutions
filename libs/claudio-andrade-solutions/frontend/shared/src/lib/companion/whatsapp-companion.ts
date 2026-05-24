@@ -321,6 +321,30 @@ export class WhatsappCompanion {
     }, this.DOCK_DEBOUNCE_MS) as unknown as number;
   }
 
+  /**
+   * Detecta si un dock está actualmente NO RENDERIZADO (display:none en él
+   * o algún ancestor). Si el dock está oculto, getBoundingClientRect()
+   * devuelve `{top:0, left:0, right:0, bottom:0, width:0, height:0}` —
+   * todo en cero. Sin este check, el companion trataría al dock oculto
+   * como "candidato active" en (0,0) y posicionaría el hub en la esquina
+   * superior izquierda (cortado por el navbar) — bug visible en mobile
+   * para el dock "hero" cuyo anchor vive dentro de `.hero__scroll-hint`
+   * (display:none < 1100px width).
+   *
+   * Un dock visible con anchor de tamaño 0 (caso del hero anchor: `width:
+   * 0; height: 0`) tendrá width/height en cero pero top/left con su
+   * posición real → no caemos en este caso. Solo el rect ABSOLUTO-cero
+   * indica display:none.
+   */
+  private isDockHidden(rect: DOMRect): boolean {
+    return (
+      rect.width === 0
+      && rect.height === 0
+      && rect.top === 0
+      && rect.left === 0
+    );
+  }
+
   private recomputeActiveDock(): void {
     const docks = this.registry.docks();
     if (docks.length === 0) {
@@ -332,27 +356,19 @@ export class WhatsappCompanion {
     // viewport Y ha cruzado el trigger (top<=95%vh). Active = el último
     // (mayor order) que califica.
     //
-    // Por qué la simetría importa: el algoritmo viejo activaba "el último
-    // dock con top<=95%vh", sin chequear el extremo superior. En scroll-up
-    // el dock viejo se iba por abajo (top>triggerY → no califica) y el
-    // active flippeaba al dock anterior — que en ese instante seguía
-    // off-screen ARRIBA (top muy negativo, pero seguía pasando top<=triggerY).
-    // El swim arrancaba con destino INVISIBLE y el pez "volaba" fuera del
-    // viewport en scroll-up. En scroll-down esto no pasaba porque los
-    // docks entran desde abajo de manera natural (top decreciendo hacia
-    // triggerY = on-screen).
-    //
-    // Con la guarda `rect.top + height >= 0` (parte inferior del dock aún
-    // no se fue por arriba), un dock que esté completamente off-screen
-    // arriba ya no califica. Si nadie califica, mantenemos el active
-    // previo — el ícono queda anclado a su dock viejo (page-anchored,
-    // por lo que scrollea naturalmente con la página) hasta que un dock
-    // nuevo emerge por el borde superior.
+    // ADEMÁS: filtramos docks ocultos (display:none) — sus rects son
+    // (0,0,0,0) y harían que el companion intente posicionarse en la
+    // esquina superior izquierda del viewport. Bug histórico de
+    // responsive: el dock "hero" vive en `.hero__scroll-hint` que tiene
+    // display:none < 1100×720. En mobile sin ese filtro, el hub aparecía
+    // cortado contra el navbar en (16, 0).
     const vh = window.innerHeight;
     const triggerY = vh * 0.95;
     let activeId: string | null = null;
     for (const dock of docks) {
       const rect = dock.el.getBoundingClientRect();
+      // Skip docks no renderizados (display:none en él o ancestor).
+      if (this.isDockHidden(rect)) continue;
       // Off-screen ABAJO o aún no llegó al trigger.
       if (rect.top > triggerY) {
         if (activeId !== null) break; // los siguientes están más abajo aún
@@ -364,17 +380,33 @@ export class WhatsappCompanion {
       activeId = dock.id;
     }
     if (activeId === null) {
-      // Nadie califica. Si no hay active actual, fallback al primer dock
-      // visible (caso de carga inicial). Si ya hay active, lo mantenemos.
-      if (this.activeDockId() !== null) return;
+      // Nadie califica. Si ya hay active actual VÁLIDO, lo mantenemos
+      // (page-anchored, scrollea con la página naturalmente). Si no,
+      // buscamos cualquier dock visible (no oculto) como fallback. Si
+      // ningún dock es visible, activeId queda null y el template oculta
+      // el pivot — caso mobile inicial donde el único dock razonable es
+      // el "hero" pero está display:none.
+      const currentActive = this.activeDockId();
+      if (currentActive !== null) {
+        // Verificar que el active actual no se haya vuelto invisible
+        // (raro, pero posible si el layout cambia: resize de mobile a
+        // desktop ocultaría docks que antes eran visibles). Si está
+        // oculto, NO lo conservamos.
+        const currentDock = docks.find((d) => d.id === currentActive);
+        if (currentDock) {
+          const currentRect = currentDock.el.getBoundingClientRect();
+          if (!this.isDockHidden(currentRect)) return;
+        }
+      }
       for (const dock of docks) {
         const rect = dock.el.getBoundingClientRect();
+        if (this.isDockHidden(rect)) continue;
         if (rect.top + rect.height >= 0 && rect.top <= vh) {
           activeId = dock.id;
           break;
         }
       }
-      if (activeId === null) activeId = docks[0].id;
+      // Sin docks visibles → activeId = null. Template oculta el pivot.
     }
     if (activeId !== this.activeDockId()) {
       this.activeDockId.set(activeId);
@@ -703,5 +735,9 @@ export class WhatsappCompanion {
     // requerir actualización JS por cada frame de scroll.
     const pageY = this.current.y + window.scrollY;
     pivot.style.transform = `translate3d(${this.current.x}px, ${pageY}px, 0)`;
+    // Una vez posicionado, hacerlo visible. El CSS arranca con
+    // visibility:hidden para evitar el "flash en (0,0)" entre el mount
+    // de Angular y la primera llamada a applyTransform.
+    pivot.style.visibility = 'visible';
   }
 }
