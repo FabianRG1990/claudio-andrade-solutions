@@ -327,20 +327,26 @@
     color: rgb(var(--bioluminescent));
     box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.30);
   }
+  // Vulnerable / En peligro / Crítico — antes coral (rgb 240 135 107) en
+  // intensidades crecientes para señalizar urgencia. El usuario rechazó el
+  // contraste anaranjado contra las cards azules: rompía la unidad visual
+  // del marquee. Movido a lagoon (mismo blue del resto del sitio) en las
+  // mismas tres intensidades — la jerarquía de urgencia sobrevive por
+  // opacidad (15% → 25% → 35%) sin meter un hue caliente desentonado.
   &[data-status='vulnerable'] {
-    background: rgb(var(--coral) / 0.15);
-    color: rgb(var(--coral));
-    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.30);
+    background: rgb(var(--lagoon) / 0.15);
+    color: rgb(var(--lagoon));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.30);
   }
   &[data-status='en-peligro'] {
-    background: rgb(var(--coral) / 0.25);
-    color: rgb(var(--coral));
-    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.40);
+    background: rgb(var(--lagoon) / 0.25);
+    color: rgb(var(--lagoon));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.40);
   }
   &[data-status='critico'] {
-    background: rgb(var(--coral) / 0.35);
+    background: rgb(var(--lagoon) / 0.35);
     color: rgb(var(--foam));
-    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.60);
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.60);
   }
 }
 
@@ -375,7 +381,9 @@
 }
 [data-accent='lagoon'] .service-card__category::before { background: rgb(var(--lagoon)); box-shadow: 0 0 6px rgb(var(--lagoon) / 0.6); }
 [data-accent='kelp'] .service-card__category::before { background: rgb(var(--bioluminescent)); box-shadow: 0 0 6px rgb(var(--bioluminescent) / 0.6); }
-[data-accent='coral'] .service-card__category::before { background: rgb(var(--coral)); box-shadow: 0 0 6px rgb(var(--coral) / 0.6); }
+// coral pasó a lagoon — mismo motivo que los status chips: el dot coral
+// rompía la unidad visual del marquee con un hue caliente solitario.
+[data-accent='coral'] .service-card__category::before { background: rgb(var(--lagoon)); box-shadow: 0 0 6px rgb(var(--lagoon) / 0.6); }
 [data-accent='bioluminescent'] .service-card__category::before { background: rgb(var(--bioluminescent)); box-shadow: 0 0 8px rgb(var(--bioluminescent) / 0.7); }
 
 .service-card__name {

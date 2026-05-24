@@ -189,7 +189,11 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorDatabaseBold',
     accent: 'coral',
-    iconColor: '#F0B870',
+    // Antes #F0B870 (amarillo-naranja Walmart). El usuario pidió eliminar
+    // todo naranja de las cards del marquee — el icono se ve en un tile de
+    // 24px pero el hue cálido contra el resto azul rompía la unidad. Cambio
+    // a sky-blue para mantenerlo distinguible del resto de iconos azules.
+    iconColor: '#5BB8E5',
   },
   {
     slug: 'landing-premium',
@@ -241,7 +245,10 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorGearSixBold',
     accent: 'coral',
-    iconColor: '#F0876B',
+    // Antes #F0876B (coral). Mismo motivo que apps-walmart — sin naranja en
+    // los iconos del marquee. Lavender-blue distinto del #7B98F0 (apps-moviles)
+    // y del #9DAEEF (consultoria-cloud) para que no luzca duplicado.
+    iconColor: '#88A8F2',
   },
   {
     slug: 'consultoria-cloud',

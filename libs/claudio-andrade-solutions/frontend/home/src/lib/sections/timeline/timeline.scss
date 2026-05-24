@@ -387,10 +387,15 @@
   );
 }
 .tech-card[data-accent='coral'] .tech-card__glow {
+  // Antes coral (rgb 216 112 96) — la única gradiente cálida en un set de
+  // tech-cards azules. Movido a lagoon para coherencia visual con el resto
+  // del stack (Frontend lagoon, Monorepo kelp, Infraestructura bioluminescent
+  // — todos hues fríos). La identidad de la card sigue viniendo del contenido
+  // (Claude · IA, INTELIGENCIA) y de su posición en el grid, no del hue.
   background: radial-gradient(
     circle,
-    rgb(var(--coral) / 0.38) 0%,
-    rgb(var(--coral) / 0.10) 38%,
+    rgb(80 160 255 / 0.38) 0%,
+    rgb(80 160 255 / 0.10) 38%,
     transparent 72%
   );
 }
@@ -448,8 +453,9 @@
   box-shadow: 0 0 6px rgb(var(--bioluminescent) / 0.6);
 }
 .tech-card[data-accent='coral'] .tech-card__category::before {
-  background: rgb(var(--coral));
-  box-shadow: 0 0 6px rgb(var(--coral) / 0.6);
+  // dot coral → blue, mismo motivo que el glow de arriba.
+  background: rgb(80 160 255);
+  box-shadow: 0 0 6px rgb(80 160 255 / 0.6);
 }
 .tech-card[data-accent='bioluminescent'] .tech-card__category::before {
   background: rgb(var(--bioluminescent));

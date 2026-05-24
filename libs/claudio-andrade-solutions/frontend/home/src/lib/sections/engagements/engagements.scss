@@ -366,10 +366,15 @@
   );
 }
 .engagement-card[data-accent='coral'] .engagement-card__glow {
+  // Antes: glow coral (rgb 240 135 107) — leía como contraste anaranjado
+  // sin lógica visual contra el resto de cards azules del sitio. Movido a
+  // lagoon (mismo tono que el highlight central) para que las tres cards
+  // del set lean coherentes — la diferenciación queda en intensidad +
+  // contenido + badge, no en hue caliente vs frío.
   background: radial-gradient(
     circle,
-    rgb(var(--coral) / 0.40) 0%,
-    rgb(var(--coral) / 0.10) 38%,
+    rgb(80 160 255 / 0.40) 0%,
+    rgb(80 160 255 / 0.10) 38%,
     transparent 72%
   );
 }
