@@ -288,29 +288,54 @@ export class WhatsappCompanion {
       this.activeDockId.set(null);
       return;
     }
-    // Regla: el dock se vuelve "active" en el momento que su eyebrow
-    // aparece por la parte inferior del viewport. triggerY = 95% de vh →
-    // cuando rect.top <= triggerY el eyebrow está a ~5% del borde inferior
-    // (apenas visible). Eso da al pez tiempo para nadar HACIA la sección
-    // mientras el user todavía está scrolleando — el user pidió que con
-    // scrolls "normales" (no fast) la animación se llegue a apreciar.
+    // Algoritmo SIMÉTRICO para scroll-down y scroll-up. Un dock califica
+    // como active SOLO si está al menos parcialmente VISIBLE en el
+    // viewport Y ha cruzado el trigger (top<=95%vh). Active = el último
+    // (mayor order) que califica.
     //
-    // Active dock = el ÚLTIMO (mayor order) cuya top haya cruzado debajo
-    // del triggerY. Como docks están sorted por order ascendente en el
-    // registry, podemos cortar el loop apenas un dock no califique.
-    const triggerY = window.innerHeight * 0.95;
-    let activeId = docks[0].id; // fallback al primero si ninguno califica
-    let foundAny = false;
+    // Por qué la simetría importa: el algoritmo viejo activaba "el último
+    // dock con top<=95%vh", sin chequear el extremo superior. En scroll-up
+    // el dock viejo se iba por abajo (top>triggerY → no califica) y el
+    // active flippeaba al dock anterior — que en ese instante seguía
+    // off-screen ARRIBA (top muy negativo, pero seguía pasando top<=triggerY).
+    // El swim arrancaba con destino INVISIBLE y el pez "volaba" fuera del
+    // viewport en scroll-up. En scroll-down esto no pasaba porque los
+    // docks entran desde abajo de manera natural (top decreciendo hacia
+    // triggerY = on-screen).
+    //
+    // Con la guarda `rect.top + height >= 0` (parte inferior del dock aún
+    // no se fue por arriba), un dock que esté completamente off-screen
+    // arriba ya no califica. Si nadie califica, mantenemos el active
+    // previo — el ícono queda anclado a su dock viejo (page-anchored,
+    // por lo que scrollea naturalmente con la página) hasta que un dock
+    // nuevo emerge por el borde superior.
+    const vh = window.innerHeight;
+    const triggerY = vh * 0.95;
+    let activeId: string | null = null;
     for (const dock of docks) {
       const rect = dock.el.getBoundingClientRect();
-      if (rect.top <= triggerY) {
-        activeId = dock.id;
-        foundAny = true;
-      } else {
-        // Docks siguientes están aún más abajo en la página — ninguno va
-        // a calificar. Cortamos para ahorrar getBoundingClientRect.
-        if (foundAny) break;
+      // Off-screen ABAJO o aún no llegó al trigger.
+      if (rect.top > triggerY) {
+        if (activeId !== null) break; // los siguientes están más abajo aún
+        continue;
       }
+      // Off-screen ARRIBA — invisible, no candidato a active.
+      if (rect.top + rect.height < 0) continue;
+      // En viewport (al menos parcial) y cruzó el trigger.
+      activeId = dock.id;
+    }
+    if (activeId === null) {
+      // Nadie califica. Si no hay active actual, fallback al primer dock
+      // visible (caso de carga inicial). Si ya hay active, lo mantenemos.
+      if (this.activeDockId() !== null) return;
+      for (const dock of docks) {
+        const rect = dock.el.getBoundingClientRect();
+        if (rect.top + rect.height >= 0 && rect.top <= vh) {
+          activeId = dock.id;
+          break;
+        }
+      }
+      if (activeId === null) activeId = docks[0].id;
     }
     if (activeId !== this.activeDockId()) {
       this.activeDockId.set(activeId);
