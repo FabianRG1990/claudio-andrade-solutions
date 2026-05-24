@@ -51,6 +51,32 @@
   transform: translate3d(0, 0, 0);
   will-change: transform;
   pointer-events: auto;
+  // Entrada coordinada con la cadena de reveal del hero. El último
+  // elemento del hero (.hero__scroll-hint) arranca su fade a 1450ms con
+  // 600ms duration → settled a 2050ms. El ícono cierra la composición:
+  // delay 1700ms (entre el "Hablemos" label que aparece a 1450ms y el
+  // settle a 2050ms del scroll-hint), duration 500ms, settled ~2200ms.
+  // backwards mantiene opacity:0 durante el delay (sin esto, el ícono se
+  // ve apenas monta el componente y rompe la lectura del hero).
+  //
+  // OJO: animamos SOLO opacity acá — el transform del pivot lo controla
+  // JS (translate3d a coords de página). Si la animación incluyera
+  // transform, pisaría el posicionamiento del JS y el ícono saltaría
+  // a (0,0). El scale-up de entrada lo aplica .companion__hub que tiene
+  // su propio transform independiente.
+  animation: companion-intro-opacity 500ms 1700ms var(--ease-fluid) backwards;
+}
+
+@keyframes companion-intro-opacity {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companion__pivot,
+  .companion__hub {
+    animation: none;
+  }
 }
 
 // Anchor por centro: el hub queda centrado en el punto del transform.
@@ -61,6 +87,16 @@
   transition:
     opacity 220ms var(--ease-fluid),
     transform 220ms var(--ease-fluid);
+  // Scale-up de entrada — mismo delay/duración que la opacity del pivot,
+  // pero solo afecta el TAMAÑO del hub (no su posición, que se mantiene
+  // por el translate(-50%, -50%) en `from` y `to`). El ícono "emerge"
+  // desde 0.6 hasta 1.0, en sync con el fade del pivot.
+  animation: companion-intro-scale 500ms 1700ms var(--ease-fluid) backwards;
+}
+
+@keyframes companion-intro-scale {
+  from { transform: translate(-50%, -50%) scale(0.6); }
+  to   { transform: translate(-50%, -50%) scale(1); }
 }
 
 // Durante swim: hub se contrae + desaparece. El pez del canvas toma
