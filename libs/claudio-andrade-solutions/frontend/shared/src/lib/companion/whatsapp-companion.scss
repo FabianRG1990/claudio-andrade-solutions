@@ -35,13 +35,19 @@
 }
 
 .companion__pivot {
-  position: fixed;
+  // CLAVE: position absolute (NO fixed) — así el ícono está en el flow del
+  // documento y el browser lo scrollea naturalmente junto a la página, igual
+  // que cualquier elemento normal. JS solo necesita escribir el transform
+  // UNA vez por dock cambio; el scroll no requiere sincronización JS.
+  //
+  // Con position: fixed (anterior) el ícono vive en viewport coords y JS
+  // tenía que actualizar el transform CADA FRAME del scroll para mantener
+  // alignment con el dock — cualquier sub-frame lag = desalineación visible.
+  position: absolute;
   top: 0;
   left: 0;
   z-index: 46;
-  // El transform lo aplica JS (translate3d a la posición del dock).
-  // Anchor por centro — el contenido se centra sobre el punto del
-  // transform via translate(-50%, -50%) en el contenedor interno.
+  // Transform aplicado por JS en coords de PÁGINA (no viewport).
   transform: translate3d(0, 0, 0);
   will-change: transform;
   pointer-events: auto;

@@ -288,20 +288,32 @@ export class WhatsappCompanion {
       this.activeDockId.set(null);
       return;
     }
-    const triggerY = window.innerHeight * 0.35;
-    let bestId = docks[0].id;
-    let bestDist = Number.POSITIVE_INFINITY;
+    // Regla: el dock se vuelve "active" en el momento que su eyebrow
+    // aparece por la parte inferior del viewport. triggerY = 95% de vh →
+    // cuando rect.top <= triggerY el eyebrow está a ~5% del borde inferior
+    // (apenas visible). Eso da al pez tiempo para nadar HACIA la sección
+    // mientras el user todavía está scrolleando — el user pidió que con
+    // scrolls "normales" (no fast) la animación se llegue a apreciar.
+    //
+    // Active dock = el ÚLTIMO (mayor order) cuya top haya cruzado debajo
+    // del triggerY. Como docks están sorted por order ascendente en el
+    // registry, podemos cortar el loop apenas un dock no califique.
+    const triggerY = window.innerHeight * 0.95;
+    let activeId = docks[0].id; // fallback al primero si ninguno califica
+    let foundAny = false;
     for (const dock of docks) {
       const rect = dock.el.getBoundingClientRect();
-      const centerY = rect.top + rect.height / 2;
-      const dist = Math.abs(centerY - triggerY);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestId = dock.id;
+      if (rect.top <= triggerY) {
+        activeId = dock.id;
+        foundAny = true;
+      } else {
+        // Docks siguientes están aún más abajo en la página — ninguno va
+        // a calificar. Cortamos para ahorrar getBoundingClientRect.
+        if (foundAny) break;
       }
     }
-    if (bestId !== this.activeDockId()) {
-      this.activeDockId.set(bestId);
+    if (activeId !== this.activeDockId()) {
+      this.activeDockId.set(activeId);
     }
   }
 
@@ -325,6 +337,8 @@ export class WhatsappCompanion {
     // scrollea, el pez sigue su trayecto en el espacio de la página y
     // aparece/desaparece del viewport naturalmente (no "viaja con el scroll").
     const scrollY = window.scrollY;
+    const vh = window.innerHeight;
+    const margin = 80;
     // A: posición de PÁGINA del dock viejo (donde estaba el ícono ahora).
     // Calculada desde el elemento del dock para que sea exacta aún si el
     // user scrolleó durante el debounce.
@@ -332,9 +346,20 @@ export class WhatsappCompanion {
       ? this.registry.docks().find((d) => d.id === this.dockedId)
       : null;
     const aViewport = oldDock ? this.computeDockPosition(oldDock) : this.current;
-    this.swimStart = { x: aViewport.x, y: aViewport.y + scrollY };
-    // B: posición de PÁGINA del dock nuevo.
-    this.swimEnd = { x: targetViewport.x, y: targetViewport.y + scrollY };
+    let aPage = { x: aViewport.x, y: aViewport.y + scrollY };
+    const bPage = { x: targetViewport.x, y: targetViewport.y + scrollY };
+
+    // CLAMP del start a la franja visible de la página: [scrollY+margin,
+    // scrollY+vh-margin]. Si el dock viejo quedó off-screen (jump scroll,
+    // scroll fast), el pez "entra" desde el borde más cercano del viewport
+    // en vez de nadar invisible por arriba/abajo. El end queda en la posición
+    // real del dock nuevo — el ícono settled debe quedar pegado al eyebrow.
+    const visibleTop = scrollY + margin;
+    const visibleBottom = scrollY + vh - margin;
+    aPage.y = Math.max(visibleTop, Math.min(visibleBottom, aPage.y));
+
+    this.swimStart = aPage;
+    this.swimEnd = bPage;
     this.swimStartTime = performance.now();
     this.swimPhase = 0;
     this.swimState.set('swimming');
@@ -477,6 +502,11 @@ export class WhatsappCompanion {
   private applyTransform(): void {
     const pivot = this.pivotRef()?.nativeElement;
     if (!pivot) return;
-    pivot.style.transform = `translate3d(${this.current.x}px, ${this.current.y}px, 0)`;
+    // El pivot es position: absolute → recibe coords de PÁGINA (no viewport).
+    // Convertir current (viewport) a page sumando scrollY. Esto hace que el
+    // browser scrollee el ícono junto con la página automáticamente, sin
+    // requerir actualización JS por cada frame de scroll.
+    const pageY = this.current.y + window.scrollY;
+    pivot.style.transform = `translate3d(${this.current.x}px, ${pageY}px, 0)`;
   }
 }
