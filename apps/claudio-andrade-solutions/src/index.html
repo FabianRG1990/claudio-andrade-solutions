@@ -63,22 +63,15 @@
       fetchpriority="high"
     />
 
-    <!-- GLB del pez (~7.7 MB) — antes vivía como `<link rel="preload"
-         as="fetch" fetchpriority="high">` en el <head>, lo que ARRANCABA
-         la descarga apenas el browser parseaba el HTML, peleando bandwidth
-         y CPU con el bundle JS + imágenes del hero. En mobile (3G/4G real)
-         esto agregaba 5-15s al tiempo de "página utilizable" y desplazaba
-         contenido crítico (LCP) detrás del GLB en la cola HTTP/2.
-         Estrategia nueva: `prefetch` (no preload) con `as="fetch"`. Esto
-         indica al browser "descargá esto cuando estés ocioso, baja
-         prioridad" — el GLB llega DESPUÉS del bundle + imágenes + fuentes
-         del hero. Por el momento que el wolf-lake-canvas (deferred a
-         requestIdleCallback) y el companion (también deferred) pidan el
-         archivo vía GLTFLoader, está caliente en cache.
-         crossorigin="anonymous" matchea el fetch del loader; sin él el
-         browser dispara un fetch nuevo en lugar de usar el cache.
-         Mantenemos el hint en <head> para que el browser sepa del recurso
-         apenas parsea, sin que compita con el critical render path. -->
+    <!-- GLB del pez (~7.7 MB) — prefetch siempre. Lo usan AMBOS renderers
+         (wolf-fish-three del hero + companion-fish del swim), y el user
+         pidió mantener la animación de companion-fish también en phone.
+         `prefetch` (no preload) = low priority — llega DESPUÉS del bundle
+         + imágenes + fuentes del hero, sin pelear el critical render path.
+         Antes el GLB era `<link rel="preload" as="fetch" fetchpriority="high">`
+         que ARRANCABA la descarga apenas el browser parseaba el HTML,
+         sumando 5-15s al tiempo de página utilizable en mobile (3G/4G).
+         crossorigin="anonymous" matchea el fetch del loader. -->
     <link
       rel="prefetch"
       href="/hero-wolf/fish-model.glb"

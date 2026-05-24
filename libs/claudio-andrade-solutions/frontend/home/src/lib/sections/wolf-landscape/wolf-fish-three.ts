@@ -212,7 +212,20 @@ export class FishThreeRenderer {
     this.numJoints = numJoints;
   }
 
-  async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
+  /**
+   * Inicializa el renderer. En `options.lowPower=true` (típicamente mobile
+   * que pasó `shouldSkipHeavyWebGL()`), reduce DPR a 1.0 y omite el bloom
+   * pass — clave para que el footprint de GPU memory no rebase el budget
+   * del browser mobile y produzca un crash. Sin bloom los neones se ven
+   * menos intensos pero el pez sigue brillando vía emissive del material.
+   */
+  async init(
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number,
+    options: { lowPower?: boolean } = {},
+  ): Promise<void> {
+    const lowPower = options.lowPower === true;
     this.canvasW = width;
     this.canvasH = height;
 
@@ -232,7 +245,11 @@ export class FishThreeRenderer {
       // para un canvas hero único.
       preserveDrawingBuffer: true,
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // DPR adaptivo: 1.0 mobile/low-power, hasta 2.0 desktop. Cada x2 en DPR
+    // cuadriplica el framebuffer + bloom render targets internos del bloom.
+    // El detalle visual del pez nadando en mobile (a tamaño 10-12 px) entre
+    // DPR 1 y 2 es prácticamente invisible al ojo del usuario.
+    this.renderer.setPixelRatio(lowPower ? 1.0 : Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(width, height, false);
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -289,13 +306,21 @@ export class FishThreeRenderer {
     ]);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(width, height),
-      3.20, // strength — bloom EXTREMO, las luces irradian al agua
-      0.95, // radius — halo MUY amplio
-      0.25, // threshold — capta cualquier pixel apenas brillante
-    );
-    this.composer.addPass(this.bloomPass);
+    if (!lowPower) {
+      // UnrealBloomPass crea internamente un chain de ~5 render targets
+      // (mipmap blur cascade). Cada uno es width*height*16 bytes (RGBA16F).
+      // En 393×844×16 = 5.3 MB × 5 mipmaps × DPR² → 21-85 MB SOLO para el
+      // bloom de este renderer. En mobile saltarlo es la diferencia entre
+      // crashear y no crashear. Los neones se ven menos brillantes pero
+      // el emissive del material PBR sigue dando el "glow" base.
+      this.bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(width, height),
+        3.20, // strength — bloom EXTREMO, las luces irradian al agua
+        0.95, // radius — halo MUY amplio
+        0.25, // threshold — capta cualquier pixel apenas brillante
+      );
+      this.composer.addPass(this.bloomPass);
+    }
 
     // ─── v33: Dissolve into water — blur + alpha fade gradual ──────────
     // El user pidio: "blur gradual que conforme el pez vaya mas para
@@ -506,7 +531,11 @@ export class FishThreeRenderer {
     // brillantes pintadas) hace que los neones se vean como luces de verdad.
     // El multiplicador cyan del emissive tinta el glow.
     this.baseMaterial.emissive = new THREE.Color(0x90c8ff);
-    this.baseMaterial.emissiveIntensity = 1.0;
+    // En mobile (lowPower) no hay UnrealBloomPass → sin el cascade glow,
+    // los neones se ven menos brillantes. Compensamos x1.6 sobre el emissive
+    // intensity para que el PBR emita más luz directa. Visualmente queda
+    // luminoso, sin halo soft alrededor, pero los marks no quedan apagados.
+    this.baseMaterial.emissiveIntensity = lowPower ? 1.6 : 1.0;
     // Transparent: el fragment baja gl_FragColor.a en zona sumergida para
     // que el lake canvas (city refleja) brille a traves del cuerpo del
     // pez = lectura visual "esta DENTRO del agua, no encima". Sin esto

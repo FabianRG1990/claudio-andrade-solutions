@@ -8,6 +8,8 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { shouldSkipHeavyWebGL } from '@cas-ui-shared/utils/device-capability';
+
 import { FishThreeRenderer, type FishHandle } from './wolf-fish-three';
 import { getActiveHeroVariant, onHeroVariantChange } from './hero-variants';
 
@@ -2639,16 +2641,23 @@ export class WolfLakeCanvas {
     // preferencia del sistema. Pero Apple define reduced-motion como
     // "reduce motion of UI elements" (parallax, zoom, fades agresivos) —
     // no como "no animar contenido". Los peces nadando son contenido
-    // ambiental suave, equivalente a un video corriendo en mute. Apple
-    // misma anima videos en sus product pages con reduced-motion activo.
-    //
-    // El bailout principal ocurre en Safari iOS: Low Power Mode activa
-    // reduced-motion automáticamente, así que iPhones en LPM nunca veían
-    // peces (reportado por el usuario). Con este cambio el canvas monta
-    // siempre. El flow shader (WolfLakeFlow) sí respeta reduced-motion
-    // — su UV-distortion es la animación intensa; los peces nadando son
-    // suaves y se ven directamente si el shader no monta (host de
-    // wolf-lake-canvas pasa a opacity:1 cuando .flow-active está ausente).
+    // ambiental suave, equivalente a un video corriendo en mute.
+
+    // ─── Mobile / low-power → reducción agresiva (NO bailout total).
+    // El user fue explícito: la animación de los peces NO se desactiva.
+    // En cambio bajamos el footprint para no rebasar el budget de GPU de
+    // mobile Safari/Chrome (causa de los crashes "A problem repeatedly
+    // occurred" / "Can't open this page"). Plan:
+    //   • 3 peces ambient en lugar de 5 (-40% mesh instances)
+    //   • Sin cursor fish (touch devices no tienen cursor, no se usa)
+    //   • DPR 1.0 (en lugar de min(devicePixelRatio, 2)) → -75% framebuffer
+    //   • Sin UnrealBloomPass (el cascade de 5 render targets internos
+    //     es lo más costoso de GPU memory; sin bloom los neones se ven
+    //     menos brillantes pero el pez sigue visible)
+    // El user también escribió "el pez que sigue el cursor, lo siga,
+    // porque no vamos a ocuparlo ahí" — autorización explícita de quitar
+    // el cursor fish en mobile.
+    const isMobileMode = shouldSkipHeavyWebGL();
 
     const canvas = this.canvasRef().nativeElement;
     const host = this.hostRef.nativeElement;
@@ -2674,7 +2683,7 @@ export class WolfLakeCanvas {
       [maskImg, heroImg] = await Promise.all([
         loadImage(variant.lakeMask),
         loadImage(variant.image),
-        fishRenderer.init(canvas, initialW, initialH),
+        fishRenderer.init(canvas, initialW, initialH, { lowPower: isMobileMode }),
       ]);
     } catch (err) {
       // Sin fish: el `<picture>` del hero ya está pintado, así que el usuario
@@ -3063,19 +3072,29 @@ export class WolfLakeCanvas {
     //     mayormente en cielo/montañas → wander score colapsa → pez se queda
     //     vagando en zona de ~80 px ("stuck loose") cerca de "Y" del título
     //     y al lado del card del hero.
-    // 4 glowFishes ambientales + 1 cursorFish = 5 peces total.
-    // Spawns distribuidos por todo el lago expandido (y_v ∈ [0.43, 1.0]).
-    // Lejos del texto HTML (titulo + card) pero ocupando la altura
-    // completa del area de nado para que los peces se vean dispersos
-    // y no clustered abajo.
-    const GLOW_SPAWN: Vec[] = [
-      // y >= 0.72 — todos abajo de la linea de la roca (0.62) con margen,
-      // para que ambient fish nazcan ya en su zona permitida.
-      { x: 0.20, y: 0.72 }, // mid-left (debajo de roca)
-      { x: 0.82, y: 0.72 }, // mid-right (debajo de roca)
-      { x: 0.30, y: 0.88 }, // bottom-left (cerca, grande)
-      { x: 0.65, y: 0.88 }, // bottom-right (cerca, grande)
-    ];
+    // Desktop / tablet: 4 glowFishes ambientales + 1 cursorFish = 5 peces.
+    // Phone: 3 glowFishes ambientales + sin cursorFish = 3 peces. El user
+    // fue específico: "Si los peces están consumiendo muchos recursos,
+    // entonces solo dejemos tres. Quitemos el pez que sigue el cursor
+    // porque en los teléfonos no sirve."
+    // 3 spawns elegidos: mid-left, mid-right, bottom-mid — distribuyen los
+    // peces visualmente sin clusterear todos en el bottom. (Los 2 spawns
+    // bottom de desktop se consolidan en 1 mid-bottom para no perder la
+    // cobertura en la zona grande del lago.)
+    const GLOW_SPAWN: Vec[] = isMobileMode
+      ? [
+          { x: 0.20, y: 0.72 }, // mid-left
+          { x: 0.82, y: 0.72 }, // mid-right
+          { x: 0.48, y: 0.88 }, // bottom-mid (consolida los 2 bottom de desktop)
+        ]
+      : [
+          // y >= 0.72 — todos abajo de la linea de la roca (0.62) con margen,
+          // para que ambient fish nazcan ya en su zona permitida.
+          { x: 0.20, y: 0.72 }, // mid-left (debajo de roca)
+          { x: 0.82, y: 0.72 }, // mid-right (debajo de roca)
+          { x: 0.30, y: 0.88 }, // bottom-left (cerca, grande)
+          { x: 0.65, y: 0.88 }, // bottom-right (cerca, grande)
+        ];
     const glowFishes: GlowFish[] = [];
     const buildGlowFishes = (): void => {
       glowFishes.length = 0;
@@ -3165,7 +3184,13 @@ export class WolfLakeCanvas {
     // Cada handle = group + mesh + material clonado con sus propios uniforms.
     // Los handles persisten entre resize (no se recrean en buildGlowFishes
     // porque solo contienen GPU resources, no estado del fish).
-    const cursorFishHandle = fishRenderer.addFish();
+    // En mobile NO creamos handle para el cursor fish — su mesh + vertex
+    // buffer + draw call adicionales son innecesarios cuando no hay cursor
+    // (touch devices). El objeto `cursorFish` sigue existiendo para que el
+    // tick loop no se rompa, pero al no haber handle el renderer no lo dibuja.
+    // Líneas más abajo: applyWaterTint y updateFish del cursor son no-op si
+    // cursorFishHandle === null.
+    const cursorFishHandle: FishHandle | null = isMobileMode ? null : fishRenderer.addFish();
     const glowFishHandles = glowFishes.map(() => fishRenderer.addFish());
 
     const ro = new ResizeObserver(() => {
@@ -3622,12 +3647,18 @@ export class WolfLakeCanvas {
           fishRenderer.updateFish(glowFishHandles[i], gf, depthScaleAt(ghV));
         }
       }
-      const cursorHeadV = canvasUVToImgUV(
-        { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
-        cw, ch, IMG_W, IMG_H,
-      ).y;
-      applyWaterTint(cursorFishHandle, cursorFish.spine[0].x, cursorFish.spine[0].y);
-      fishRenderer.updateFish(cursorFishHandle, cursorFish, depthScaleAt(cursorHeadV));
+      // Cursor fish: solo lo renderizamos si hay handle (skip en mobile —
+      // touch devices no tienen cursor). El objeto cursorFish sigue
+      // existiendo y corriendo su lógica de hover en CPU, pero su mesh no
+      // se actualiza ni se dibuja.
+      if (cursorFishHandle) {
+        const cursorHeadV = canvasUVToImgUV(
+          { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
+          cw, ch, IMG_W, IMG_H,
+        ).y;
+        applyWaterTint(cursorFishHandle, cursorFish.spine[0].x, cursorFish.spine[0].y);
+        fishRenderer.updateFish(cursorFishHandle, cursorFish, depthScaleAt(cursorHeadV));
+      }
       fishRenderer.render();
 
       raf = requestAnimationFrame(tick);

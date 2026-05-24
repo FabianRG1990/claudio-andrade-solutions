@@ -15,6 +15,7 @@ import { isPlatformBrowser } from '@angular/common';
 
 import { WhatsappHub } from '../components/whatsapp-hub/whatsapp-hub';
 import { CompanionDockRegistry, type CompanionDock } from './companion-dock.service';
+import { shouldSkipHeavyWebGL } from '../utils/device-capability';
 // Solo tipos en estático: el renderer (que arrastra three.js + GLTFLoader +
 // EffectComposer + UnrealBloomPass = ~551 KB raw / 115 KB gz) se carga vía
 // `await import('./companion-fish')` dentro de initFishRenderer(). Así three.js
@@ -205,6 +206,17 @@ export class WhatsappCompanion {
   private async initFishRenderer(): Promise<void> {
     const canvas = this.canvasRef()?.nativeElement;
     if (!canvas) return;
+    // En mobile/low-power NO hacemos bailout — la animación pez↔icono es
+    // parte de la identidad de la marca y el user fue explícito: "no es
+    // negociable". En cambio inicializamos el renderer en modo "low power":
+    //   • DPR 1.0 (en lugar de min(devicePixelRatio, 2)) → -75% framebuffer
+    //   • Sin UnrealBloomPass → -5 render targets internos en cascade
+    //   • emissiveIntensity boost (+50%) para compensar la falta del halo
+    //     del bloom; el material PBR sigue dando luz emisiva directa.
+    // Esto baja el footprint de GPU memory de este renderer de ~70 MB a
+    // ~10-15 MB, dejando margen sobrado dentro del budget de mobile Safari.
+    const lowPower = shouldSkipHeavyWebGL();
+
     // Dynamic import del módulo que contiene three.js + post-processing +
     // GLTFLoader. El bundler (Angular esbuild) lo emite como chunk separado
     // — verificable en `dist/.../browser` post-build (chunk con three core
@@ -223,7 +235,7 @@ export class WhatsappCompanion {
     const h = window.innerHeight;
     const renderer = new CompanionFishRendererCtor();
     try {
-      await renderer.init(canvas, w, h);
+      await renderer.init(canvas, w, h, { lowPower });
       this.fishRenderer = renderer;
       this.fishReady = true;
     } catch (err) {

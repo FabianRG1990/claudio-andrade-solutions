@@ -178,19 +178,44 @@ export class CompanionFishRenderer {
   private lightsGeometry: THREE.BufferGeometry | null = null;
   private lightsMesh: THREE.Points | null = null;
 
+  // Flag de modo low-power, leído por update() para subir el emissive
+  // intensity del material PBR del pez cuando NO hay bloom — compensa la
+  // falta del halo del UnrealBloomPass via emissive directo, así los
+  // neones siguen luminosos en mobile.
+  private lowPower = false;
+
   // ─── Lifecycle ─────────────────────────────────────────────────────────
-  async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
+  /**
+   * @param options.lowPower Mobile / low-power profile: DPR 1.0, sin
+   *   UnrealBloomPass, emissive intensity boost. La animación del pez
+   *   se mantiene visible al 100%, solo se reduce el footprint de GPU
+   *   memory de ~70 MB a ~10-15 MB para no rebasar el budget de mobile
+   *   Safari y producir crash recurrente.
+   */
+  async init(
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number,
+    options: { lowPower?: boolean } = {},
+  ): Promise<void> {
+    this.lowPower = options.lowPower === true;
     this.canvasW = width;
     this.canvasH = height;
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
-      antialias: true,
+      // antialias false en lowPower — multi-sample buffer adicional cuesta
+      // ~width*height*4 bytes; deshabilitarlo en mobile (donde DPR ya está
+      // a 1.0) baja un poco más el footprint. El pez es chico (~100 px),
+      // sin AA se ve casi igual.
+      antialias: !this.lowPower,
       premultipliedAlpha: true,
       powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // DPR adaptivo: 1.0 en mobile/low-power (-75% framebuffer), hasta 2.0
+    // en desktop. La diferencia visual a 100×100 px del pez es despreciable.
+    this.renderer.setPixelRatio(this.lowPower ? 1.0 : Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(width, height, false);
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -234,36 +259,47 @@ export class CompanionFishRenderer {
     // Cierre con CopyShader renderToScreen — sin esto el UnrealBloomPass
     // escribe al canvas con alpha=1 y arruina la transparencia. Mismo
     // patrón que el hero (FishThreeRenderer).
-    const [
-      { EffectComposer },
-      { RenderPass },
-      { UnrealBloomPass },
-      { ShaderPass },
-      { CopyShader },
-    ] = await Promise.all([
-      import('three/examples/jsm/postprocessing/EffectComposer.js'),
-      import('three/examples/jsm/postprocessing/RenderPass.js'),
-      import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
-      import('three/examples/jsm/postprocessing/ShaderPass.js'),
-      import('three/examples/jsm/shaders/CopyShader.js'),
-    ]);
-    this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    // Bloom más fuerte y ancho — los neones del companion necesitan un
-    // halo más amplio para sentirse "premium glowing object" sobre el
-    // fondo dark de las secciones post-hero (a la Apple Vision Pro /
-    // Linear product marketing). Threshold bajo para que también el
-    // rim cyan haga halo, no solo los puntos hot.
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(width, height),
-      3.20, // strength (was 2.40)
-      1.00, // radius (was 0.85)
-      0.22, // threshold (was 0.30)
-    );
-    this.composer.addPass(this.bloomPass);
-    const copyPass = new ShaderPass(CopyShader);
-    copyPass.renderToScreen = true;
-    this.composer.addPass(copyPass);
+    //
+    // Mobile (lowPower): NO montamos composer/bloom. UnrealBloomPass crea
+    // internamente un chain de 5 render targets (mipmap blur cascade); en
+    // 393×844×16 bytes ≈ 5.3 MB × 5 niveles = ~25 MB GPU SOLO para el
+    // bloom. Multiplicado por el DPR² en desktop, son 80-100 MB.
+    // En vez de bloom, en mobile usamos `renderer.render(scene, camera)`
+    // directo (sin pass chain) y compensamos la pérdida de halo en update()
+    // multiplicando el emissive intensity x1.5 — el material PBR sigue
+    // dando luz emisiva, solo sin el cascade glow.
+    if (!this.lowPower) {
+      const [
+        { EffectComposer },
+        { RenderPass },
+        { UnrealBloomPass },
+        { ShaderPass },
+        { CopyShader },
+      ] = await Promise.all([
+        import('three/examples/jsm/postprocessing/EffectComposer.js'),
+        import('three/examples/jsm/postprocessing/RenderPass.js'),
+        import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
+        import('three/examples/jsm/postprocessing/ShaderPass.js'),
+        import('three/examples/jsm/shaders/CopyShader.js'),
+      ]);
+      this.composer = new EffectComposer(this.renderer);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
+      // Bloom más fuerte y ancho — los neones del companion necesitan un
+      // halo más amplio para sentirse "premium glowing object" sobre el
+      // fondo dark de las secciones post-hero (a la Apple Vision Pro /
+      // Linear product marketing). Threshold bajo para que también el
+      // rim cyan haga halo, no solo los puntos hot.
+      this.bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(width, height),
+        3.20, // strength (was 2.40)
+        1.00, // radius (was 0.85)
+        0.22, // threshold (was 0.30)
+      );
+      this.composer.addPass(this.bloomPass);
+      const copyPass = new ShaderPass(CopyShader);
+      copyPass.renderToScreen = true;
+      this.composer.addPass(copyPass);
+    }
 
     // ─── Light overlay material — verde HDR ────────────────────────────
     this.lightMaterial = new THREE.ShaderMaterial({
@@ -869,9 +905,16 @@ export class CompanionFishRenderer {
     if (this.fishMaterial) {
       this.emissiveScratch.copy(EMISSIVE_IDLE).lerp(EMISSIVE_MORPH, colorShift);
       this.fishMaterial.emissive.copy(this.emissiveScratch);
+      // En mobile (lowPower) NO hay bloom pass → el halo verde dramático
+      // se pierde. Compensamos multiplicando el emissive intensity x1.6
+      // para que el material PBR emita más luz directa. El pez no luce
+      // EXACTAMENTE igual que con bloom (sin el cascade glow soft alrededor)
+      // pero queda claramente luminoso, no apagado.
+      const lowPowerBoost = this.lowPower ? 1.6 : 1.0;
       this.fishMaterial.emissiveIntensity =
-        EMISSIVE_INTENSITY_BASE
-        + (EMISSIVE_INTENSITY_MORPH - EMISSIVE_INTENSITY_BASE) * colorShift;
+        (EMISSIVE_INTENSITY_BASE
+          + (EMISSIVE_INTENSITY_MORPH - EMISSIVE_INTENSITY_BASE) * colorShift)
+        * lowPowerBoost;
       // Opacity ramp para crossfade simultáneo con el hub al final del swim.
       // El material ya es `transparent: true` desde el init, así que setear
       // .opacity surte efecto sin tocar nada más. Cuando meshOpacity=1 (el
