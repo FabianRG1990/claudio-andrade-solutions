@@ -6,11 +6,16 @@
 
 @if (hasDocks()) {
   <!-- Pivot del botón: position fixed, transform driven por JS para
-       anclarse al dock activo. -->
+       anclarse al dock activo. La clase .is-swimming se ata a hubVisible
+       (no a swimState) porque la transformación premium (curl ↔ orbe)
+       requiere overlap: el hub se ESCONDE 250ms antes de "swimming"
+       activo (durante el curl-in del pez) y RE-APARECE 250ms antes del
+       fin del swim (durante el curl-out del pez), creando crossfade en
+       las dos puntas. -->
   <div
     #pivot
     class="companion__pivot"
-    [class.is-swimming]="swimState() === 'swimming'"
+    [class.is-swimming]="!hubVisible()"
   >
     <app-whatsapp-hub #hub size="sm" class="companion__hub" />
   </div>

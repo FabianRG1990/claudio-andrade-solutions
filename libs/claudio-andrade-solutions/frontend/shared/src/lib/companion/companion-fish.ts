@@ -53,6 +53,26 @@ const NEON_RGB = new THREE.Vector3(0.30, 1.65, 0.55);
 const RIM_RGB = new THREE.Vector3(0.20, 1.10, 0.45);
 const LIGHT_RGB = new THREE.Vector3(0.50, 1.55, 0.85);
 
+// ─── Paleta de transformación ───────────────────────────────────────────────
+// Emissive base del companion = cyan-green (4ae285), heredado del hero pero
+// shifted hacia G para que el pez no se sienta "azul" sobre el shell verde
+// que tendrá la transición. Al hacer colorShift=1 lerpea a WhatsApp green
+// puro (25d366) — el color exacto del botón del hub. La transición es de
+// 4ae285 → 25d366: mismo verde pero más saturado y oscuro, dando la
+// sensación de "el pez condensándose en el ícono".
+const EMISSIVE_IDLE = new THREE.Color(0x4ae285);
+const EMISSIVE_MORPH = new THREE.Color(0x25d366);
+// Bloom strength durante swim normal vs durante curl peak. El bloom alto
+// durante el curl crea el "orbe pesado" que disimula visualmente el corte
+// topológico (truco Pixar/Apple Vision Pro).
+const BLOOM_STRENGTH_BASE = 3.20;
+const BLOOM_STRENGTH_MORPH = 4.50;
+// Emissive intensity también escala — el pez idle pulsa fuerte (2.0); en
+// peak morph el cuerpo se vuelve casi puro emissive (3.2) para que el
+// halo verde domine la lectura visual.
+const EMISSIVE_INTENSITY_BASE = 2.0;
+const EMISSIVE_INTENSITY_MORPH = 3.2;
+
 interface CompanionFishUniforms {
   uSpine: { value: Float32Array };
   uSegLen: { value: Float32Array };
@@ -96,6 +116,36 @@ export interface CompanionFishState {
   bodyEffort: number;
   /** Gate del wave 0..1. 1 = wave activa. */
   swimGate: number;
+  /**
+   * Fase de "curl" 0..1. 0 = spine recta + wave normal (pez nadando);
+   * 1 = spine en arco circular cerrado (pez enroscado en O, head = tail).
+   * Valores intermedios producen un C-bend progresivo. Se usa para la
+   * transformación pez→ícono y viceversa en los extremos del swim.
+   *
+   * Cuando curl=1 y bodyLen=98px, el círculo formado tiene diámetro
+   * 98/π ≈ 31px — exactamente el tamaño del trigger del hub (32px sm).
+   * Esto da continuidad geométrica perfecta entre el pez curled y el
+   * ícono WhatsApp.
+   */
+  curlPhase?: number;
+  /**
+   * Lerp del emissive del cuerpo desde cyan-green (#4ae285, palette
+   * default del companion) hacia WhatsApp green puro (#25d366). 0 =
+   * cyan-green; 1 = WhatsApp green. Se sube en sincronía con curlPhase
+   * para que el orbe curled sea exactamente el color del botón. También
+   * dispara un bloom boost (strength 3.20 → 4.50) para el "halo verde
+   * pesado" típico del momento de transformación.
+   */
+  colorShift?: number;
+  /**
+   * Opacity global del mesh (0..1). 1 = pez 100% visible (default); 0 =
+   * invisible. Se usa para crossfade simultáneo con el hub durante el
+   * último tramo del swim — el pez fadea OUT al mismo tiempo que el hub
+   * fadea IN, total visibility (pez + hub) = ~constante, lectura "el pez
+   * SE CONVIRTIÓ en el hub" en vez de "pez llegó + hub apareció encima +
+   * pez desapareció" (sequencia que rompe la transformación).
+   */
+  meshOpacity?: number;
 }
 
 export class CompanionFishRenderer {
@@ -118,6 +168,12 @@ export class CompanionFishRenderer {
 
   // Una sola fish handle — el companion solo tiene un pez.
   private mesh: THREE.Mesh | null = null;
+  // Referencia al material clonado del mesh (vs baseMaterial que es el del
+  // GLB sin clonar). Lo mutamos cada frame en update() para el lerp de
+  // emissive durante la transformación curl → hub.
+  private fishMaterial: THREE.MeshStandardMaterial | null = null;
+  // Color helper reutilizable para el lerp emissive — evita allocs por frame.
+  private readonly emissiveScratch = new THREE.Color();
   private uniforms: CompanionFishUniforms | null = null;
   private lightsGeometry: THREE.BufferGeometry | null = null;
   private lightsMesh: THREE.Points | null = null;
@@ -560,6 +616,7 @@ export class CompanionFishRenderer {
     this.scene.add(lightsMesh);
 
     this.mesh = mesh;
+    this.fishMaterial = material;
     this.uniforms = uniforms;
     this.lightsGeometry = lightsGeometry;
     this.lightsMesh = lightsMesh;
@@ -578,10 +635,43 @@ export class CompanionFishRenderer {
     const halfW = this.canvasW / 2;
     const halfH = this.canvasH / 2;
 
-    // Construir chainJoints recto desde la cabeza en la dirección de
-    // -heading (la cola va hacia atrás del swim). El cuerpo tiene
-    // longitud size * SPRITE_SIZE_FACTOR. Distribuir N joints uniformes.
-    const bodyLen = state.size * SPRITE_SIZE_FACTOR;
+    // ─── Tres blends separados para el morph ─────────────────────────
+    // Cada aspecto de la transformación usa su propia curva de easing —
+    // por design, no por accidente. Esto fue el feedback del user: con un
+    // solo blend smoothstep, todo arrancaba a la vez y el pez quedaba
+    // "tieso girando" porque la flexión y la rotación competían por la
+    // atención al mismo ritmo. Separando:
+    //
+    //   • bendBlend (easeOutCubic) — flexión del cuerpo. Arranca RÁPIDO
+    //     así el body se ve doblarse en C casi de inmediato. El user
+    //     percibe "el pez se está flexionando" antes que cualquier otra
+    //     cosa.
+    //
+    //   • spinBlend (easeInQuart) — rotación de toda la spine alrededor
+    //     del dock-center. Arranca LENTA, se acelera al final. Así la
+    //     flexión es visible durante 100-150ms antes de que la rotación
+    //     empiece a dominar la lectura visual.
+    //
+    //   • scaleBlend (smoothstep) — encogimiento del cuerpo. Suave en
+    //     ambos extremos. El orbe final es 50% del tamaño original, así
+    //     "se mete" dentro del hub (32px) — el orbe queda ~16px diám,
+    //     half el size del hub, dando la lectura "el pez se condensó
+    //     dentro del logo".
+    const curlPhaseRaw = Math.max(0, Math.min(1, state.curlPhase ?? 0));
+    const bendBlend = 1 - Math.pow(1 - curlPhaseRaw, 3); // easeOutCubic
+    const spinBlend = curlPhaseRaw * curlPhaseRaw * curlPhaseRaw * curlPhaseRaw; // easeInQuart
+    const scaleBlend = curlPhaseRaw * curlPhaseRaw * (3 - 2 * curlPhaseRaw); // smoothstep
+
+    // Scale-down agresivo del bodyLen — al curl=1 el body es 15% del
+    // original. bodyLen afecta a la spine length, al uMeshScale
+    // (thickness del mesh) y al R_outer de la espiral. Todo escala
+    // proporcionalmente: el pez se enrosca en una espiral diminuta
+    // (~3px radio en curl=1) "metiéndose dentro del logo". El crossfade
+    // posterior con el hub (32px) hace que esa motita se desvanezca
+    // mientras el logo emerge — fusion genuina, no swap.
+    const SCALE_MIN = 0.15;
+    const sizeFactor = 1 - (1 - SCALE_MIN) * scaleBlend;
+    const bodyLen = state.size * SPRITE_SIZE_FACTOR * sizeFactor;
     const cosH = Math.cos(state.heading);
     const sinH = Math.sin(state.heading);
 
@@ -600,6 +690,15 @@ export class CompanionFishRenderer {
 
     const spine = this.uniforms.uSpine.value;
     const segLen = this.uniforms.uSegLen.value;
+
+    // Linear spine (curl=0): head at state.head, body extends backward
+    // along -heading. Con la espiral implementada abajo, NO necesitamos
+    // re-anchoring del head — la espiral converge naturalmente al
+    // dock-center (tail at center, head at outer rim). El head queda
+    // libre en la posición del swim end (state.head) durante curl=0 y
+    // se va desplazando hacia el outer de la espiral conforme curl
+    // crece. Al curl=1, head está a R_outer del dock; tail está EN el
+    // dock. Visual: la espiral converge al icono.
 
     let prevX = 0;
     let prevY = 0;
@@ -642,6 +741,95 @@ export class CompanionFishRenderer {
       prevY = sy;
     }
 
+    // ─── Curl pass — lerp cada joint hacia el arco circular ───────────
+    // curlPhase 0 = spine recta + carangiform wave (lo construido arriba);
+    // curlPhase 1 = spine en círculo cerrado (head encuentra tail). El
+    // truco geométrico: un arco con bend = curlPhase·2π y arclen = bodyLen
+    // tiene radius = bodyLen/(curlPhase·2π). Cuando curl=1, radius =
+    // bodyLen/(2π) → con bodyLen 98px el círculo tiene 31px de diámetro
+    // (≈ tamaño del trigger del hub). El blend usa smoothstep para evitar
+    // la "esquina" geométrica al inicio/fin de la curl.
+    //
+    // El arco se construye en world coords (top-left origin, Y down)
+    // saliendo de (headX, headY) con tangente -heading. La perpendicular
+    // CCW al cuerpo apunta a (+sin(h), -cos(h)) en frame world; usamos
+    // ese vector para colocar el centro del arco a distance R en esa
+    // dirección. Esto hace que el pez se enrosque SIEMPRE hacia el mismo
+    // lado (consistencia visual independiente de la dirección del swim).
+    if (curlPhaseRaw > 1e-3) {
+      // ─── Espiral de Arquímedes — fusion genuina con el logo ─────────
+      //
+      // Esta NO es una rotación rígida ("helicóptero") ni un círculo
+      // cerrado: es una espiral verdadera que CONVERGE al dock-center.
+      // El head queda en el outer rim; la tail acumula vueltas y
+      // termina exactamente en el centro = posición del logo. Al lerp
+      // desde la spine lineal, el body se enrosca progresivamente como
+      // un caracol que se hace pequeño hacia el centro.
+      //
+      // Por qué Arquímedes (r lineal con θ) en vez de logarítmica
+      // (r·e^bθ): la Arquímedes da espacio uniforme entre vueltas, así
+      // que la espiral se "lee" como anillos concéntricos parejos. La
+      // logarítmica se aprieta mucho en el centro y se ve como nautilo
+      // (más artística pero menos premium-clean).
+      //
+      // 1.5 vueltas = sweet spot: suficiente "enrosque" para que sea
+      // espiral evidente, no tanto que cause mareo o que pierda detalle
+      // del body wave del path swim que viene antes.
+      //
+      // Arc length de un Arquímedes con r(θ)=R·(1-θ/θ_max) sobre θ ∈
+      // [0, θ_max] ≈ R·θ_max/2. Para θ_max=2π·1.5=3π:
+      //   L ≈ R·3π/2 ≈ R·π·1.5
+      // Resolver para que L = bodyLen (después del scale-down):
+      //   R_outer = bodyLen / (π · 1.5)
+      const SPIRAL_TURNS = 1.5;
+      const R_outer = bodyLen / (Math.PI * SPIRAL_TURNS);
+      const θ_max = 2 * Math.PI * SPIRAL_TURNS;
+      const oneMinusBend = 1 - bendBlend;
+
+      // Orientación de la espiral: el head queda en la dirección
+      // (sinH, -cosH) desde el dock = perp +CCW del heading, que en
+      // world Y-down significa "arriba" del dock visualmente cuando
+      // heading=0. Misma dirección que el arc curl anterior usaba para
+      // el center, así la continuidad visual con el path-swim que
+      // venía antes se mantiene.
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        // r(t): linear shrink R_outer → 0
+        const r = R_outer * (1 - t);
+        // θ(t): increases CCW around dock-center as we go from head to tail
+        const θ = t * θ_max;
+        const dirX = Math.sin(state.heading + θ);
+        const dirY = -Math.cos(state.heading + θ);
+        const spiralWorldX = state.headX + r * dirX;
+        const spiralWorldY = state.headY + r * dirY;
+        const spiralSx = spiralWorldX - halfW;
+        const spiralSy = halfH - spiralWorldY;
+        spine[i * 2] = spine[i * 2] * oneMinusBend + spiralSx * bendBlend;
+        spine[i * 2 + 1] = spine[i * 2 + 1] * oneMinusBend + spiralSy * bendBlend;
+      }
+
+      // Spinblend ya no se usa para rotación rígida — está intrínseco
+      // a la espiral (el body inherentemente rota mientras se contrae).
+      // Lo dejamos calculado por si lo queremos para algún detalle
+      // posterior (ej. emissive boost durante el último tercio del
+      // spin), pero no se aplica como rotación de la spine.
+      void spinBlend;
+
+      // Recomputar segLen — la longitud poligonal de la espiral con
+      // N=13 puntos es algo menor que el ideal (cada segmento es una
+      // cuerda, no un arco), pero la normalización posterior compensa.
+      cum = 0;
+      segLen[0] = 0;
+      for (let i = 1; i < N; i++) {
+        const dx = spine[i * 2] - spine[(i - 1) * 2];
+        const dy = spine[i * 2 + 1] - spine[(i - 1) * 2 + 1];
+        cum += Math.hypot(dx, dy);
+        segLen[i] = cum;
+      }
+      prevX = spine[(N - 1) * 2];
+      prevY = spine[(N - 1) * 2 + 1];
+    }
+
     // Pad
     for (let i = N; i < MAX_SPINE; i++) {
       spine[i * 2] = prevX;
@@ -667,6 +855,34 @@ export class CompanionFishRenderer {
     this.uniforms.uSpineTotal.value = cum;
     this.uniforms.uMeshScale.value = targetBodyLen;
     this.uniforms.uTime.value = performance.now() * 0.001;
+
+    // ─── Color shift + bloom boost para el morph ─────────────────────
+    // colorShift 0..1 — durante los extremos del swim (cuando el pez se
+    // está curling o uncurling), el emissive del material lerpea desde
+    // el cyan-green idle hacia el WhatsApp green puro. El bloom strength
+    // sube de 3.20 → 4.50 dando un halo verde "pesado" que domina la
+    // lectura visual durante el corte topológico fish ↔ hub. Esto se
+    // hace cada frame mientras el state cambie — sin allocs porque
+    // reusamos this.emissiveScratch.
+    const colorShift = Math.max(0, Math.min(1, state.colorShift ?? 0));
+    const meshOpacity = Math.max(0, Math.min(1, state.meshOpacity ?? 1));
+    if (this.fishMaterial) {
+      this.emissiveScratch.copy(EMISSIVE_IDLE).lerp(EMISSIVE_MORPH, colorShift);
+      this.fishMaterial.emissive.copy(this.emissiveScratch);
+      this.fishMaterial.emissiveIntensity =
+        EMISSIVE_INTENSITY_BASE
+        + (EMISSIVE_INTENSITY_MORPH - EMISSIVE_INTENSITY_BASE) * colorShift;
+      // Opacity ramp para crossfade simultáneo con el hub al final del swim.
+      // El material ya es `transparent: true` desde el init, así que setear
+      // .opacity surte efecto sin tocar nada más. Cuando meshOpacity=1 (el
+      // default y la mayor parte del swim), no afecta nada.
+      this.fishMaterial.opacity = meshOpacity;
+    }
+    if (this.bloomPass) {
+      this.bloomPass.strength =
+        BLOOM_STRENGTH_BASE
+        + (BLOOM_STRENGTH_MORPH - BLOOM_STRENGTH_BASE) * colorShift;
+    }
 
     // ─── Light overlay (ojo) ─────────────────────────────────────────
     const lightPos = this.lightsGeometry.attributes['position'].array as Float32Array;

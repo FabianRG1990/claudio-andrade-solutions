@@ -80,13 +80,27 @@
 }
 
 // Anchor por centro: el hub queda centrado en el punto del transform.
+//
+// OJO con la durations/bezier: la transformación pez ↔ hub es uno de los
+// momentos premium del producto. El opacity fade rápido (220ms ease-fluid)
+// borra el hub limpio para que el pez curled se vea atrás; el transform
+// más lento (320ms easeOutBack) hace que el SCALE tenga un mini overshoot
+// al volver (0.85 → 1.05 → 1) — el "settle" característico de íconos que
+// nacen del aire (Apple Vision Pro icon coalesce, Linear command palette).
+// El overshoot inverso (depart 1 → 0.82 → 0.85) es invisible porque ocurre
+// durante el opacity fade-out.
 .companion__hub {
   display: block;
   transform: translate(-50%, -50%);
   opacity: 1;
+  // Opacity 180ms (matchea CROSSFADE_DUR_MS del companion.ts) — el pez
+  // fadea OUT exactamente cuando el hub fadea IN, ambos sobre los
+  // últimos 180ms del swim. Transform sigue siendo 320ms easeOutBack
+  // para que el spring del scale persista un poco después del fade,
+  // dando el "settle" característico.
   transition:
-    opacity 220ms var(--ease-fluid),
-    transform 220ms var(--ease-fluid);
+    opacity 180ms var(--ease-fluid),
+    transform 320ms cubic-bezier(0.34, 1.32, 0.64, 1);
   // Scale-up de entrada — mismo delay/duración que la opacity del pivot,
   // pero solo afecta el TAMAÑO del hub (no su posición, que se mantiene
   // por el translate(-50%, -50%) en `from` y `to`). El ícono "emerge"
@@ -99,12 +113,15 @@
   to   { transform: translate(-50%, -50%) scale(1); }
 }
 
-// Durante swim: hub se contrae + desaparece. El pez del canvas toma
-// el escenario. El transform escala dentro del translate del anchor
-// para evitar que se descentre al achicar.
+// Durante swim: hub queda oculto a scale 0.85 (≈ tamaño del pez curled).
+// Continuidad geométrica: con FISH_SIZE=14 → bodyLen=98px → curled circle
+// diameter = 98/π ≈ 31.2px. El hub trigger sm es 32px. Al ocultar a 0.85
+// el "ghost" del hub queda a 27px — un toque más chico que el orbe curled,
+// dejando margen para que el emerge crezca con overshoot. Antes era
+// scale(0.3) (9.6px), un microbotón que se notaba "popping in" al volver.
 .companion__pivot.is-swimming .companion__hub {
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.3);
+  transform: translate(-50%, -50%) scale(0.85);
   pointer-events: none;
 }
 

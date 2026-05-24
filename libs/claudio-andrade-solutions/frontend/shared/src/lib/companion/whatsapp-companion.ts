@@ -73,6 +73,14 @@ export class WhatsappCompanion {
   protected readonly activeDockId = signal<string | null>(null);
   protected readonly swimState = signal<SwimState>('idle');
   protected readonly hasDocks = computed(() => this.registry.docks().length > 0);
+  // Signal separado del swimState — controla la visibilidad del hub DOM
+  // (ícono WhatsApp). Se setea false al ARRANCAR el swim (no cuando entra
+  // a 'swimming' el state), y se vuelve true unos ms ANTES del swim end
+  // para que el hub aparezca encima del pez curled (crossfade premium).
+  // Sin este signal separado, el hub se ocultaba/aparecía exactamente con
+  // los bordes del swim y se veía como "el pez sale del aire" en vez de
+  // "el ícono se transformó en pez".
+  protected readonly hubVisible = signal(true);
 
   // Posición actual del pivot (viewport coords). El transform del pivot
   // se actualiza desde acá cada frame que cambia.
@@ -88,9 +96,35 @@ export class WhatsappCompanion {
   private swimStart: Vec = { x: 0, y: 0 };
   private swimEnd: Vec = { x: 0, y: 0 };
   private swimStartTime = 0;
-  // 1500ms = swim corto, evita que el pez se sienta "estorbando" la pantalla
-  // durante mucho tiempo. Suficiente para leer la trayectoria sin agotar al ojo.
-  private readonly SWIM_DURATION_MS = 1500;
+  // Timing del swim, dividido en tres tramos:
+  //   • MORPH_HEAD_MS — uncurl del orbe en swimStart (hub→pez)
+  //   • Path swim — duración efectiva del path A→B
+  //   • MORPH_TAIL_MS — curl del pez en swimEnd (pez→hub)
+  //
+  // Total = HEAD + PATH + TAIL. El path queda en ~1400ms (similar al swim
+  // antiguo de 1500ms) y los 250ms de cada extremo cubren la transformación.
+  // 250ms es la cadencia premium documentada para morphs orgánicos cortos
+  // (Pixar character pose change, Apple Vision Pro icon coalescence): rápido
+  // pero leíble — el ojo registra la transición sin sentirse "tirado" por
+  // la animación. Más corto se siente "cut"; más largo, "lazy".
+  private readonly MORPH_HEAD_MS = 250;
+  // Tail morph 350ms (vs 250ms anterior) — la transformación tail es
+  // donde el user juzga la calidad del morph. Con 250ms el bend +
+  // spin + scale-down se atropellaban: el ojo no alcanzaba a apreciar
+  // el detalle de la flexión antes de que la rotación tomara el
+  // escenario. 350ms da ~120ms extra para que la flexión easeOutCubic
+  // se "lea" como movimiento orgánico de pez antes del spiral.
+  private readonly MORPH_TAIL_MS = 350;
+  private readonly SWIM_DURATION_MS = 1900;
+  // Duración del crossfade pez↔hub (último tramo del swim). 180ms es
+  // el sweet spot: suficiente para que el ojo lerpe entre ambos sin
+  // ver "salto", corto enough para no quedarse con ambos visibles
+  // demasiado tiempo. El user había reportado "el logo aparece antes
+  // de que el pez desaparezca" — al acortar la ventana y bajar el
+  // tamaño del orbe (50% via scale-down), el crossfade ahora se lee
+  // como "el pez se condensó dentro del logo" en vez de "ambos
+  // visibles simultáneamente".
+  private readonly CROSSFADE_DUR_MS = 180;
 
   private rafId = 0;
   private dirty = false;
@@ -106,6 +140,10 @@ export class WhatsappCompanion {
   // de swims encadenados (eso era el "el pez no sabe a dónde ir").
   private readonly DOCK_DEBOUNCE_MS = 250;
   private dockChangeDebounceTimer = 0;
+  // Timer del re-emerge del hub al final del swim. Se programa al inicio
+  // del swim para disparar (SWIM - TAIL + 50ms) después, dando un mini
+  // overlap visual entre el hub que aparece y el pez que termina de curling.
+  private hubEmergeTimer = 0;
   // Última activeDockId que sí fue scheduleada para evitar resetear el timer
   // de debounce en cada frame del rAF continuo. Solo re-schedule cuando el
   // active dock cambia respecto al último que disparó scheduleDebouncedSwim.
@@ -139,6 +177,7 @@ export class WhatsappCompanion {
     this.destroyRef.onDestroy(() => {
       if (this.rafId) cancelAnimationFrame(this.rafId);
       if (this.dockChangeDebounceTimer) clearTimeout(this.dockChangeDebounceTimer);
+      if (this.hubEmergeTimer) clearTimeout(this.hubEmergeTimer);
       this.fishRenderer?.dispose();
     });
   }
@@ -399,6 +438,38 @@ export class WhatsappCompanion {
     this.swimState.set('swimming');
     this.dockedId = targetId;
     this.hub()?.close();
+
+    // Hub se oculta INMEDIATAMENTE al arrancar el swim → el CSS hace su
+    // fade-out (220ms) concurrente con el pez apareciendo curled-orbe
+    // sobre la misma posición. El ojo lee "el ícono se condensó en el
+    // pez" porque ambos ocupan el mismo espacio en transición.
+    this.hubVisible.set(false);
+    // Programar el re-emerge: SWIM - TAIL + 50ms después del start, el
+    // hub vuelve a estar visible. CSS lo fadea in (220ms) sobre el pez
+    // que está completando su curl en el destino → el ojo lee "el pez
+    // se condensó en el ícono" (cierre del loop simétrico).
+    if (this.hubEmergeTimer) clearTimeout(this.hubEmergeTimer);
+    this.hubEmergeTimer = setTimeout(() => {
+      this.hubEmergeTimer = 0;
+      // Solo emerger si todavía estamos swimming (no si el swim fue
+      // interrumpido o ya terminó por otra razón).
+      if (this.swimState() === 'swimming') {
+        // Snap del pivot al dock NUEVO antes de hacer visible el hub:
+        // durante el swim el pivot estaba congelado en el dock VIEJO,
+        // así que si lo hiciéramos visible ahí, aparecería en el lugar
+        // equivocado. El fish-canvas pinta el pez curled en la posición
+        // del newDock (swimEnd), y queremos que el hub fade-in suceda
+        // exactamente encima. El user no ve el "jump" porque el hub está
+        // a opacity 0 cuando lo movemos.
+        const newDock = this.registry.docks().find((d) => d.id === this.dockedId);
+        if (newDock) {
+          this.current = this.computeDockPosition(newDock);
+          this.applyTransform();
+        }
+        this.hubVisible.set(true);
+      }
+    }, this.SWIM_DURATION_MS - this.CROSSFADE_DUR_MS) as unknown as number;
+
     this.scheduleRaf();
   }
 
@@ -457,7 +528,41 @@ export class WhatsappCompanion {
     const now = performance.now();
     const elapsed = now - this.swimStartTime;
     const t = Math.min(1, elapsed / this.SWIM_DURATION_MS);
-    const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    // ─── Fase de la transformación ────────────────────────────────────
+    // El swim se divide en HEAD (uncurl) → PATH → TAIL (curl). Cada fase
+    // expone su propio progreso, y derivamos:
+    //   • pathT      — t∈[0,1] dentro del path (clampado a 0 en HEAD, 1 en TAIL)
+    //   • curlPhase  — 1 → 0 durante HEAD; 0 durante PATH; 0 → 1 durante TAIL
+    //   • colorShift — sincronizado con curlPhase (mismo valor)
+    //   • waveGate   — 0 → 1 durante HEAD; 1 durante PATH; 1 → 0 durante TAIL
+    //                  ramping cuadrático para que la onda carangiform no
+    //                  "arranque de golpe" desde el orbe-curled
+    const pathDurMs = this.SWIM_DURATION_MS - this.MORPH_HEAD_MS - this.MORPH_TAIL_MS;
+    const tailStartMs = this.SWIM_DURATION_MS - this.MORPH_TAIL_MS;
+    let pathT: number;
+    let curlPhase: number;
+    let waveGate: number;
+    if (elapsed < this.MORPH_HEAD_MS) {
+      const h = elapsed / this.MORPH_HEAD_MS;
+      pathT = 0;
+      curlPhase = 1 - h;
+      waveGate = h * h; // quadratic ramp-up — wave amplitude empieza en 0
+    } else if (elapsed >= tailStartMs) {
+      const ti = Math.min(1, (elapsed - tailStartMs) / this.MORPH_TAIL_MS);
+      pathT = 1;
+      curlPhase = ti;
+      waveGate = (1 - ti) * (1 - ti); // quadratic ramp-down
+    } else {
+      pathT = (elapsed - this.MORPH_HEAD_MS) / pathDurMs;
+      curlPhase = 0;
+      waveGate = 1;
+    }
+    const colorShift = curlPhase;
+
+    const eased = pathT < 0.5
+      ? 4 * pathT * pathT * pathT
+      : 1 - Math.pow(-2 * pathT + 2, 3) / 2;
 
     // swimAt devuelve pos en coords de PÁGINA. Convertir a viewport para el
     // renderer (que pinta sobre canvas position:fixed en viewport coords).
@@ -468,6 +573,25 @@ export class WhatsappCompanion {
     const { pos: pagePos, heading } = this.swimAt(eased);
     const viewportPos: Vec = { x: pagePos.x, y: pagePos.y - window.scrollY };
 
+    // Durante el tail curl, override el viewportPos a la posición ACTUAL
+    // del dock destino. swimEnd está locked en page coords desde el inicio
+    // del swim; si el user scrolleó durante el swim, swimEnd ya no coincide
+    // con el dock actual y el orbe-pez queda desalineado del hub que
+    // emerge encima. Usar dock-position-now garantiza alineación perfecta
+    // entre orbe (renderer canvas) y hub (DOM pivot).
+    if (curlPhase > 0 && elapsed >= tailStartMs) {
+      const newDock = this.registry.docks().find((d) => d.id === this.dockedId);
+      if (newDock) {
+        const dockViewport = this.computeDockPosition(newDock);
+        viewportPos.x = dockViewport.x;
+        viewportPos.y = dockViewport.y;
+      }
+    }
+    // En head curl (uncurl) NO necesitamos override: swimAt(0) devuelve
+    // swimStart en page coords = old-dock-page-y, y el hub DOM está
+    // page-anchored al old-dock por su pivot — ambos comparten page-y
+    // y dan misma viewport-y bajo cualquier scrollY. ✓
+
     if (this.fishReady && this.fishRenderer) {
       // Tail-beat ≈ 3 Hz. swimPhase += 0.32 rad por frame a 60fps → 19.2 rad/s
       // → 3.05 Hz. Banda canónica de carangiform cruising (atún/salmón
@@ -475,20 +599,36 @@ export class WhatsappCompanion {
       // en vez de "nada".
       this.swimPhase += 0.32;
 
-      // Effort fade-in/out — wave amplitude crece al despegar y baja al
-      // anclar. Esto suaviza la emergencia desde el botón y la llegada
-      // al destino sin "stops" abruptos.
-      const fadeIn = Math.min(t / 0.18, 1);
-      const fadeOut = Math.min((1 - t) / 0.18, 1);
-      const effort = Math.max(0, Math.min(1, fadeIn * fadeOut));
+      // Effort fade-in/out solo durante PATH — los morphs (HEAD/TAIL)
+      // tienen su propio gate (waveGate). El effort de path simula que el
+      // pez "acelera" al arrancar y "frena" al llegar dentro del segmento
+      // del path, sin contaminar la lectura de los curls.
+      let effort = 0;
+      if (curlPhase < 1e-3 && pathT > 0 && pathT < 1) {
+        const fadeIn = Math.min(pathT / 0.18, 1);
+        const fadeOut = Math.min((1 - pathT) / 0.18, 1);
+        effort = Math.max(0, Math.min(1, fadeIn * fadeOut));
+      }
 
       // Head yaw counter-phase: el cráneo de un pez no queda perfectamente
       // estable — gira ~3-5° en contra de la cola con cada beat. Eso
       // refuerza visualmente la lectura "el cuerpo entero empuja agua".
       // Amplitud chica (0.06 rad ≈ 3.4°) para no marear; contra-fase
       // restando sin(swimPhase) — opuesto al sentido instantáneo de la cola.
-      const yawAmp = 0.06 * effort;
+      const yawAmp = 0.06 * effort * waveGate;
       const headYaw = -Math.sin(this.swimPhase) * yawAmp;
+
+      // Mesh opacity ramp para el crossfade simultáneo con el hub.
+      // Empieza CROSSFADE_DUR_MS antes del swim-end, dura lo mismo. Al
+      // swim-end, meshOpacity=0 (pez invisible) y hub a opacity~100%.
+      // El timing se compute desde swim-end (no desde tail-start) así
+      // queda independiente de cuánto dure el curl: al swim end siempre
+      // el handoff está completo.
+      const HUB_EMERGE_START_MS = this.SWIM_DURATION_MS - this.CROSSFADE_DUR_MS;
+      let meshOpacity = 1;
+      if (elapsed >= HUB_EMERGE_START_MS) {
+        meshOpacity = Math.max(0, 1 - (elapsed - HUB_EMERGE_START_MS) / this.CROSSFADE_DUR_MS);
+      }
 
       const state: CompanionFishState = {
         headX: viewportPos.x,
@@ -496,8 +636,11 @@ export class WhatsappCompanion {
         heading: heading + headYaw,
         size: this.FISH_SIZE,
         swimPhase: this.swimPhase,
-        bodyEffort: effort,
-        swimGate: effort,
+        bodyEffort: effort * waveGate,
+        swimGate: effort * waveGate,
+        curlPhase,
+        colorShift,
+        meshOpacity,
       };
       this.fishRenderer.update(state);
       this.fishRenderer.render();
@@ -514,23 +657,26 @@ export class WhatsappCompanion {
         : { x: this.swimEnd.x, y: this.swimEnd.y - window.scrollY };
       this.applyTransform();
       this.swimState.set('idle');
+      // Safety — normalmente hubEmergeTimer ya hizo set(true) 200ms antes,
+      // pero por si setTimeout fue throttled (tab inactivo, debugger, etc.)
+      // forzamos el estado correcto al final.
+      this.hubVisible.set(true);
 
-      // Limpiamos el canvas 220ms más tarde — eso le da tiempo al hub
-      // a aparecer (CSS transition 200ms) ON TOP del último frame del
-      // pez. El ojo lee "el pez se convirtió en botón" en vez de
-      // "pez desaparece + botón aparece" (el pluff feo).
+      // Limpiamos el canvas INMEDIATAMENTE — al swim end el pez ya está
+      // a opacity 0 por el ramp de meshOpacity (que corrió los últimos
+      // 220ms en paralelo con el fade-in del hub). El último frame
+      // pintado es prácticamente invisible; el clear simplemente borra
+      // los píxeles muertos. Antes esperábamos 220ms ANTES de limpiar,
+      // así el último frame del pez (a opacity 1 todavía con el modelo
+      // viejo) quedaba visible MIENTRAS el hub ya estaba pleno → user
+      // veía dos cosas a la vez, rompiendo la lectura "morph".
       if (this.fishReady && this.fishRenderer) {
-        setTimeout(() => {
-          // Si arrancó otro swim mientras esperábamos, no limpiar.
-          if (this.swimState() !== 'swimming') {
-            const canvas = this.canvasRef()?.nativeElement;
-            const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
-            if (gl) {
-              gl.clearColor(0, 0, 0, 0);
-              gl.clear(gl.COLOR_BUFFER_BIT);
-            }
-          }
-        }, 220);
+        const canvas = this.canvasRef()?.nativeElement;
+        const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+        if (gl) {
+          gl.clearColor(0, 0, 0, 0);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+        }
       }
 
       // Re-evaluar el dock activo. Si el user siguió scrolleando durante
