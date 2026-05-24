@@ -154,11 +154,18 @@ export class CompanionFishRenderer {
     // chrome con reflexiones azules submarinas. El verde queda
     // EXCLUSIVAMENTE en los neones (ojos + lineas procedurales),
     // creando contraste cyan-body + green-eye = preferencia del user.
-    this.scene.add(new THREE.AmbientLight(0xc8d8ff, 0.85));
-    const key = new THREE.DirectionalLight(0xfff2dd, 1.4);
+    //
+    // Fill levels altos: el pez del companion vuela sobre el shell de
+    // la app (sin lago bright detrás), entonces requiere bastante más
+    // baseline luminance que el hero para no fundirse con el fondo
+    // oscuro post-hero. Key light blanco-warm + ambient azul brillante
+    // + hemi con ground levantado al azul medio para que el belly no
+    // quede negro contra el fondo dark.
+    this.scene.add(new THREE.AmbientLight(0xc8d8ff, 1.65));
+    const key = new THREE.DirectionalLight(0xfff2dd, 1.6);
     key.position.set(0.3, 1.0, 0.5);
     this.scene.add(key);
-    this.scene.add(new THREE.HemisphereLight(0x90b4ff, 0x102040, 0.5));
+    this.scene.add(new THREE.HemisphereLight(0x90b4ff, 0x2a4a80, 1.05));
 
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     const envScene = new THREE.Scene();
@@ -186,11 +193,16 @@ export class CompanionFishRenderer {
     ]);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // Bloom más fuerte y ancho — los neones del companion necesitan un
+    // halo más amplio para sentirse "premium glowing object" sobre el
+    // fondo dark de las secciones post-hero (a la Apple Vision Pro /
+    // Linear product marketing). Threshold bajo para que también el
+    // rim cyan haga halo, no solo los puntos hot.
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(width, height),
-      2.40, // strength
-      0.85, // radius
-      0.30, // threshold
+      3.20, // strength (was 2.40)
+      1.00, // radius (was 0.85)
+      0.22, // threshold (was 0.30)
     );
     this.composer.addPass(this.bloomPass);
     const copyPass = new ShaderPass(CopyShader);
@@ -249,16 +261,22 @@ export class CompanionFishRenderer {
       this.meshMax.copy(bbox.max);
     }
 
-    // Material PBR — body queda navy chrome (como el hero), sin tint.
-    // El verde vive exclusivamente en los neones del fragment shader
-    // (ojos + lineas procedurales) — preferencia del user.
-    this.baseMaterial.metalness = 0.95;
-    this.baseMaterial.roughness = 0.22;
-    this.baseMaterial.envMapIntensity = 2.2;
+    // Material PBR — body lee como "pulido pintado" en vez de chrome
+    // puro. El hero usa metalness 0.95 porque el lago lo refleja todo;
+    // acá no hay lago, entonces bajamos metalness a 0.62 para que el
+    // body responda con su própio color (diffuse) en vez de depender
+    // del environment dark de la página. Roughness sube un toque para
+    // dispersar más la luz key y dar lift uniforme. envMapIntensity
+    // alto para que las pocas reflexiones sean blue-bright (no oscuras).
+    // emissiveIntensity 2.0 — los marks de la texture (incluyendo el
+    // ojo verde) pulsan fuerte.
+    this.baseMaterial.metalness = 0.62;
+    this.baseMaterial.roughness = 0.28;
+    this.baseMaterial.envMapIntensity = 3.4;
     this.baseMaterial.color = new THREE.Color(0xffffff);
     this.baseMaterial.emissiveMap = this.baseMaterial.map;
     this.baseMaterial.emissive = new THREE.Color(0x4ae285);
-    this.baseMaterial.emissiveIntensity = 1.0;
+    this.baseMaterial.emissiveIntensity = 2.0;
     this.baseMaterial.transparent = true;
     this.baseMaterial.needsUpdate = true;
 
@@ -391,14 +409,39 @@ export class CompanionFishRenderer {
           bodyMask += (1.0 - smoothstep(0.045, 0.090, dist)) * 5.50;
           bodyMask += (1.0 - smoothstep(0.090, 0.220, dist)) * 2.00;
         }
+        // (g) Dorsal ridge — línea fina a lo largo del lomo, signature
+        // bioluminiscente. Sin esto, cuando el pez nada VERTICAL entre
+        // capítulos N→N+1 el viewer ve el lomo y no tiene chromatic
+        // signature contra el fondo dark. La línea corre de bodyU 0.22
+        // (justo después del head/body separator) a 0.85 (antes del
+        // tail button), en dorsalV 0.92 — bien arriba, casi en el edge
+        // dorsal. Mismo color cyan que las demás líneas.
+        {
+          float uM = smoothstep(0.22, 0.30, bodyU) * (1.0 - smoothstep(0.78, 0.88, bodyU));
+          float dV = abs(dorsalV - 0.92);
+          bodyMask += uM * (1.0 - smoothstep(0.030, 0.075, dV)) * 5.00;
+          bodyMask += uM * (1.0 - smoothstep(0.075, 0.200, dV)) * 1.80;
+        }
 
         bodyMask *= lineBoost;
         eyeMask *= lineBoost;
 
-        // Cyan body lines (mismo color que el hero)
-        gl_FragColor.rgb += vec3(0.40, 0.95, 1.80) * bodyMask * 5.0;
-        // Green eye (WhatsApp green saturado)
-        gl_FragColor.rgb += vec3(0.30, 1.65, 0.55) * eyeMask * 5.0;
+        // Cyan body lines (mismo color que el hero) — bump a 8.5 para
+        // legibilidad fuerte sobre fondo dark post-hero. El bloom las
+        // toma como hot points y genera halo cyan amplio.
+        gl_FragColor.rgb += vec3(0.40, 0.95, 1.80) * bodyMask * 8.5;
+        // Green eye (WhatsApp green saturado) — bump a 8.0.
+        gl_FragColor.rgb += vec3(0.30, 1.65, 0.55) * eyeMask * 8.0;
+
+        // Dorsal wash — lift sutil de color en la mitad superior del
+        // cuerpo, sin afectar el belly (que ya está bien servido por el
+        // hemi ground bounce). Sin esto, cuando el pez nada vertical
+        // entre capítulos el lomo se lee como sombra. Tinte teal-cyan
+        // pastel (no satura — solo lifts el midtone), enmascarado a
+        // dorsalV > 0.55 con falloff suave hasta 0.95. Magnitud
+        // moderada (×1.10) para no perder la sensación premium.
+        float dorsalAccent = smoothstep(0.55, 0.95, dorsalV);
+        gl_FragColor.rgb += vec3(0.22, 0.55, 0.85) * dorsalAccent * 1.10;
 
         // Texture neon boost — el GLB tiene el ojo pintado en cyan.
         // Re-tintamos a VERDE en la zona del ojo (bodyU ~ 0.05-0.20)
@@ -416,12 +459,19 @@ export class CompanionFishRenderer {
           gl_FragColor.rgb += mixColor * neonLum * neonMaskAdd * 5.0;
         #endif
 
-        // Fresnel rim — CYAN como el hero (es subtle, no debe tirar
-        // el balance hacia verde).
+        // Rim fresnel a DOBLE capa — la firma premium de objetos 3D
+        // sobre fondo dark (Apple Vision Pro / Linear / Stripe). La
+        // capa ancha (pow 1.4) baña todo el contorno con cyan pastel
+        // suave dando sensación de "objeto levitando sobre dark glow";
+        // la capa sharp (pow 4.0) afina el edge exacto en cyan-bright
+        // para que la silueta esté siempre definida. El bloom amplifica
+        // ambas y genera el halo amplio característico.
         vec3 vRimViewDir = normalize(vViewPosition);
         float vRimNoV = max(0.0, dot(normalize(vNormal), vRimViewDir));
-        float vRimFresnel = pow(1.0 - vRimNoV, 2.5);
-        gl_FragColor.rgb += vec3(0.30, 0.70, 1.50) * vRimFresnel * 1.20;
+        float vRimWide = pow(1.0 - vRimNoV, 1.4);
+        float vRimSharp = pow(1.0 - vRimNoV, 4.0);
+        gl_FragColor.rgb += vec3(0.30, 0.65, 1.30) * vRimWide * 1.40;
+        gl_FragColor.rgb += vec3(0.55, 1.10, 1.95) * vRimSharp * 3.20;
 
         #include <output_fragment>
         `,
