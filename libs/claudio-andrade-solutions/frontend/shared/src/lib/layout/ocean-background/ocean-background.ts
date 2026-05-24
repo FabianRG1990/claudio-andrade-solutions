@@ -35,195 +35,363 @@ import { filter } from 'rxjs/operators';
 
 type Vec = { x: number; y: number };
 
-// Tintes — los peces leen como siluetas atmosféricas casi fundidas con
-// el agua oscura (estética original Acuario). Compositing normal (sin
-// `screen` blend, que multiplicaba la presencia y los volvía protagonistas).
-// Alphas calibrados al punto intermedio: ~2× los originales (0.06-0.11),
-// suficiente para que el ojo los registre sobre `#06091A` (navy puro,
-// sin hue-contrast disponible) pero por debajo del umbral de "fish loud".
+// Tintas brass / oro. Match al italic de los títulos (--brass = rgb 198 161
+// 91 = #C6A15B). 4 variantes dentro de la familia cream-brass-bronze.
+//
+// Alphas: bump suave (~30%) sobre la versión brass original (0.10-0.14 →
+// 0.14-0.18). El usuario aclaró que el hue brass-gold estaba bien, solo
+// quería verlos un poquito más — no más saturados, no de otro hue, solo
+// un escalón más visibles contra el navy.
 const TINTS: ReadonlyArray<{ body: string; tail: string }> = [
-  { body: 'rgba(127, 227, 214, 0.16)', tail: 'rgba(94, 196, 209, 0.11)' },
-  { body: 'rgba(180, 205, 215, 0.13)', tail: 'rgba(140, 165, 180, 0.09)' },
-  { body: 'rgba(94, 196, 209, 0.15)', tail: 'rgba(140, 175, 155, 0.11)' },
-  { body: 'rgba(160, 195, 175, 0.14)', tail: 'rgba(115, 150, 135, 0.10)' },
-  { body: 'rgba(140, 175, 200, 0.13)', tail: 'rgba(105, 140, 170, 0.09)' },
+  // Brass base — el tono más cercano al italic de los títulos
+  { body: 'rgba(198, 161, 91, 0.17)', tail: 'rgba(168, 132, 70, 0.12)' },
+  // Cream-gold — más claro, lectura "luz reflejada"
+  { body: 'rgba(220, 185, 115, 0.15)', tail: 'rgba(195, 160, 95, 0.11)' },
+  // Bronze — más oscuro/saturado, profundidad
+  { body: 'rgba(170, 130, 65, 0.18)', tail: 'rgba(140, 105, 55, 0.13)' },
+  // Champagne — pálido, el más etéreo
+  { body: 'rgba(232, 200, 140, 0.14)', tail: 'rgba(205, 170, 110, 0.10)' },
 ];
 
+// ============================================================================
+// ShadowFish — pez procedural ambiental.
+//
+// La versión anterior tenía 3 defectos visuales que el usuario marcó:
+//   1. "Parecían renacuajos" — la onda solo afectaba i=2..N, cabeza y cuerpo
+//      rígidos. Movimiento de tadpole, no de pez.
+//   2. "Doblaban por el mismo camino y se deformaban" — el head usaba lerp
+//      directo hacia el target. Cuando el target quedaba detrás, el head
+//      pivotaba en el mismo punto y FABRIK forzaba el cuerpo a doblarse en
+//      horquilla (hairpin), no en arco.
+//   3. "Tienen que doblar como una C" — pedido explícito de C-shape turn.
+//
+// Reescritura combina TRES técnicas validadas (research notes en
+// memory/reference_fish_animation_research.md):
+//
+//   A) Modelo cinemático tipo bicycle (Dubins): `forwardSpeed` siempre > 0
+//      modulado por alignment con target; `heading` rota a `maxTurnRate`
+//      bounded. Esto crea un radio mínimo de giro (Rmin = speed/turnRate)
+//      que IMPIDE el pivot en su lugar. Si el target queda detrás, el pez
+//      sobrepasa, arquea, y vuelve — exactamente lo que hacen los peces
+//      reales.
+//
+//   B) Chain espacial argonaut (animal-proc-anim): los joints persisten en
+//      coords mundo entre frames. Cada joint mantiene distancia fija al
+//      anterior Y un ángulo bounded (±20°) vs el ángulo del anterior. Cuando
+//      el head gira rápido, el cuerpo NO puede plegar más de ese ángulo por
+//      joint, así que emerge una curva continua C-shape. Sin parpadeos, sin
+//      hairpins, sin "carta agarrada de la trompa".
+//
+//   C) Carangiform traveling wave en TODO el cuerpo: `sin(swimPhase - k*u)`
+//      con envelope cuadrático `u²` (cabeza 0, cola máxima). Wavelength ~1.2
+//      longitudes corporales (k≈5.2), frecuencia ~1 Hz (omega ~6.5 rad/s).
+//      La onda se aplica perpendicular a la tangente de la cadena en cada
+//      joint, así undulación + giro coexisten sin distorsión.
+// ============================================================================
 class ShadowFish {
-  spine: Vec[];
+  // Posición y heading de la cabeza (modelo cinemático).
+  x: number;
+  y: number;
+  heading: number;
+  forwardSpeed: number;
+
+  // Onda de nado.
+  swimPhase: number;
+  swimOmega: number;
+
+  // Geometría.
+  bodyLength: number;
+  segments: number;
   segLen: number;
-  bodyScale: number;
+
+  // Visual.
   baseAlpha: number;
-  phase = Math.random() * Math.PI * 2;
+  tint: { body: string; tail: string };
+  // bodyScale mantenido como alias de bodyLength para el sort by-size del
+  // tick (los peces lejanos se pintan primero).
+  bodyScale: number;
+
+  // Target navigation.
   target: Vec;
   targetTimer = 0;
-  speed: number;
-  blurAmount: number;
-  tint: { body: string; tail: string };
-  segments: number;
+
+  // Constantes cinemáticas — bounded turn rate crea Rmin = speed/turnRate.
+  readonly maxTurnRate: number;
+  readonly minSpeed: number;
+  readonly maxSpeed: number;
+
+  // Chain espacial (coords mundo). Persiste entre frames — esa persistencia
+  // es lo que garantiza continuidad geométrica y curvas C limpias.
+  readonly chainJoints: Vec[];
+  readonly chainAngles: number[];
+  // 20° max bend por joint. Sumado por 12 joints = 240° de curvatura total
+  // máxima — suficiente para una C cerrada en U-turn sin permitir hairpin.
+  readonly bendLimit = Math.PI / 9;
 
   constructor(start: Vec, w: number, h: number, depth: number) {
-    // depth: 0..1 — 0 cerca, 1 lejos
+    // depth: 0..1 — 0 cerca, 1 lejos.
     //
-    // Viewport scale: el bodyScale base estaba calibrado para desktop 1440px.
-    // En phone 360 los peces se renderizaban al mismo tamaño absoluto que en
-    // desktop — un pez "cerca" (sc=9.5, ~126px de largo) ocupaba ~35% del
-    // ancho del viewport phone, leyéndose como desproporcionado vs el resto
-    // del contenido. La queja del usuario fue explícita: "no quiero que los
-    // peces sean tan grandes en pantallas pequeñas".
-    //
-    // `viewportScale` interpola lineal entre 0.45 (phone <540) y 1.0
-    // (desktop ≥1200). Resultado:
-    //   phone 360  → 0.45 → sc 1.1-4.3 → pez ~15-57px largo
-    //   phone 430  → 0.45
-    //   tablet 768 → 0.64 → sc 1.6-6.1 → ~21-81px largo
-    //   tablet 870 → 0.73 → ~24-92px
-    //   laptop 1024→ 0.85 → ~28-108px
-    //   desktop 1200+→ 1.0 → original 33-126px
+    // Viewport scale: el bodyLength base está calibrado para desktop 1440px.
+    // En phone 360 sin escala los peces se ven desproporcionados (~35% del
+    // ancho del viewport por un pez "cerca"). `viewportScale` interpola
+    // lineal entre 0.45 (phone <540) y 1.0 (desktop ≥1200):
+    //   phone 360-540 → 0.45 → bodyLength 14-44px
+    //   tablet 768    → 0.64 → 20-62px
+    //   desktop 1200+ → 1.00 → 31-97px
     const viewportScale = Math.max(0.45, Math.min(1.0, w / 1200));
-    const sc = ((1 - depth) * 7 + 2.5) * viewportScale;
-    this.bodyScale = sc;
-    this.segLen = sc * 0.95;
-    this.segments = 14;
-    this.spine = Array.from({ length: this.segments }, (_, i) => ({
-      x: start.x - i * this.segLen,
-      y: start.y,
-    }));
-    this.baseAlpha = 0.5 + (1 - depth) * 0.35;
-    this.speed = 0.45 + (1 - depth) * 0.45;
-    this.blurAmount = 0.8 + depth * 1.8;
+    this.bodyLength = ((1 - depth) * 66 + 31) * viewportScale;
+    this.bodyScale = this.bodyLength;
+    this.segments = 12;
+    this.segLen = this.bodyLength / this.segments;
+
+    this.baseAlpha = 0.55 + (1 - depth) * 0.30;
     this.tint = TINTS[Math.floor(Math.random() * TINTS.length)];
-    this.target = {
-      x: Math.random() * w,
-      y: 80 + Math.random() * Math.max(80, h - 160),
-    };
+
+    this.x = start.x;
+    this.y = start.y;
+    this.heading = Math.random() * Math.PI * 2;
+
+    this.swimPhase = Math.random() * Math.PI * 2;
+    // omega 5.0-7.0 rad/s = ~0.8-1.1 Hz. Frecuencia baja para lectura
+    // atmosférica — peces de fondo, no de acción.
+    this.swimOmega = 5.0 + Math.random() * 2.0;
+
+    // Speed: 22-50 px/s con boost por depth. Bajo en términos absolutos
+    // (1-2.5 cards width por segundo) para preservar feel "ambiente".
+    this.maxSpeed = 22 + (1 - depth) * 28;
+    this.minSpeed = this.maxSpeed * 0.50;
+    this.forwardSpeed = this.maxSpeed * 0.85;
+
+    // Turn rate 0.7-1.3 rad/s (~40-75°/s). Combinado con speed da Rmin
+    // ~22/1.3 = 17px hasta ~50/0.7 = 71px — siempre menor al bodyLength,
+    // garantiza que U-turns produzcan una C clara y no un círculo apretado.
+    this.maxTurnRate = 0.7 + (1 - depth) * 0.6;
+
+    // Init de la chain: línea recta detrás del head, todos los ángulos
+    // alineados con heading. Cualquier movimiento posterior los ajusta.
+    this.chainJoints = [];
+    this.chainAngles = [];
+    for (let i = 0; i <= this.segments; i++) {
+      this.chainJoints.push({
+        x: this.x - Math.cos(this.heading) * i * this.segLen,
+        y: this.y - Math.sin(this.heading) * i * this.segLen,
+      });
+      this.chainAngles.push(this.heading);
+    }
+
+    this.target = { x: 0, y: 0 };
     this.pickTarget(w, h);
   }
 
   private pickTarget(w: number, h: number): void {
-    const head = this.spine[0];
+    // Distancia mínima 320px — targets más cercanos producen loops cerrados
+    // donde el pez orbita sin alcanzar (overshoot constante por Rmin).
     const angle = Math.random() * Math.PI * 2;
-    const dist = 220 + Math.random() * 600;
-    this.target.x = Math.max(40, Math.min(w - 40, head.x + Math.cos(angle) * dist));
-    this.target.y = Math.max(40, Math.min(h - 40, head.y + Math.sin(angle) * dist));
-    this.targetTimer = 4 + Math.random() * 5;
+    const dist = 320 + Math.random() * 480;
+    this.target.x = Math.max(60, Math.min(w - 60, this.x + Math.cos(angle) * dist));
+    this.target.y = Math.max(60, Math.min(h - 60, this.y + Math.sin(angle) * dist));
+    this.targetTimer = 5 + Math.random() * 5;
   }
 
   update(dt: number, w: number, h: number): void {
     this.targetTimer -= dt;
     if (this.targetTimer <= 0) this.pickTarget(w, h);
 
-    const head = this.spine[0];
-    const dx = this.target.x - head.x;
-    const dy = this.target.y - head.y;
-    const dist = Math.hypot(dx, dy);
-    const pull = 0.022;
-    const maxStep = this.speed * dt * 60;
-    const step = Math.min(dist * pull, maxStep);
-    if (dist > 0.5) {
-      head.x += (dx / dist) * step;
-      head.y += (dy / dist) * step;
+    // Edge avoidance proactiva: si el pez está cerca del borde y el heading
+    // lo lleva afuera, pickea target hacia el centro. Sin esto, peces que
+    // hicieron lock con un heading hacia el borde llegan a tocar el clamp
+    // visualmente y se ven "atascados".
+    const margin = 50;
+    const lookaheadDist = this.forwardSpeed * 1.2;
+    const lookX = this.x + Math.cos(this.heading) * lookaheadDist;
+    const lookY = this.y + Math.sin(this.heading) * lookaheadDist;
+    if (
+      lookX < margin || lookX > w - margin ||
+      lookY < margin || lookY > h - margin
+    ) {
+      // Apuntar al cuadrante centro con jitter ±90° — evita que todos los
+      // peces converjan al centro exacto y formen un nudo.
+      const centerAngle = Math.atan2(h / 2 - this.y, w / 2 - this.x);
+      const jitter = (Math.random() - 0.5) * Math.PI;
+      const newAngle = centerAngle + jitter;
+      const dist = 280 + Math.random() * 320;
+      this.target.x = Math.max(80, Math.min(w - 80, this.x + Math.cos(newAngle) * dist));
+      this.target.y = Math.max(80, Math.min(h - 80, this.y + Math.sin(newAngle) * dist));
+      this.targetTimer = 4 + Math.random() * 3;
     }
 
-    // FABRIK constraint
-    for (let i = 1; i < this.spine.length; i++) {
-      const a = this.spine[i - 1];
-      const b = this.spine[i];
-      const ddx = b.x - a.x;
-      const ddy = b.y - a.y;
-      const d = Math.hypot(ddx, ddy) || 1;
-      b.x = a.x + (ddx / d) * this.segLen;
-      b.y = a.y + (ddy / d) * this.segLen;
+    // ── Modelo cinemático bicycle ─────────────────────────────────────────
+    const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+    let diff = targetAngle - this.heading;
+    // Normalizar a (-π, π]
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+
+    // Rotar heading bounded por maxTurnRate. El sign(diff) elige el lado
+    // del giro que produce menor recorrido angular.
+    const maxStep = this.maxTurnRate * dt;
+    const headingDelta = Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+    this.heading += headingDelta;
+
+    // Speed modulado por alignment: cuando el target está al frente
+    // (alignment=1), va al máximo; cuando está detrás (alignment=-1), va
+    // al mínimo — pero NUNCA se detiene. Eso es lo que mata el pivot.
+    const alignment = Math.cos(diff);
+    const targetSpeed = this.minSpeed +
+      (this.maxSpeed - this.minSpeed) * (0.5 + 0.5 * alignment);
+    // Lerp con tau ~500ms (k=2) para sensación de masa/momentum.
+    this.forwardSpeed += (targetSpeed - this.forwardSpeed) * Math.min(1, dt * 2);
+
+    // Integrar posición.
+    this.x += Math.cos(this.heading) * this.forwardSpeed * dt;
+    this.y += Math.sin(this.heading) * this.forwardSpeed * dt;
+
+    // ── Resolver chain espacial (argonaut) ────────────────────────────────
+    // Head salta a la nueva posición. chainAngles[0] = heading actúa como
+    // anchor para el constraint de chainAngles[1].
+    this.chainJoints[0].x = this.x;
+    this.chainJoints[0].y = this.y;
+    this.chainAngles[0] = this.heading;
+
+    for (let i = 1; i < this.chainJoints.length; i++) {
+      const prev = this.chainJoints[i - 1];
+      const cur = this.chainJoints[i];
+      // Look-back natural: dirección desde cur hacia prev.
+      const naturalLookBack = Math.atan2(prev.y - cur.y, prev.x - cur.x);
+      // Constrain a ±bendLimit del look-back del joint anterior. Esto es
+      // lo que garantiza que el cuerpo NUNCA se pliegue en horquilla:
+      // máximo 20° de curvatura entre joints adyacentes.
+      const constrained = this.constrainAngle(
+        naturalLookBack,
+        this.chainAngles[i - 1],
+        this.bendLimit,
+      );
+      this.chainAngles[i] = constrained;
+      // Reposicionar cur a distancia segLen de prev en la dirección OPUESTA
+      // al look-back (prev → cur = -lookBack).
+      this.chainJoints[i].x = prev.x - Math.cos(constrained) * this.segLen;
+      this.chainJoints[i].y = prev.y - Math.sin(constrained) * this.segLen;
     }
 
-    // Tail wave (lighter than hero fish — these are ambient)
-    const baseSpeed = step;
-    this.phase += dt * (3 + baseSpeed * 0.4);
-    for (let i = 2; i < this.spine.length; i++) {
-      const t = i / (this.spine.length - 1);
-      const wave = Math.sin(this.phase - t * 4) * 1.2 * t * t;
-      const a = this.spine[i - 1];
-      const b = this.spine[i];
-      const tx = b.x - a.x;
-      const ty = b.y - a.y;
-      const len = Math.hypot(tx, ty) || 1;
-      const nx = -ty / len;
-      const ny = tx / len;
-      b.x += nx * wave;
-      b.y += ny * wave;
-      const ddx = b.x - a.x;
-      const ddy = b.y - a.y;
-      const d = Math.hypot(ddx, ddy) || 1;
-      b.x = a.x + (ddx / d) * this.segLen;
-      b.y = a.y + (ddy / d) * this.segLen;
-    }
+    // ── Avanzar fase del wave ─────────────────────────────────────────────
+    this.swimPhase += this.swimOmega * dt;
   }
 
-  private widthAt(t: number): number {
-    return Math.max(
-      1.5,
-      Math.sin(Math.PI * Math.pow(t, 0.6)) * (1 - 0.4 * t) * this.bodyScale,
-    );
+  private constrainAngle(angle: number, anchor: number, limit: number): number {
+    let d = angle - anchor;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    d = Math.max(-limit, Math.min(limit, d));
+    return anchor + d;
+  }
+
+  // Perfil de ancho del cuerpo. u in [0, 1], 0=head, 1=tail. Profile peaks
+  // ~30% del head (sin(π·u^0.55) tiene su máximo cerca de u=0.3 con esa
+  // potencia), taper lineal hacia la cola.
+  private bodyWidth(u: number): number {
+    const profile = Math.sin(Math.PI * Math.pow(u, 0.55));
+    const taper = 1 - 0.6 * u;
+    return Math.max(0.8, profile * taper * this.bodyLength * 0.075);
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    const left: Vec[] = [];
-    const right: Vec[] = [];
+    // Construir la spine visual: chain (curva del giro) + wave (undulación).
+    // El wave se añade perpendicular a la tangente local de la chain en cada
+    // joint, así girar + nadar coexisten sin que uno distorsione al otro.
+    const N = this.chainJoints.length;
+    // Wavelength ~1.2 bodyLengths → k = 2π/1.2 ≈ 5.24. Amplitud cresce
+    // cuadráticamente desde el head (envelope u²) hasta la cola.
+    const k = 5.2;
+    const ampMax = this.bodyLength * 0.08;
 
-    for (let i = 0; i < this.spine.length; i++) {
-      const t = i / (this.spine.length - 1);
-      const cur = this.spine[i];
-      const nx = i < this.spine.length - 1 ? this.spine[i + 1] : cur;
-      const px = i > 0 ? this.spine[i - 1] : cur;
-      const tx = nx.x - px.x;
-      const ty = nx.y - px.y;
-      const len = Math.hypot(tx, ty) || 1;
-      const ux = -ty / len;
-      const uy = tx / len;
-      const w = this.widthAt(t);
-      left.push({ x: cur.x + ux * w, y: cur.y + uy * w });
-      right.push({ x: cur.x - ux * w, y: cur.y - uy * w });
+    const spine: Vec[] = new Array(N);
+    for (let i = 0; i < N; i++) {
+      const u = i / (N - 1);
+      const envelope = u * u;
+      const waveOffset = Math.sin(this.swimPhase - k * u) * ampMax * envelope;
+
+      const joint = this.chainJoints[i];
+      // Tangente local: promedio de los vecinos para los interiores; en
+      // los extremos usa el vecino disponible. La perpendicular es
+      // (-tangentY, tangentX) — la onda se aplica en esa dirección.
+      let tx: number, ty: number;
+      if (i === 0) {
+        const next = this.chainJoints[1];
+        tx = joint.x - next.x;
+        ty = joint.y - next.y;
+      } else if (i === N - 1) {
+        const prev = this.chainJoints[i - 1];
+        tx = prev.x - joint.x;
+        ty = prev.y - joint.y;
+      } else {
+        const prev = this.chainJoints[i - 1];
+        const next = this.chainJoints[i + 1];
+        tx = prev.x - next.x;
+        ty = prev.y - next.y;
+      }
+      const tl = Math.hypot(tx, ty) || 1;
+      const perpX = -ty / tl;
+      const perpY = tx / tl;
+
+      spine[i] = {
+        x: joint.x + perpX * waveOffset,
+        y: joint.y + perpY * waveOffset,
+      };
     }
 
-    const head = this.spine[0];
-    const tail = this.spine[this.spine.length - 1];
-    const beforeTail = this.spine[this.spine.length - 2];
-    const tailDir = { x: tail.x - beforeTail.x, y: tail.y - beforeTail.y };
-    const tailLen = Math.hypot(tailDir.x, tailDir.y) || 1;
-    tailDir.x /= tailLen;
-    tailDir.y /= tailLen;
-    const finPerp = { x: -tailDir.y, y: tailDir.x };
-    const tailWag = Math.sin(this.phase - 4) * (this.bodyScale * 0.5);
-    const finReach = this.bodyScale * 1.55;
-    const tailEnd = {
-      x: tail.x + tailDir.x * finReach + finPerp.x * tailWag * 0.4,
-      y: tail.y + tailDir.y * finReach + finPerp.y * tailWag * 0.4,
+    // ── Outline del cuerpo (left + right de la spine) ─────────────────────
+    const left: Vec[] = new Array(N);
+    const right: Vec[] = new Array(N);
+
+    for (let i = 0; i < N; i++) {
+      const u = i / (N - 1);
+      const w = this.bodyWidth(u);
+      const cur = spine[i];
+      const prev = spine[Math.max(0, i - 1)];
+      const next = spine[Math.min(N - 1, i + 1)];
+      const tx = next.x - prev.x;
+      const ty = next.y - prev.y;
+      const tl = Math.hypot(tx, ty) || 1;
+      const nx = -ty / tl;
+      const ny = tx / tl;
+      left[i] = { x: cur.x + nx * w, y: cur.y + ny * w };
+      right[i] = { x: cur.x - nx * w, y: cur.y - ny * w };
+    }
+
+    const head = spine[0];
+    const tail = spine[N - 1];
+
+    // ── Caudal fin (cola en abanico) ──────────────────────────────────────
+    const tailPrev = spine[N - 2];
+    const tdx = tail.x - tailPrev.x;
+    const tdy = tail.y - tailPrev.y;
+    const tdl = Math.hypot(tdx, tdy) || 1;
+    const tDirX = tdx / tdl;
+    const tDirY = tdy / tdl;
+    const tNx = -tDirY;
+    const tNy = tDirX;
+    const finReach = this.bodyLength * 0.14;
+    const finWidth = this.bodyLength * 0.09;
+    // El wag de la cola sigue la fase del wave (extendido un período más
+    // allá del último joint) — extensión natural de la undulación.
+    const tailWag = Math.sin(this.swimPhase - k) * (this.bodyLength * 0.05);
+
+    const tailEnd: Vec = {
+      x: tail.x + tDirX * finReach + tNx * tailWag * 0.4,
+      y: tail.y + tDirY * finReach + tNy * tailWag * 0.4,
     };
-    const tailUp = {
-      x:
-        tail.x +
-        tailDir.x * finReach * 0.5 +
-        finPerp.x * (this.bodyScale * 0.85 + tailWag * 0.3),
-      y:
-        tail.y +
-        tailDir.y * finReach * 0.5 +
-        finPerp.y * (this.bodyScale * 0.85 + tailWag * 0.3),
+    const tailUp: Vec = {
+      x: tail.x + tDirX * finReach * 0.5 + tNx * (finWidth + tailWag * 0.25),
+      y: tail.y + tDirY * finReach * 0.5 + tNy * (finWidth + tailWag * 0.25),
     };
-    const tailDown = {
-      x:
-        tail.x +
-        tailDir.x * finReach * 0.5 -
-        finPerp.x * (this.bodyScale * 0.85 - tailWag * 0.3),
-      y:
-        tail.y +
-        tailDir.y * finReach * 0.5 -
-        finPerp.y * (this.bodyScale * 0.85 - tailWag * 0.3),
+    const tailDown: Vec = {
+      x: tail.x + tDirX * finReach * 0.5 - tNx * (finWidth - tailWag * 0.25),
+      y: tail.y + tDirY * finReach * 0.5 - tNy * (finWidth - tailWag * 0.25),
     };
 
     ctx.save();
     ctx.globalAlpha = this.baseAlpha;
 
-    // Tail (caudal fan)
     ctx.fillStyle = this.tint.tail;
     ctx.beginPath();
     ctx.moveTo(tail.x, tail.y);
@@ -232,11 +400,10 @@ class ShadowFish {
     ctx.closePath();
     ctx.fill();
 
-    // Body silhouette
     ctx.fillStyle = this.tint.body;
     ctx.beginPath();
     ctx.moveTo(head.x, head.y);
-    for (let i = 0; i < left.length - 1; i++) {
+    for (let i = 0; i < N - 1; i++) {
       const c1 = left[i];
       const c2 = left[i + 1];
       const mx = (c1.x + c2.x) / 2;
@@ -244,7 +411,7 @@ class ShadowFish {
       ctx.quadraticCurveTo(c1.x, c1.y, mx, my);
     }
     ctx.lineTo(tail.x, tail.y);
-    for (let i = right.length - 1; i > 0; i--) {
+    for (let i = N - 1; i > 0; i--) {
       const c1 = right[i];
       const c2 = right[i - 1];
       const mx = (c1.x + c2.x) / 2;
@@ -335,10 +502,14 @@ export class OceanBackground {
 
     // Density por área (no lineal por width). En widescreen 1440×900 el peso
     // base es 1.0; en phone 360×640 baja a ~0.4 → menos peces, más respiro.
-    // Esto evita el caso de "phone saturado" o "widescreen vacío".
+    //
+    // Reducido de 9 → 5 (con coloración dorada los peces son notoriamente
+    // más visibles que los antiguos tintes acuario; mantener la densidad
+    // anterior saturaba el background). Floor de 2 en lugar de 3 para que
+    // viewports muy chicos (phone landscape angosto) no se llenen.
     const fishCountForArea = (cw: number, ch: number): number => {
       const ratio = Math.sqrt((cw * ch) / (1440 * 900));
-      return Math.max(3, Math.round(9 * ratio));
+      return Math.max(2, Math.round(5 * ratio));
     };
 
     let fish: ShadowFish[] = [];
