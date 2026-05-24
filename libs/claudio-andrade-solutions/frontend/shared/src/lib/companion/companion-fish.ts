@@ -536,10 +536,15 @@ export class CompanionFishRenderer {
     const sinH = Math.sin(state.heading);
 
     // Onda carangiform sobre la espina recta — añade curvatura lateral.
+    // Amplitud: 30% base + hasta 60% extra por effort. Con size=14 y
+    // effort=1: ampPx ≈ 14 · 0.90 ≈ 12.6 px de barrido lateral en la cola
+    // (≈ 13% del body length 98px). Eso es la banda canónica del
+    // carangiform tail-tip amplitude: 10-15% de L. Antes era ~2.8 px y se
+    // leía como pez rígido; ahora se ve nadar de verdad.
     const viewMorph = Math.sin(state.heading) ** 2;
     const viewAmpBoost = 1 + 0.7 * viewMorph;
     const ampPx = state.size
-      * (0.04 + 0.18 * state.bodyEffort)
+      * (0.30 + 0.60 * state.bodyEffort)
       * viewAmpBoost
       * state.swimGate;
 

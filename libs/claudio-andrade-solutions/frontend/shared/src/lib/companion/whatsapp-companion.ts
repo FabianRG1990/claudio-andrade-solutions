@@ -330,33 +330,42 @@ export class WhatsappCompanion {
   }
 
   private startSwim(targetViewport: Vec, targetId: string): void {
-    // CLAVE: swimStart/swimEnd se guardan en COORDS DE PÁGINA (no viewport).
-    // El renderer convierte page→viewport restando scrollY al pintar. Esto
-    // hace que el pez NO siga el scroll — es como los peces ambientales del
-    // hero, que viven en el canvas del hero y no en el viewport. Si el user
-    // scrollea, el pez sigue su trayecto en el espacio de la página y
-    // aparece/desaparece del viewport naturalmente (no "viaja con el scroll").
+    // swimStart/swimEnd se guardan en COORDS DE PÁGINA (no viewport). El
+    // renderer convierte page→viewport restando scrollY al pintar. Esto
+    // hace que el pez NO viaje con el scroll — vive en el espacio de la
+    // página y aparece/desaparece del viewport naturalmente.
     const scrollY = window.scrollY;
-    const vh = window.innerHeight;
-    const margin = 80;
-    // A: posición de PÁGINA del dock viejo (donde estaba el ícono ahora).
-    // Calculada desde el elemento del dock para que sea exacta aún si el
-    // user scrolleó durante el debounce.
+    // A: posición VIEWPORT del dock viejo (donde el ícono está RealMente
+    // — puede estar off-screen si el user scrolleó rápido pasado de él).
     const oldDock = this.dockedId
       ? this.registry.docks().find((d) => d.id === this.dockedId)
       : null;
     const aViewport = oldDock ? this.computeDockPosition(oldDock) : this.current;
-    let aPage = { x: aViewport.x, y: aViewport.y + scrollY };
-    const bPage = { x: targetViewport.x, y: targetViewport.y + scrollY };
 
-    // CLAMP del start a la franja visible de la página: [scrollY+margin,
-    // scrollY+vh-margin]. Si el dock viejo quedó off-screen (jump scroll,
-    // scroll fast), el pez "entra" desde el borde más cercano del viewport
-    // en vez de nadar invisible por arriba/abajo. El end queda en la posición
-    // real del dock nuevo — el ícono settled debe quedar pegado al eyebrow.
-    const visibleTop = scrollY + margin;
-    const visibleBottom = scrollY + vh - margin;
-    aPage.y = Math.max(visibleTop, Math.min(visibleBottom, aPage.y));
+    // El swim DEBE arrancar en/cerca de donde el ícono está visible. Tres
+    // casos:
+    //  (1) Ícono dentro del viewport — pez sale del ícono. Sin clamp.
+    //  (2) Ícono OFF-screen arriba (user scrolleó pasado bajando) — pez
+    //      entra desde el borde superior del viewport (justo afuera, ~60px
+    //      por encima del top). Cruza el borde top en el primer ~5% del
+    //      swim → user lo ve venir desde arriba (la dirección del ícono).
+    //  (3) Ícono OFF-screen abajo (user scrolleó pasado subiendo, p.ej.
+    //      cap-02 → hero) — pez entra desde el borde inferior, 60px abajo
+    //      del viewport bottom. Igual lógica.
+    //
+    // El clamp ESTÁ AFUERA del viewport (no adentro) — antes lo tenía
+    // adentro y el user vio al pez "aparecer en medio de pantalla". Ahora
+    // entra cruzando el borde naturalmente.
+    const vh = window.innerHeight;
+    const edgeOffset = 60;
+    const minPageY = scrollY - edgeOffset;
+    const maxPageY = scrollY + vh + edgeOffset;
+    let aPageY = aViewport.y + scrollY;
+    if (aPageY < minPageY) aPageY = minPageY;
+    else if (aPageY > maxPageY) aPageY = maxPageY;
+
+    const aPage = { x: aViewport.x, y: aPageY };
+    const bPage = { x: targetViewport.x, y: targetViewport.y + scrollY };
 
     this.swimStart = aPage;
     this.swimEnd = bPage;
@@ -369,14 +378,15 @@ export class WhatsappCompanion {
   }
 
   /**
-   * Path FIJO del pez — independiente de scroll up/down. Línea recta entre
-   * swimStart y swimEnd con un sin-bulge perpendicular SIEMPRE hacia la
-   * izquierda (toward smaller X). Esto da la misma forma de animación sin
-   * importar si el user scrollea hacia abajo o arriba, y mantiene al pez
-   * fuera de la zona central de contenido (cards, títulos).
+   * Path CASI RECTO entre swimStart y swimEnd, con un sin-bulge perpendicular
+   * MUY sutil (≤ 40px) que evita la línea geométricamente perfecta sin caer
+   * en media-luna. La curvatura visible del nado viene de la onda corporal
+   * carangiform (companion-fish.ts), no del path — un pez real avanza
+   * casi recto y su cuerpo oscila lateralmente sobre esa trayectoria.
    *
    *   t ∈ [0, 1]
    *   pos(t) = lerp(A, B, t) + perpLeft(A→B) · sin(πt) · amp
+   *   amp    = min(len · 0.04, 40)
    *
    * Returns: posición + heading tangencial para orientar el pez.
    */
@@ -398,9 +408,11 @@ export class WhatsappCompanion {
       perpX = -perpX;
       perpY = -perpY;
     }
-    // Amplitud: 18% de la distancia, capped a 160px. Para swims cortos el
-    // arco es chico; para largos no se vuelve excesivo.
-    const amp = Math.min(len * 0.18, 160);
+    // Amplitud baja — 4% de la distancia, capped a 40px. Casi recto: el ojo
+    // lee "el pez nada en línea hacia el destino" en vez de "el pez dibuja
+    // una media luna". La sensación de natación viene del cuerpo (wave),
+    // no del path.
+    const amp = Math.min(len * 0.04, 40);
     const bulge = Math.sin(t * Math.PI) * amp;
     const pos = {
       x: lx + perpX * bulge,
@@ -432,7 +444,11 @@ export class WhatsappCompanion {
     const viewportPos: Vec = { x: pagePos.x, y: pagePos.y - window.scrollY };
 
     if (this.fishReady && this.fishRenderer) {
-      this.swimPhase += 0.18;
+      // Tail-beat ≈ 3 Hz. swimPhase += 0.32 rad por frame a 60fps → 19.2 rad/s
+      // → 3.05 Hz. Banda canónica de carangiform cruising (atún/salmón
+      // ~3-5 Hz). 0.18 era ~1.7 Hz, lo cual se leía como "flota a la deriva"
+      // en vez de "nada".
+      this.swimPhase += 0.32;
 
       // Effort fade-in/out — wave amplitude crece al despegar y baja al
       // anclar. Esto suaviza la emergencia desde el botón y la llegada
@@ -441,13 +457,21 @@ export class WhatsappCompanion {
       const fadeOut = Math.min((1 - t) / 0.18, 1);
       const effort = Math.max(0, Math.min(1, fadeIn * fadeOut));
 
+      // Head yaw counter-phase: el cráneo de un pez no queda perfectamente
+      // estable — gira ~3-5° en contra de la cola con cada beat. Eso
+      // refuerza visualmente la lectura "el cuerpo entero empuja agua".
+      // Amplitud chica (0.06 rad ≈ 3.4°) para no marear; contra-fase
+      // restando sin(swimPhase) — opuesto al sentido instantáneo de la cola.
+      const yawAmp = 0.06 * effort;
+      const headYaw = -Math.sin(this.swimPhase) * yawAmp;
+
       const state: CompanionFishState = {
         headX: viewportPos.x,
         headY: viewportPos.y,
-        heading,
+        heading: heading + headYaw,
         size: this.FISH_SIZE,
         swimPhase: this.swimPhase,
-        bodyEffort: effort * 0.9,
+        bodyEffort: effort,
         swimGate: effort,
       };
       this.fishRenderer.update(state);
