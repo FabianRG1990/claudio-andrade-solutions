@@ -106,6 +106,10 @@ export class WhatsappCompanion {
   // de swims encadenados (eso era el "el pez no sabe a dónde ir").
   private readonly DOCK_DEBOUNCE_MS = 250;
   private dockChangeDebounceTimer = 0;
+  // Última activeDockId que sí fue scheduleada para evitar resetear el timer
+  // de debounce en cada frame del rAF continuo. Solo re-schedule cuando el
+  // active dock cambia respecto al último que disparó scheduleDebouncedSwim.
+  private lastScheduledActiveId: string | null = null;
 
   // ─── Fish renderer ────────────────────────────────────────────────────
   private fishRenderer: CompanionFishRenderer | null = null;
@@ -184,6 +188,14 @@ export class WhatsappCompanion {
     this.rafId = requestAnimationFrame(() => {
       this.rafId = 0;
       this.tick();
+      // rAF continuo: tick() re-lee el rect del dock cada frame para que el
+      // ícono se mantenga pegado aún si el dock se mueve por otra animación
+      // (ej. .reveal con `transform: translateY(28px) → 0` durante 400ms).
+      // Sin esto, si el user para el scroll mid-reveal, el ícono se queda
+      // anclado a la posición pre-reveal y se ve desalineado del eyebrow.
+      // El cost es despreciable: 1 getBoundingClientRect + 1 setProperty
+      // por frame.
+      this.scheduleRaf();
     });
   }
 
@@ -230,8 +242,18 @@ export class WhatsappCompanion {
     // Si el active diverge del docked, schedule swim al active. El swim
     // arranca 250ms después del último cambio. Durante el wait, el ícono
     // sigue al dock viejo (que puede irse del viewport si el user scrollea).
-    if (active !== this.dockedId) {
+    //
+    // IMPORTANTE: solo re-schedule si el active CAMBIÓ respecto al último
+    // que fue scheduleado. Con rAF continuo, sin este guard, scheduleDebounced
+    // se llamaría cada frame y resetaría el timer infinitamente — el swim
+    // nunca arrancaría.
+    if (active !== this.dockedId && active !== this.lastScheduledActiveId) {
+      this.lastScheduledActiveId = active;
       this.scheduleDebouncedSwim();
+    } else if (active === this.dockedId) {
+      // Llegamos al docked (puede pasar si el swim ya terminó). Reset el
+      // tracker para que un futuro cambio dispare un nuevo schedule.
+      this.lastScheduledActiveId = null;
     }
   }
 
