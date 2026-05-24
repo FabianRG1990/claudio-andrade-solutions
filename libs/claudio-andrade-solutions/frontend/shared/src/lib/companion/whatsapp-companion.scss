@@ -1,0 +1,67 @@
+// =============================================================================
+// WhatsappCompanion — global WhatsApp que sigue al scroll.
+//
+// Capas:
+//   • :host es el contenedor lógico — no posiciona, sus hijos sí.
+//   • .companion__fish-canvas: full-viewport fixed z=44, transparente.
+//     Solo recibe pixels durante el swim. pointer-events: none.
+//   • .companion__pivot: position fixed, transform-translate al dock
+//     activo. z=46, contiene el hub (botón + popover). Durante el
+//     swim el hub se oculta vía .is-swimming.
+//
+// El nav fixed vive en z=50; el hub popover usa z:50 interno; ambos
+// quedan por arriba del companion.
+// =============================================================================
+
+:host {
+  // El componente no se posiciona — son sus hijos los que viven
+  // fixed. Mantenemos :host sin estilo de posición para no crear un
+  // stacking context innecesario.
+  display: contents;
+}
+
+.companion__fish-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 44;
+  // El renderer setea width/height attributes (back buffer) y CSS size
+  // matches el viewport. Forzamos display block para evitar el inline
+  // gap por debajo del canvas.
+  display: block;
+}
+
+.companion__pivot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 46;
+  // El transform lo aplica JS (translate3d a la posición del dock).
+  // Anchor por centro — el contenido se centra sobre el punto del
+  // transform via translate(-50%, -50%) en el contenedor interno.
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  pointer-events: auto;
+}
+
+// Anchor por centro: el hub queda centrado en el punto del transform.
+.companion__hub {
+  display: block;
+  transform: translate(-50%, -50%);
+  opacity: 1;
+  transition:
+    opacity 220ms var(--ease-fluid),
+    transform 220ms var(--ease-fluid);
+}
+
+// Durante swim: hub se contrae + desaparece. El pez del canvas toma
+// el escenario. El transform escala dentro del translate del anchor
+// para evitar que se descentre al achicar.
+.companion__pivot.is-swimming .companion__hub {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.3);
+  pointer-events: none;
+}

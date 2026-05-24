@@ -14,6 +14,7 @@ import {
 import { availability } from '@cas-ui-shared/data/data';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
+import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.directive';
 
 /**
  * Availability — capítulo 05 "Empezar". Columna izquierda sticky con
@@ -23,7 +24,7 @@ import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directi
  */
 @Component({
   selector: 'app-availability',
-  imports: [RouterLink, NgIcon, Eyebrow, RevealDirective],
+  imports: [RouterLink, NgIcon, Eyebrow, RevealDirective, CompanionDockDirective],
   providers: [
     provideIcons({
       phosphorArrowUpRightBold,

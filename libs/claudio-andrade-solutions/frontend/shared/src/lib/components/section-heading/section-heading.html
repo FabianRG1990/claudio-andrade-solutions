@@ -1,6 +1,16 @@
 <div class="section-heading" [attr.data-align]="align()">
   <div appReveal>
-    <app-eyebrow [tone]="tone()">{{ eyebrow() }}</app-eyebrow>
+    @if (dockId(); as id) {
+      <app-eyebrow
+        [tone]="tone()"
+        [appCompanionDock]="id"
+        [order]="dockOrder()"
+        [offsetX]="dockOffsetX()"
+        [label]="eyebrow()"
+      >{{ eyebrow() }}</app-eyebrow>
+    } @else {
+      <app-eyebrow [tone]="tone()">{{ eyebrow() }}</app-eyebrow>
+    }
   </div>
 
   <h2 appReveal [delay]="0.08" class="section-heading__title">

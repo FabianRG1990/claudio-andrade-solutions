@@ -21,6 +21,11 @@ export { PageHeader } from './lib/components/page-header/page-header';
 export { SectionHeading } from './lib/components/section-heading/section-heading';
 export { WhatsappHub } from './lib/components/whatsapp-hub/whatsapp-hub';
 
+// ─── Companion (global WhatsApp que sigue al scroll) ──────────────────────
+export { WhatsappCompanion } from './lib/companion/whatsapp-companion';
+export { CompanionDockDirective } from './lib/companion/companion-dock.directive';
+export { CompanionDockRegistry } from './lib/companion/companion-dock.service';
+
 // ─── Directives ────────────────────────────────────────────────────────────
 export { RevealDirective } from './lib/directives/reveal/reveal.directive';
 export { ImgFadeDirective } from './lib/directives/img-fade/img-fade.directive';

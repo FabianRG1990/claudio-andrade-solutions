@@ -3,7 +3,13 @@
     <!-- ─── Header ───────────────────────────────────────────────────────── -->
     <header class="timeline__head">
       <div appReveal class="timeline__head-eyebrow">
-        <app-eyebrow tone="lagoon">Trayectoria + Stack</app-eyebrow>
+        <app-eyebrow
+          tone="lagoon"
+          appCompanionDock="timeline-head"
+          [order]="60"
+          [offsetX]="28"
+          label="Trayectoria + Stack"
+        >Trayectoria + Stack</app-eyebrow>
       </div>
       <div class="timeline__head-content">
         <h2 appReveal [delay]="0.05" class="timeline__title">
@@ -33,7 +39,13 @@
     <!-- ─── Hitos · timeline vertical ────────────────────────────────────── -->
     <div class="timeline__zone">
       <div appReveal class="timeline__zone-head">
-        <app-eyebrow tone="kelp">Hitos · 2019 → 2026</app-eyebrow>
+        <app-eyebrow
+          tone="kelp"
+          appCompanionDock="timeline-milestones"
+          [order]="70"
+          [offsetX]="28"
+          label="Hitos · 2019 → 2026"
+        >Hitos · 2019 → 2026</app-eyebrow>
         <h3 class="timeline__zone-title">
           Cómo llegamos hasta acá.
         </h3>
@@ -57,7 +69,13 @@
     <!-- ─── Stack · por qué ──────────────────────────────────────────────── -->
     <div class="timeline__zone">
       <div appReveal class="timeline__zone-head">
-        <app-eyebrow tone="lagoon">Stack & por qué</app-eyebrow>
+        <app-eyebrow
+          tone="lagoon"
+          appCompanionDock="timeline-stack"
+          [order]="80"
+          [offsetX]="28"
+          label="Stack & por qué"
+        >Stack & por qué</app-eyebrow>
         <h3 class="timeline__zone-title">
           Cada herramienta, una decisión técnica.
         </h3>

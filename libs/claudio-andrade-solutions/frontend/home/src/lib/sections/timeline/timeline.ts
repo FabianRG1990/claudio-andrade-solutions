@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
+import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.directive';
 
 interface Milestone {
   year: string;
@@ -84,7 +85,7 @@ const TECH_STACK: ReadonlyArray<Tech> = [
  */
 @Component({
   selector: 'app-timeline',
-  imports: [Eyebrow, RevealDirective],
+  imports: [Eyebrow, RevealDirective, CompanionDockDirective],
   templateUrl: './timeline.html',
   styleUrl: './timeline.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

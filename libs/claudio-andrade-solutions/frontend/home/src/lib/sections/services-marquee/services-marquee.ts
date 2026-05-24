@@ -18,6 +18,7 @@ import { phosphorClock } from '@ng-icons/phosphor-icons/regular';
 import { Service, ServiceStatus, services } from '@cas-ui-shared/data/data';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
+import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.directive';
 
 // `ServiceStatus` se mapea a tonos SCSS y etiquetas humanas para el chip
 // de la card.
@@ -56,7 +57,7 @@ interface ReelItem extends Service {
  */
 @Component({
   selector: 'app-services-marquee',
-  imports: [Eyebrow, NgIcon, RevealDirective],
+  imports: [Eyebrow, NgIcon, RevealDirective, CompanionDockDirective],
   providers: [
     provideIcons({
       phosphorBracketsCurlyBold,

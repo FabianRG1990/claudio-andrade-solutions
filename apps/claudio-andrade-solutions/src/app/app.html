@@ -6,6 +6,12 @@
 
 <app-footer />
 
+<!-- Companion global de WhatsApp — pieza fija que sigue al scroll
+     anclándose a docks marcados con [appCompanionDock]. Vive entre footer
+     y nav porque tiene que pintar sobre las secciones pero quedar por
+     debajo del nav fijo. -->
+<app-whatsapp-companion />
+
 <!-- IMPORTANTE: el nav va al final del DOM (después de main + footer) para
      garantizar que pinta encima de cualquier sección con isolation:isolate
      o transform que pueda generar un nuevo stacking context. Position fixed

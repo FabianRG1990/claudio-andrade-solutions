@@ -65,7 +65,9 @@ export class WhatsappHub {
     this.open.update((v) => !v);
   }
 
-  protected close(): void {
+  // Público — el companion lo llama al iniciar swim para que el popover
+  // no quede flotando mientras el trigger viaja por la pantalla.
+  close(): void {
     if (this.open()) this.open.set(false);
   }
 

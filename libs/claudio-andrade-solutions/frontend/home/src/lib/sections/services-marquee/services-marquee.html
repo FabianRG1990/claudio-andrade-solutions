@@ -3,7 +3,13 @@
     <div class="services-marquee__head">
       <div>
         <div appReveal>
-          <app-eyebrow tone="kelp">Capítulo 02 · Lo que ofrecemos</app-eyebrow>
+          <app-eyebrow
+            tone="kelp"
+            appCompanionDock="cap-02"
+            [order]="20"
+            [offsetX]="28"
+            label="Capítulo 02 · Lo que ofrecemos"
+          >Capítulo 02 · Lo que ofrecemos</app-eyebrow>
         </div>
         <p appReveal [delay]="0.05" class="services-marquee__count">
           Capacidades a medida · sin lista cerrada

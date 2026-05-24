@@ -4,7 +4,12 @@
       <!-- LEFT — manifiesto sticky -->
       <div class="availability__lead">
         <div appReveal>
-          <app-eyebrow>Capítulo 05 · Empezar</app-eyebrow>
+          <app-eyebrow
+            appCompanionDock="cap-05"
+            [order]="50"
+            [offsetX]="28"
+            label="Capítulo 05 · Empezar"
+          >Capítulo 05 · Empezar</app-eyebrow>
         </div>
         <h2 appReveal [delay]="0.08" class="availability__title">
           Llegás cuando querés.

@@ -5,6 +5,7 @@ import {
   FloatingNav,
   Footer,
   OceanBackground,
+  WhatsappCompanion,
 } from '@cas-ui-shared';
 
 /**
@@ -21,7 +22,7 @@ import {
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, OceanBackground, FloatingNav, Footer],
+  imports: [RouterOutlet, OceanBackground, FloatingNav, Footer, WhatsappCompanion],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

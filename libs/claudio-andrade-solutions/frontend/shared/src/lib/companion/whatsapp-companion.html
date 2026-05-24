@@ -1,0 +1,17 @@
+<!-- Canvas full-viewport para el pez verde durante el swim. Vive siempre
+     en el DOM (incluso antes de que los docks se registren) para que la
+     init del renderer three.js pueda atarse al canvas en afterNextRender.
+     Sin docks o sin swim, queda transparente (no se llama render()). -->
+<canvas #fishCanvas class="companion__fish-canvas" aria-hidden="true"></canvas>
+
+@if (hasDocks()) {
+  <!-- Pivot del botón: position fixed, transform driven por JS para
+       anclarse al dock activo. -->
+  <div
+    #pivot
+    class="companion__pivot"
+    [class.is-swimming]="swimState() === 'swimming'"
+  >
+    <app-whatsapp-hub #hub size="sm" class="companion__hub" />
+  </div>
+}

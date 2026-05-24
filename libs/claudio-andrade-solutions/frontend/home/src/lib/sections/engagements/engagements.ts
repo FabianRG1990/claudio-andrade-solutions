@@ -10,6 +10,7 @@ import {
 import { engagements, engagementFeatures } from '@cas-ui-shared/data/data';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
+import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.directive';
 
 /**
  * Engagements — capítulo 03 del manifiesto. Tres modelos de contratación en
@@ -18,7 +19,7 @@ import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directi
  */
 @Component({
   selector: 'app-engagements',
-  imports: [RouterLink, NgIcon, Eyebrow, RevealDirective],
+  imports: [RouterLink, NgIcon, Eyebrow, RevealDirective, CompanionDockDirective],
   providers: [
     provideIcons({ phosphorArrowUpRightBold, phosphorCheckBold, phosphorXBold }),
   ],

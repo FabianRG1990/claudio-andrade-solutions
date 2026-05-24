@@ -201,14 +201,20 @@
             </span>
             Continuá
           </div>
-          <!-- WhatsApp hub variante sm — lockup espejo del scroll-cue de
-               la izquierda: label "Hablemos" + ícono circular 32px.
-               Misma funcionalidad que el del footer (popover con
-               contactos), pero contenida en formato editorial inline
-               para que el peso visual cuadre con el cue de scroll. -->
+          <!-- Dock anchor del companion global de WhatsApp. El companion
+               (montado en el app shell) se ancla aquí cuando el hero está
+               en viewport. La label "Hablemos" se mantiene como cue
+               editorial; el ícono lo pinta el companion al lado derecho
+               de este lockup. -->
           <div class="hero__whatsapp-cue">
             <span class="hero__whatsapp-label">Hablemos</span>
-            <app-whatsapp-hub size="sm" class="hero__whatsapp" />
+            <span
+              appCompanionDock="hero"
+              [order]="0"
+              label="Hero"
+              class="hero__whatsapp-anchor"
+              aria-hidden="true"
+            ></span>
           </div>
         </div>
       </div>
