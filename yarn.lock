@@ -6841,6 +6841,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^22.10.3":
+  version: 22.19.19
+  resolution: "@types/node@npm:22.19.19"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/402e0f088c94cabda3cd721546bd8e4e75e098e0b342f6e03b90ca1e19c28986f9650112c64fcfd09fc8cebc0f8b20291a513153e90489331cf666e1e5503e16
+  languageName: node
+  linkType: hard
+
 "@types/parse-json@npm:^4.0.0":
   version: 4.0.2
   resolution: "@types/parse-json@npm:4.0.2"
@@ -8761,6 +8770,7 @@ __metadata:
     jsdom: "npm:~22.1.0"
     jsonc-eslint-parser: "npm:^2.1.0"
     nx: "patch:nx@npm%3A22.7.0#~/.yarn/patches/nx-npm-22.7.0-93822c10a7.patch"
+    png-to-ico: "npm:^3.0.1"
     pngjs: "npm:^7.0.0"
     prettier: "npm:^3.8.1"
     rxjs: "npm:~7.8.0"
@@ -13342,7 +13352,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimist@npm:1.2.8, minimist@npm:^1.2.6":
+"minimist@npm:1.2.8, minimist@npm:^1.2.6, minimist@npm:^1.2.8":
   version: 1.2.8
   resolution: "minimist@npm:1.2.8"
   checksum: 10c0/19d3fcdca050087b84c2029841a093691a91259a47def2f18222f41e7645a0b7c44ef4b40e88a1e58a40c84d2ef0ee6047c55594d298146d0eb3f6b737c20ce6
@@ -14758,6 +14768,19 @@ __metadata:
   bin:
     playwright: cli.js
   checksum: 10c0/dfe38396e616e5c4f98825ce90037bb96e477c5a2bd9258a24854f8ce72a8a41427b19098863866f85aa0216e70287dd537c4438d761aca93995e31ae099c533
+  languageName: node
+  linkType: hard
+
+"png-to-ico@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "png-to-ico@npm:3.0.1"
+  dependencies:
+    "@types/node": "npm:^22.10.3"
+    minimist: "npm:^1.2.8"
+    pngjs: "npm:^7.0.0"
+  bin:
+    png-to-ico: bin/cli.js
+  checksum: 10c0/71532b59eaf9deb8a7b97a02b8f84a484ac0dcfeb41c8f80f9f4263553c521f9f9e2c7b12bbce47cc835cc241e13440f0ab616530b02cf4c2317e701efef5787
   languageName: node
   linkType: hard
 

@@ -23,8 +23,8 @@
            el ícono genérico.
          - PNG sized 32 + 192: browsers modernos los prefieren si los ofrecemos.
          - apple-touch-icon 192: iOS al guardar a home screen.
-         El nav y page-headers usan `/logo/logo-512.png` (215 KB) o
-         `logo-192.png` (39 KB) según tamaño. -->
+         emblem-mark y emblem-stamp (nav, footer, page-headers) usan
+         `/logo/logo-192.{avif,webp,png}` via <picture> con fallback. -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/logo/logo-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/logo/logo-192.png" />
