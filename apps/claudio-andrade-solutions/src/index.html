@@ -63,17 +63,24 @@
       fetchpriority="high"
     />
 
-    <!-- Preload del GLB del pez. El archivo pesa ~7.7 MB y antes se
-         pre-loadeaba dinámicamente desde el chunk lazy de wolf-fish-three —
-         eso significaba que la descarga arrancaba sólo después de que
-         Angular hidratara y evaluara ese chunk (segundos perdidos en mobile).
-         Acá arranca en cuanto el browser parsea el <head>, en paralelo con
-         el bundle JS y las imágenes del hero. Para cuando GLTFLoader pide
-         el archivo, está caliente en cache.
+    <!-- GLB del pez (~7.7 MB) — antes vivía como `<link rel="preload"
+         as="fetch" fetchpriority="high">` en el <head>, lo que ARRANCABA
+         la descarga apenas el browser parseaba el HTML, peleando bandwidth
+         y CPU con el bundle JS + imágenes del hero. En mobile (3G/4G real)
+         esto agregaba 5-15s al tiempo de "página utilizable" y desplazaba
+         contenido crítico (LCP) detrás del GLB en la cola HTTP/2.
+         Estrategia nueva: `prefetch` (no preload) con `as="fetch"`. Esto
+         indica al browser "descargá esto cuando estés ocioso, baja
+         prioridad" — el GLB llega DESPUÉS del bundle + imágenes + fuentes
+         del hero. Por el momento que el wolf-lake-canvas (deferred a
+         requestIdleCallback) y el companion (también deferred) pidan el
+         archivo vía GLTFLoader, está caliente en cache.
          crossorigin="anonymous" matchea el fetch del loader; sin él el
-         browser dispara un fetch nuevo en lugar de usar el cache. -->
+         browser dispara un fetch nuevo en lugar de usar el cache.
+         Mantenemos el hint en <head> para que el browser sepa del recurso
+         apenas parsea, sin que compita con el critical render path. -->
     <link
-      rel="preload"
+      rel="prefetch"
       href="/hero-wolf/fish-model.glb"
       as="fetch"
       type="model/gltf-binary"
@@ -81,51 +88,68 @@
     />
 
     <!-- =========================================================================
-         iOS Safari viewport fix — `--app-vh` desde el LAYOUT viewport.
-         iOS Safari 17/18 tiene bugs documentados con `100dvh` / `100lvh` /
-         `100svh`: el valor calculado no matchea el viewport real, dejando
-         el hero/drawer más cortos que la pantalla. Reporte usuario iPhone 15
-         (2026-05): ni dvh ni lvh resolvían el bleed-through del capítulo 1
-         bajo el hero; en rotación, el hero quedaba con altura del orientation
-         anterior y mostraba solo el cielo.
-         Estrategia:
-           • `window.innerHeight` en iOS Safari = LAYOUT viewport = el valor
-             URL-bar-OCULTA (el grande). Es lo que queremos: el hero debe
-             extenderse DETRÁS del URL bar overlay, no terminar arriba de él.
-           • `visualViewport.height` = VISUAL viewport = lo que se ve ahora
-             (chico cuando URL bar visible). Tomamos el MAX de los dos.
-           • Sticky-max dentro de la misma orientación: --app-vh solo crece,
-             nunca encoge. Razón: si la URL bar transiciona durante el
-             scroll, no encogemos → hero no re-cropea su imagen.
-           • Reset SOLO en cambio de orientación real (portrait↔landscape).
-             iOS Safari tiene delay entre orientationchange y innerHeight
-             update — re-medimos a 0/50/200/500ms + RAF para capturar el
-             valor estabilizado.
+         Viewport height fix — `--app-vh` LOCKED por orientación.
+         Bug reportado (Chrome Android, "imagen brinca y brinca y brinca al
+         primer scroll"): la URL bar de Chrome Android se colapsa
+         progresivamente durante los primeros 200-300ms de scroll, disparando
+         múltiples `visualViewport.resize` events. La versión previa de este
+         script crecía `--app-vh` con cada resize (sticky-max), lo que
+         engordaba `.hero` un poco con cada tick → la imagen `object-fit:
+         cover` re-cropeaba con cada paso → JUMP visible.
+         Estrategia nueva:
+           • LOCKED por orientación: medimos UNA vez al boot + reseteamos al
+             cambio real de orientación. Resize/visualViewport changes durante
+             scroll son IGNORADOS (no crecemos en ese path).
+           • Initial measurement con piso = `screen.height` (la altura del
+             dispositivo en CSS px, NO afectada por URL bar). En Chrome Android
+             portrait esto da la altura URL-bar-oculta upfront → `.hero` arranca
+             ya con su tamaño final → no hay nada que re-cropear al colapsar.
+           • iOS Safari: `innerHeight` ya es la layout viewport (URL bar
+             oculta) — Math.max con screen.height da el mismo valor o no
+             pierde nada.
+           • Orientation change: reseteo + re-medición en 0/50/200/500ms +
+             RAF para capturar el valor estabilizado tras la rotación
+             (iOS Safari tiene delay entre orientationchange e innerHeight).
          Inline + síncrono en <head> antes del <style> del splash: la
          variable está seteada ANTES del primer paint.
          ========================================================================= -->
     <script>
       (function () {
-        var maxVh = 0;
+        var currentVh = 0;
         var lastOrientation = null;
 
         function measureVh() {
-          // innerHeight en iOS Safari = layout viewport (URL bar oculta,
-          // valor grande). Es el target — queremos extendernos detrás del
-          // URL bar overlay.
+          // En Chrome Android, `innerHeight` reporta la viewport VISIBLE
+          // (cambia con URL bar). En iOS Safari, reporta la LAYOUT viewport
+          // (URL bar oculta, valor estable). screen.height es el alto del
+          // dispositivo en CSS px — NO cambia con URL bar en ninguno de los
+          // dos browsers. Tomamos el MÁXIMO para garantizar que arrancamos
+          // con el valor URL-bar-oculta en TODOS los browsers.
+          // (En PWA installed mode o desktop, screen.height es el monitor
+          // entero — innerHeight es lo correcto y termina ganando.)
           var inner = window.innerHeight || 0;
           var visual =
             (window.visualViewport && window.visualViewport.height) || 0;
-          return Math.max(inner, visual);
+          var screenH = (window.screen && window.screen.height) || 0;
+          // Clamp screen.height al ratio razonable del aspect del viewport
+          // para evitar valores absurdos (multi-monitor, screen.height del
+          // monitor entero cuando la ventana es chica). Si screen es más de
+          // 1.6x el visible, ignoramos — no es nuestra ventana.
+          if (visual > 0 && screenH > visual * 1.6) screenH = 0;
+          if (inner > 0 && screenH > inner * 1.6) screenH = 0;
+          return Math.max(inner, visual, screenH);
         }
 
-        function setAppVh() {
+        function setAppVh(force) {
           var h = measureVh();
-          if (h > maxVh) {
-            maxVh = h;
+          // LOCKED: solo escribimos en boot (currentVh=0) o cuando force=true
+          // (orientation change). Cambios de visualViewport durante scroll
+          // (URL bar collapse) NO entran acá.
+          if (currentVh === 0 || force === true) {
+            currentVh = h;
             document.documentElement.style.setProperty(
               '--app-vh',
-              maxVh + 'px',
+              currentVh + 'px',
             );
           }
         }
@@ -144,36 +168,57 @@
           var current = getOrientation();
           if (current === lastOrientation) return;
           lastOrientation = current;
-          // Reset del sticky-max — la nueva orientación tiene geometría
-          // distinta y queremos medir desde cero.
-          maxVh = 0;
-          // iOS Safari delay innerHeight update post-rotación. Re-medimos
-          // en varias ventanas de tiempo para capturar el valor estable.
-          setAppVh();
-          setTimeout(setAppVh, 50);
-          setTimeout(setAppVh, 200);
-          setTimeout(setAppVh, 500);
+          // Reset + re-medición forzada. iOS Safari tiene delay entre
+          // orientationchange y innerHeight update — re-medimos en varias
+          // ventanas para capturar el valor estabilizado.
+          currentVh = 0;
+          setAppVh(true);
+          setTimeout(function () { currentVh = 0; setAppVh(true); }, 50);
+          setTimeout(function () { currentVh = 0; setAppVh(true); }, 200);
+          setTimeout(function () { currentVh = 0; setAppVh(true); }, 500);
           if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(setAppVh);
+            requestAnimationFrame(function () { currentVh = 0; setAppVh(true); });
           }
+          // Animación suave de orientation change. Sin esta clase, el browser
+          // hace un hard cut: el contenedor pasa de portrait a landscape
+          // instantáneamente, la imagen `object-fit: cover` re-cropea con
+          // origen distinto, y la nueva <source> del <picture> (si cambia
+          // el media-query) puede tardar 50-150ms en cargar — el user ve un
+          // "corte" feo.
+          // Estrategia: html.is-orienting → CSS aplica fade+blur a .hero__scene
+          // durante 380ms. Tiempo distribuido: 180ms fade-out, 60ms hold a
+          // opacity baja (cubre el reflow + carga de nueva <source> + ajuste
+          // del --app-vh), 180ms fade-in. El user percibe una transición tipo
+          // "lente que se reenfoca" en vez del corte abrupto.
+          var doc = document.documentElement;
+          doc.classList.add('is-orienting');
+          setTimeout(function () { doc.classList.remove('is-orienting'); }, 380);
         }
 
         lastOrientation = getOrientation();
         setAppVh();
         // Re-measure tras el primer paint — algunas versiones de iOS
         // reportan innerHeight incorrectamente en el primer tick síncrono.
+        // Esto es el ÚNICO update no-orientation que permitimos: se ejecuta
+        // ANTES de que el user pueda scrollear (rAF 1 = ~16ms post-script).
         if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(setAppVh);
+          requestAnimationFrame(function () {
+            var h = measureVh();
+            // Solo upgrade si es mayor que el actual — evita downgrade que
+            // re-cropearía el hero.
+            if (h > currentVh) {
+              currentVh = h;
+              document.documentElement.style.setProperty('--app-vh', h + 'px');
+            }
+          });
         }
 
-        window.addEventListener('resize', setAppVh, { passive: true });
+        // Ya NO escuchamos `resize` ni `visualViewport.resize` directos —
+        // esos eran los culpables del "brinca y brinca" en Chrome Android
+        // durante el colapso animado de la URL bar.
+        // orientationchange + matchMedia change cubren el ÚNICO caso donde
+        // queremos actualizar: rotación real del dispositivo.
         window.addEventListener('orientationchange', handleOrientationChange);
-        if (window.visualViewport) {
-          window.visualViewport.addEventListener('resize', setAppVh);
-        }
-        // matchMedia change como signal extra de cambio de orientación —
-        // iOS Safari dispara este event de forma más confiable que
-        // orientationchange en algunos contextos.
         if (typeof window.matchMedia === 'function') {
           var mql = window.matchMedia('(orientation: landscape)');
           if (typeof mql.addEventListener === 'function') {
@@ -349,6 +394,34 @@
       html.app-booted .floating-nav-rail {
         opacity: 1;
         transform: translateY(0);
+      }
+
+      /* =====================================================================
+         Orientation change — fade+blur de la escena del hero mientras el
+         browser hace el relayout. La clase `is-orienting` la pone el script
+         de --app-vh por 380ms cuando detecta un cambio real de orientación.
+         Sin esto, el user veía un "corte" abrupto entre portrait y landscape:
+         la imagen object-fit:cover re-cropeaba sobre un origen distinto y
+         la nueva <source> del <picture> tardaba ms en cargar.
+         La transición es CSS pura (no requiere JS animation), aplicada a
+         .hero__scene (no a .hero) para que solo la capa visual de fondo se
+         atenúe — los headings se quedan en su lugar.
+         Vive acá (global, sin view-encapsulation) por la misma razón que
+         las reglas de `html.app-booted`: el selector matchea `<html>` y
+         Angular envuelve los CSS del componente con un atributo ngContent
+         que `<html>` jamás tiene.
+         ===================================================================== */
+      .hero__scene {
+        transition: opacity 180ms cubic-bezier(0.32, 0.72, 0, 1),
+                    filter 180ms cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      html.is-orienting .hero__scene {
+        opacity: 0.35;
+        filter: blur(10px);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero__scene { transition: opacity 80ms linear; filter: none !important; }
+        html.is-orienting .hero__scene { opacity: 0.6; filter: none; }
       }
 
       /* Hero — cascada interna back-to-front. La escena (bg image + lake-flow

@@ -15,7 +15,13 @@ import { isPlatformBrowser } from '@angular/common';
 
 import { WhatsappHub } from '../components/whatsapp-hub/whatsapp-hub';
 import { CompanionDockRegistry, type CompanionDock } from './companion-dock.service';
-import { CompanionFishRenderer, type CompanionFishState } from './companion-fish';
+// Solo tipos en estático: el renderer (que arrastra three.js + GLTFLoader +
+// EffectComposer + UnrealBloomPass = ~551 KB raw / 115 KB gz) se carga vía
+// `await import('./companion-fish')` dentro de initFishRenderer(). Así three.js
+// queda en un chunk separado fuera del bundle inicial — el companion se
+// mounta en el app shell (root) y antes de este split forzaba que three.js
+// fuera initial en todas las rutas, no solo en home.
+import type { CompanionFishRenderer, CompanionFishState } from './companion-fish';
 
 type SwimState = 'idle' | 'swimming';
 
@@ -163,7 +169,21 @@ export class WhatsappCompanion {
     afterNextRender(() => {
       if (!isPlatformBrowser(this.platformId)) return;
       this.setupTracking();
-      this.initFishRenderer();
+      // Diferimos la carga del fish renderer hasta que el main thread esté
+      // idle — el chunk pesa ~115 KB gz (three.js + GLTFLoader + post-fx) y
+      // descargarlo durante el primer paint pelea por bandwidth y CPU con el
+      // hero. requestIdleCallback con timeout 4s defensivo: si el browser
+      // nunca queda idle (rare), la carga arranca igual antes del primer swim
+      // probable (el swim solo dispara tras DOCK_DEBOUNCE_MS = 250ms desde
+      // que se detecta un cambio de dock, y el primer cambio requiere scroll).
+      const win = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
+      const kickoff = (): void => { void this.initFishRenderer(); };
+      if (typeof win.requestIdleCallback === 'function') {
+        win.requestIdleCallback(kickoff, { timeout: 4000 });
+      } else {
+        // Safari < 15 fallback. 1500ms post-paint deja respiro al hero.
+        setTimeout(kickoff, 1500);
+      }
     });
 
     effect(() => {
@@ -185,9 +205,23 @@ export class WhatsappCompanion {
   private async initFishRenderer(): Promise<void> {
     const canvas = this.canvasRef()?.nativeElement;
     if (!canvas) return;
+    // Dynamic import del módulo que contiene three.js + post-processing +
+    // GLTFLoader. El bundler (Angular esbuild) lo emite como chunk separado
+    // — verificable en `dist/.../browser` post-build (chunk con three core
+    // sale fuera del initial KOASWAYX). Si la red falla acá, el companion
+    // sigue funcionando: el hub DOM ya está montado y se queda anclado al
+    // dock sin animación pez (la transición pasa a ser un fade simple del
+    // hub vía CSS, que sigue siendo "premium suficiente" como fallback).
+    let CompanionFishRendererCtor: typeof import('./companion-fish').CompanionFishRenderer;
+    try {
+      ({ CompanionFishRenderer: CompanionFishRendererCtor } = await import('./companion-fish'));
+    } catch (err) {
+      console.warn('[WhatsappCompanion] fish module load failed; falling back to hub-only:', err);
+      return;
+    }
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const renderer = new CompanionFishRenderer();
+    const renderer = new CompanionFishRendererCtor();
     try {
       await renderer.init(canvas, w, h);
       this.fishRenderer = renderer;

@@ -20,25 +20,25 @@
        como cuando el contenedor es más ancho (caso desktop). -->
   <div class="hero__scene">
     <!-- Imagen estática MK6 (lago + lobo wireframe + skyline + cielo
-         estrellado). El `<picture>` negocia formato por compatibilidad del
-         navegador: AVIF (~60 KB) → WebP (~135 KB) → PNG (~1.8 MB fallback). -->
-    <!-- Art direction: cada variante es una COMPOSICIÓN distinta (no recorte
-         mecánico del 16:9) pensada para su tela:
-           • phone (portrait ≤640px) → 9:16 vertical, lobo centrado, cielo+lago amplios
-           • tablet (641-1099 con altura ≥640) → 1:1 cuadrado, balance editorial
-           • cinematic (ultrawide ≥21:9) → 21:9 panorama, solo monitores ultrawide reales
-           • desktop (default) → 16:9 MK6 original (laptops 14"/15", monitores 16:9/16:10,
-             tablet landscape, phone landscape — todas las telas "horizontales no ultrawide")
-         IMPORTANTE: el orden de los <source> importa — el primero que matchea
-         gana. La cinematic va primero por consistencia visual: si en el futuro
-         se vuelve a habilitar para algún otro viewport, queda en cabeza. El
-         tablet excluye explícitamente alturas < 640 para no agarrar landscape
-         phone — ese viewport cae directo al fallback desktop. -->
+         estrellado). El `<picture>` negocia formato y variante:
+           • AVIF (preferido, ~60 KB) por variante
+           • WebP (fallback en <img>, ~135 KB) por variante seleccionada del
+             desktop default — el `<img>` selecciona webp del DESKTOP MK6 si
+             ningún <source> de breakpoint matchea. Para que phone/tablet/
+             cinematic carguen webp cuando AVIF no es soportado, agregamos
+             un <source type="image/webp"> después del AVIF de cada variante.
+         PNG removido del chain (1.8-3.3 MB cada uno, ~10 MB en total). En
+         2026, todos los browsers que pueden cargar Angular 21 (requiere ES
+         modules) soportan WebP — el PNG era disco muerto en el hosting.
+         Art direction: cada variante es una COMPOSICIÓN distinta:
+           • phone (portrait ≤640px) → 9:16 vertical, lobo centrado
+           • tablet (641-1099 con altura ≥640) → 1:1 cuadrado, balance
+           • cinematic (ultrawide ≥21:9) → 21:9 panorama, solo ultrawide reales
+           • desktop (default) → 16:9 MK6 (laptops, monitores 16:9/16:10,
+             tablet landscape, phone landscape — "horizontales no ultrawide")
+         IMPORTANTE: el orden importa — primer match gana. -->
     <picture>
-      <!-- Cinematic: SOLO monitores ultrawide reales (≥21:9, ej.
-           3440×1440, 2560×1080). Laptops 14"/15" (16:9 ~2.22:1) y phone
-           landscape caen al fallback desktop (MK6 16:9) que encaja sin
-           distorsionar la base de ciudad/roca con el shader del agua. -->
+      <!-- Cinematic: SOLO monitores ultrawide reales (≥21:9). -->
       <source
         media="(min-width: 1024px) and (min-aspect-ratio: 21/9)"
         srcset="hero-wolf/hero-mk6-cinematic.avif"
@@ -49,15 +49,8 @@
         srcset="hero-wolf/hero-mk6-cinematic.webp"
         type="image/webp"
       />
-      <source
-        media="(min-width: 1024px) and (min-aspect-ratio: 21/9)"
-        srcset="hero-wolf/hero-mk6-cinematic.jpg"
-      />
 
-      <!-- Tablet (641-1099 wide, altura ≥640, aspect ≤6/5 = portrait/casi
-           cuadrado): iPad portrait, tablets en general. El max-aspect-ratio
-           6/5 (=1.2) excluye iPad landscape (~1.33), que cae al fallback
-           desktop con MK6 16:9 — composición que encaja bien en ese rango. -->
+      <!-- Tablet (641-1099 wide, altura ≥640, aspect ≤6/5). -->
       <source
         media="(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)"
         srcset="hero-wolf/hero-mk6-tablet.avif"
@@ -68,12 +61,8 @@
         srcset="hero-wolf/hero-mk6-tablet.webp"
         type="image/webp"
       />
-      <source
-        media="(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)"
-        srcset="hero-wolf/hero-mk6-tablet.png"
-      />
 
-      <!-- Phone (≤640): portrait vertical -->
+      <!-- Phone (≤640): portrait vertical. -->
       <source
         media="(max-width: 640px)"
         srcset="hero-wolf/hero-mk6-phone.avif"
@@ -84,19 +73,16 @@
         srcset="hero-wolf/hero-mk6-phone.webp"
         type="image/webp"
       />
-      <source
-        media="(max-width: 640px)"
-        srcset="hero-wolf/hero-mk6-phone.png"
-      />
 
-      <!-- Desktop wide (default fallback): MK6 original 16:9 -->
+      <!-- Desktop wide (default): MK6 16:9. AVIF + img-fallback webp. -->
       <source srcset="hero-wolf/hero-mk6.avif" type="image/avif" />
-      <source srcset="hero-wolf/hero-mk6.webp" type="image/webp" />
       <img
         class="hero__bg"
-        src="hero-wolf/hero-mk6.png"
+        src="hero-wolf/hero-mk6.webp"
         alt=""
         aria-hidden="true"
+        width="1672"
+        height="941"
         fetchpriority="high"
         decoding="async"
       />

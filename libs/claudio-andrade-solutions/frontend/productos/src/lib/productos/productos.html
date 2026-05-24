@@ -18,11 +18,12 @@
           <div class="product-row__media glass-shell">
             <div class="product-row__media-inner">
               <picture>
+                <!-- AVIF + WebP fallback. PNG removido del chain (1-2 MB vs
+                     50-100 KB webp). 2026: browsers con Angular 21 soportan webp. -->
                 <source [srcset]="p.image.replace('.png', '.avif')" type="image/avif" />
-                <source [srcset]="p.image.replace('.png', '.webp')" type="image/webp" />
                 <img
                   appImgFade
-                  [src]="p.image"
+                  [src]="p.image.replace('.png', '.webp')"
                   [alt]="p.name"
                   class="product-row__image"
                   decoding="async"

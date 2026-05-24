@@ -31,10 +31,14 @@
             <div class="case-row__media-inner">
               @for (slide of c.slides; track slide.src; let si = $index) {
                 <picture>
+                  <!-- AVIF para browsers modernos (~30% más liviano que webp).
+                       El <img> usa .webp como ÚNICO fallback — descartamos el
+                       PNG (1-3 MB vs 50-100 KB webp). En 2026 todos los
+                       browsers que soportan ES modules (req. de Angular 21)
+                       soportan WebP, así que PNG era disco muerto en hosting. -->
                   <source [srcset]="slide.src.replace('.png', '.avif')" type="image/avif" />
-                  <source [srcset]="slide.src.replace('.png', '.webp')" type="image/webp" />
                   <img
-                    [src]="slide.src"
+                    [src]="slide.src.replace('.png', '.webp')"
                     [alt]="slide.alt"
                     class="case-row__image"
                     [class.is-active]="indices[i]() === si"
