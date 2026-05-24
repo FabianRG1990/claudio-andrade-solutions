@@ -87,10 +87,10 @@ export class WhatsappCompanion {
   // ─── Swim state ───────────────────────────────────────────────────────
   private swimStart: Vec = { x: 0, y: 0 };
   private swimEnd: Vec = { x: 0, y: 0 };
-  private swimP1: Vec = { x: 0, y: 0 };
-  private swimP2: Vec = { x: 0, y: 0 };
   private swimStartTime = 0;
-  private readonly SWIM_DURATION_MS = 2000;
+  // 1500ms = swim corto, evita que el pez se sienta "estorbando" la pantalla
+  // durante mucho tiempo. Suficiente para leer la trayectoria sin agotar al ojo.
+  private readonly SWIM_DURATION_MS = 1500;
 
   private rafId = 0;
   private dirty = false;
@@ -99,10 +99,6 @@ export class WhatsappCompanion {
   // espaciado del lockup original del hero (Hablemos + icon con gap
   // 12px) — el user pidió que volviera a esa posición.
   private readonly DOCK_OFFSET_X = 16;
-  // Margen del viewport para clamping. El pez entra/sale por aquí (no
-  // exactamente en el borde) para que el ojo perciba "viene de afuera"
-  // sin que aparezca pegado al edge.
-  private readonly VIEWPORT_MARGIN = 80;
   // Tiempo de scroll-settle antes de comprometerse a un swim. Mientras
   // el dock activo cambia rápidamente (scroll fast), cada cambio reinicia
   // el timer. Cuando el scroll para, 250ms después arranca el swim al
@@ -159,7 +155,10 @@ export class WhatsappCompanion {
   }
 
   private setupTracking(): void {
-    const onScroll = () => { this.dirty = true; this.scheduleRaf(); };
+    const onScroll = () => {
+      this.dirty = true;
+      this.scheduleRaf();
+    };
     const onResize = () => {
       this.dirty = true;
       const canvas = this.canvasRef()?.nativeElement;
@@ -206,33 +205,33 @@ export class WhatsappCompanion {
     const active = this.activeDockId();
     if (!active) return;
 
-    if (active !== this.dockedId) {
-      // Dock activo cambió respecto al docked actual.
-      //
-      // Primera vez (sin docked previo) — teleport sin animar.
-      if (this.dockedId === null) {
-        const dock = this.registry.docks().find((d) => d.id === active);
-        if (!dock) return;
-        this.current = this.computeDockPosition(dock);
-        this.dockedId = active;
-        this.applyTransform();
-        return;
-      }
-      // Caso normal: schedule swim con debounce. El swim arranca
-      // 250ms después de que el dock activo deje de cambiar. Mientras
-      // el user esté scrolleando rápido, el timer se reinicia y el
-      // pez NUNCA aparece a medio camino — solo cuando el scroll se
-      // calma, el swim ÚNICO A→B se dispara hacia el dock final.
-      this.scheduleDebouncedSwim();
-    } else {
-      // Mismo dock — el companion sigue el rect del eyebrow mientras
-      // el user scrollea dentro de la sección. NO es swim, solo
-      // tracking sin animación. Aquí no se renderiza pez.
+    // Primera vez (sin docked previo) — teleport sin animar al active.
+    if (this.dockedId === null) {
       const dock = this.registry.docks().find((d) => d.id === active);
       if (!dock) return;
-      const target = this.computeDockPosition(dock);
-      this.current = target;
+      this.current = this.computeDockPosition(dock);
+      this.dockedId = active;
       this.applyTransform();
+      return;
+    }
+
+    // Anclado a la PÁGINA: el ícono SIEMPRE sigue al rect actual del dock
+    // viejo (el "docked"). Cuando el user scrollea, getBoundingClientRect
+    // devuelve la viewport position del dock — si el dock está fuera del
+    // viewport (user scrolleó pasado de él), el ícono también queda fuera
+    // del viewport. Igual que los peces ambientales del hero: viven en su
+    // sección, no en la pantalla del user.
+    const docked = this.registry.docks().find((d) => d.id === this.dockedId);
+    if (docked) {
+      this.current = this.computeDockPosition(docked);
+      this.applyTransform();
+    }
+
+    // Si el active diverge del docked, schedule swim al active. El swim
+    // arranca 250ms después del último cambio. Durante el wait, el ícono
+    // sigue al dock viejo (que puede irse del viewport si el user scrollea).
+    if (active !== this.dockedId) {
+      this.scheduleDebouncedSwim();
     }
   }
 
@@ -296,78 +295,78 @@ export class WhatsappCompanion {
     };
   }
 
-  /**
-   * Trae un punto al área visible del viewport. Si está más allá del
-   * borde, lo proyecta al borde más cercano con un margen. Esto
-   * garantiza que el pez SIEMPRE entre/salga por una zona visible — no
-   * "desde el cielo" o "del subsuelo".
-   */
-  private clampToViewport(p: Vec): Vec {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const m = this.VIEWPORT_MARGIN;
-    return {
-      x: Math.max(m, Math.min(vw - m, p.x)),
-      y: Math.max(m, Math.min(vh - m, p.y)),
-    };
-  }
-
-  private startSwim(targetUnclamped: Vec, targetId: string): void {
-    // Clamp ambos extremos al viewport. Si el dock anterior quedó muy
-    // arriba (scroll up rápido) o el nuevo aparece desde abajo, el pez
-    // entra desde el borde correcto en vez de aparecer en una zona
-    // off-screen donde el usuario no lo ve.
-    this.swimStart = this.clampToViewport(this.current);
-    this.swimEnd = this.clampToViewport(targetUnclamped);
-
-    // Bezier path SIEMPRE arquea por el centro visible. Esto es la
-    // "ruta predeterminada" que el user pidió — independiente de la
-    // distancia entre docks, la forma del arco es consistente.
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-    const dy = this.swimEnd.y - this.swimStart.y;
-
-    // Centro X: punto medio entre A y B, pero TRAÍDO HACIA el centro
-    // visible — si los docks están a la derecha (típico, viven junto
-    // a eyebrows), el arco se ladea a la izquierda donde hay espacio.
-    const baseMidX = (this.swimStart.x + this.swimEnd.x) * 0.5;
-    const vwCenter = vw / 2;
-    const centerPull = Math.min(vw * 0.30, Math.abs(baseMidX - vwCenter));
-    const midX = baseMidX + Math.sign(vwCenter - baseMidX) * centerPull;
-
-    // Centro Y: depende de la dirección. Down-scroll (dy>0) → arco abajo
-    // (el pez bucea). Up-scroll (dy<0) → arco arriba (el pez sube en
-    // arco). Cap a 0.62 / 0.38 del viewport — siempre visible.
-    const midY = dy >= 0 ? vh * 0.62 : vh * 0.38;
-
-    this.swimP1 = { x: midX, y: midY };
-    this.swimP2 = { x: midX, y: midY };
+  private startSwim(targetViewport: Vec, targetId: string): void {
+    // CLAVE: swimStart/swimEnd se guardan en COORDS DE PÁGINA (no viewport).
+    // El renderer convierte page→viewport restando scrollY al pintar. Esto
+    // hace que el pez NO siga el scroll — es como los peces ambientales del
+    // hero, que viven en el canvas del hero y no en el viewport. Si el user
+    // scrollea, el pez sigue su trayecto en el espacio de la página y
+    // aparece/desaparece del viewport naturalmente (no "viaja con el scroll").
+    const scrollY = window.scrollY;
+    // A: posición de PÁGINA del dock viejo (donde estaba el ícono ahora).
+    // Calculada desde el elemento del dock para que sea exacta aún si el
+    // user scrolleó durante el debounce.
+    const oldDock = this.dockedId
+      ? this.registry.docks().find((d) => d.id === this.dockedId)
+      : null;
+    const aViewport = oldDock ? this.computeDockPosition(oldDock) : this.current;
+    this.swimStart = { x: aViewport.x, y: aViewport.y + scrollY };
+    // B: posición de PÁGINA del dock nuevo.
+    this.swimEnd = { x: targetViewport.x, y: targetViewport.y + scrollY };
     this.swimStartTime = performance.now();
-    this.swimPhase = 0; // reset wave phase para cada swim — onda arranca limpia
+    this.swimPhase = 0;
     this.swimState.set('swimming');
-    this.dockedId = targetId; // pivot ahora "pertenece" al nuevo dock
+    this.dockedId = targetId;
     this.hub()?.close();
     this.scheduleRaf();
   }
 
-  private cubicBezier(p0: Vec, p1: Vec, p2: Vec, p3: Vec, t: number): Vec {
-    const it = 1 - t;
-    const b0 = it * it * it;
-    const b1 = 3 * it * it * t;
-    const b2 = 3 * it * t * t;
-    const b3 = t * t * t;
-    return {
-      x: b0 * p0.x + b1 * p1.x + b2 * p2.x + b3 * p3.x,
-      y: b0 * p0.y + b1 * p1.y + b2 * p2.y + b3 * p3.y,
+  /**
+   * Path FIJO del pez — independiente de scroll up/down. Línea recta entre
+   * swimStart y swimEnd con un sin-bulge perpendicular SIEMPRE hacia la
+   * izquierda (toward smaller X). Esto da la misma forma de animación sin
+   * importar si el user scrollea hacia abajo o arriba, y mantiene al pez
+   * fuera de la zona central de contenido (cards, títulos).
+   *
+   *   t ∈ [0, 1]
+   *   pos(t) = lerp(A, B, t) + perpLeft(A→B) · sin(πt) · amp
+   *
+   * Returns: posición + heading tangencial para orientar el pez.
+   */
+  private swimAt(t: number): { pos: Vec; heading: number } {
+    const A = this.swimStart;
+    const B = this.swimEnd;
+    const dx = B.x - A.x;
+    const dy = B.y - A.y;
+    const len = Math.hypot(dx, dy) || 1;
+    // Linear interp
+    const lx = A.x + dx * t;
+    const ly = A.y + dy * t;
+    // Perpendicular SIEMPRE apunta a la IZQUIERDA en screen coords (perpX ≤ 0).
+    // Rotamos (dx,dy) 90° CCW → (-dy, dx). Si eso da perpX > 0, lo invertimos
+    // para garantizar dirección consistente sin importar la orientación A→B.
+    let perpX = -dy / len;
+    let perpY = dx / len;
+    if (perpX > 0) {
+      perpX = -perpX;
+      perpY = -perpY;
+    }
+    // Amplitud: 18% de la distancia, capped a 160px. Para swims cortos el
+    // arco es chico; para largos no se vuelve excesivo.
+    const amp = Math.min(len * 0.18, 160);
+    const bulge = Math.sin(t * Math.PI) * amp;
+    const pos = {
+      x: lx + perpX * bulge,
+      y: ly + perpY * bulge,
     };
-  }
-
-  private cubicBezierTangent(p0: Vec, p1: Vec, p2: Vec, p3: Vec, t: number): Vec {
-    const it = 1 - t;
-    return {
-      x: 3 * it * it * (p1.x - p0.x) + 6 * it * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x),
-      y: 3 * it * it * (p1.y - p0.y) + 6 * it * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y),
-    };
+    // Heading: derivada analítica del path en t (tangente).
+    //   d/dt [linear] = (dx, dy)
+    //   d/dt [perp · sin(πt) · amp] = perp · cos(πt) · π · amp
+    const dBulge = Math.cos(t * Math.PI) * Math.PI * amp;
+    const tx = dx + perpX * dBulge;
+    const ty = dy + perpY * dBulge;
+    const heading = Math.atan2(ty, tx);
+    return { pos, heading };
   }
 
   private tickSwim(): void {
@@ -376,11 +375,16 @@ export class WhatsappCompanion {
     const t = Math.min(1, elapsed / this.SWIM_DURATION_MS);
     const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-    const pos = this.cubicBezier(this.swimStart, this.swimP1, this.swimP2, this.swimEnd, eased);
+    // swimAt devuelve pos en coords de PÁGINA. Convertir a viewport para el
+    // renderer (que pinta sobre canvas position:fixed en viewport coords).
+    // Esto es lo que hace que el pez NO se mueva con el scroll: la posición
+    // de página es fija (locked en swim-start), pero la viewport position
+    // cambia naturalmente cuando el user scrollea — el pez se ve salir/entrar
+    // del viewport como cualquier elemento estático en la página.
+    const { pos: pagePos, heading } = this.swimAt(eased);
+    const viewportPos: Vec = { x: pagePos.x, y: pagePos.y - window.scrollY };
 
     if (this.fishReady && this.fishRenderer) {
-      const tan = this.cubicBezierTangent(this.swimStart, this.swimP1, this.swimP2, this.swimEnd, eased);
-      const heading = Math.atan2(tan.y, tan.x);
       this.swimPhase += 0.18;
 
       // Effort fade-in/out — wave amplitude crece al despegar y baja al
@@ -391,8 +395,8 @@ export class WhatsappCompanion {
       const effort = Math.max(0, Math.min(1, fadeIn * fadeOut));
 
       const state: CompanionFishState = {
-        headX: pos.x,
-        headY: pos.y,
+        headX: viewportPos.x,
+        headY: viewportPos.y,
         heading,
         size: this.FISH_SIZE,
         swimPhase: this.swimPhase,
@@ -404,8 +408,14 @@ export class WhatsappCompanion {
     }
 
     if (t >= 1) {
-      // Swim terminado. Lock al swimEnd exacto.
-      this.current = this.swimEnd;
+      // Swim terminado. Snap del ícono a la posición VIEWPORT del nuevo dock
+      // (recomputada ahora, así toma el scrollY actual — el user pudo haber
+      // scrolleado durante el swim, y queremos el ícono pegado al dock real,
+      // no a la posición de viewport que tenía al iniciar el swim).
+      const newDock = this.registry.docks().find((d) => d.id === this.dockedId);
+      this.current = newDock
+        ? this.computeDockPosition(newDock)
+        : { x: this.swimEnd.x, y: this.swimEnd.y - window.scrollY };
       this.applyTransform();
       this.swimState.set('idle');
 
