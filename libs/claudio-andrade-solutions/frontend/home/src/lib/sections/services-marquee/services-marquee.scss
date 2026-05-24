@@ -66,18 +66,74 @@
 }
 
 // =============================================================================
-// Reel — carrusel CSS infinito. La cinta se duplica en TS y el keyframe la
-// translatea -50% (= longitud de las 10 únicas) → al volver a 0 el contenido
-// visible es idéntico, sin saltos perceptibles.
+// Reel — carrusel drag-scroll infinito. Patrón industry-standard de Embla /
+// Swiper / Splide. Las decisiones críticas, una por una:
+//
+//   1. overflow: hidden + transform: translate3d (NO overflow-x: auto +
+//      scrollLeft). Razón: en iOS/Android, un overflow-x: auto roba el
+//      pan-y al browser cuando el dedo está sobre el carrusel — el usuario
+//      no puede scrollear la página verticalmente porque el touch queda
+//      atrapado en el scroll horizontal. Con transform, el viewport es
+//      overflow:hidden (no scroll) y delegamos el pan-y al browser via
+//      touch-action.
+//
+//   2. touch-action: pan-y pinch-zoom — declara que el browser puede
+//      iniciar pan VERTICAL (scroll de página) y pinch-zoom (a11y).
+//      Cualquier pan horizontal queda libre para que JS lo capture via
+//      pointer events. Resultado: swipe vertical → página baja como
+//      cualquier sección; swipe horizontal → JS conduce el drag.
+//
+//   3. Axis lock con umbral de 6px — en el primer pointermove de un touch,
+//      el JS compara |dx| vs |dy|. Si dy > dx, abandona el drag, libera
+//      el touch, y el browser maneja el scroll vertical de la página. Si
+//      dx > dy, captura el pointer y conduce el drag con preventDefault.
+//      Patrón documentado en Pointer Events spec, implementado en Embla,
+//      Swiper, Splide, react-spring-carousel-js.
+//
+//   4. user-select: none + -webkit-touch-callout: none — siempre, no sólo
+//      durante drag. Razón: en móvil, un long-press sobre el card debe
+//      mantener la cinta pausada (el usuario está LEYENDO), no disparar
+//      la lupa de selección de iOS ni la toolbar de Android. Aplicado al
+//      viewport + reel + cards para cubrir herencia incompleta en Safari.
+//
+//   5. cursor: grab → grabbing en .is-dragging. Affordance estándar
+//      (Apple Music, Stripe, Linear).
+//
+//   6. Edges absolutas sobre el viewport — overflow:hidden las clipea
+//      contra las orillas visibles. No se mueven con el contenido porque
+//      el viewport no scrollea (el que se mueve es el reel hijo).
 // =============================================================================
-.services-marquee__reel-wrap {
+.services-marquee__viewport {
   position: relative;
   margin-top: 5rem;
-  // Confina la cinta (~6800px ahora con cards de 340px × 20) dentro del
-  // viewport. `clip` (en lugar de `hidden`) bloquea scrollLeft programático.
-  // `hidden` queda como fallback para Safari <16.
-  overflow-x: hidden;
-  overflow-x: clip;
+  overflow: hidden;
+
+  // touch-action: pan-y pinch-zoom — el browser maneja scroll vertical
+  // de página y pinch-zoom para a11y. Cualquier gesto horizontal queda
+  // libre para que los pointer events del JS lo conduzcan. Esto es lo
+  // que evita que el carrusel atrape el touch y bloquee el scroll vertical.
+  touch-action: pan-y pinch-zoom;
+
+  // Cursor grab/grabbing en desktop. Affordance estándar de carruseles
+  // arrastrables. Se hereda al reel y a los cards (no necesitan setearlo).
+  cursor: grab;
+
+  // user-select: none + -webkit-touch-callout: none en TODA la zona
+  // interactiva. Razón crítica: long-press en móvil debe ser "pausar para
+  // leer", no "abrir lupa de selección iOS / toolbar Android". user-select
+  // no se hereda confiablemente en Safari, por eso se replica abajo en
+  // .services-marquee__reel y sus descendientes.
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  // -webkit-tap-highlight: transparent — sin flash gris/azul al tocar en
+  // móvil (otro signal de "esto no es un botón clickable, es una superficie
+  // arrastrable").
+  -webkit-tap-highlight-color: transparent;
+
+  &.is-dragging {
+    cursor: grabbing;
+  }
 }
 
 .services-marquee__edge {
@@ -102,26 +158,33 @@
 .services-marquee__reel {
   display: flex;
   align-items: stretch;
-  // `width: max-content` es CRÍTICO. Sin esto el reel hereda el ancho del
-  // wrap, el keyframe -50% calcula sobre ~360px = casi nada, y el loop
-  // se rompe. `max-content` deja que mida sus ~6800px reales (340 × 20)
-  // y el -50% viaje exactamente las 10 únicas.
+  // `width: max-content` — el reel debe medir el ancho real de sus 30
+  // cards (10 únicas × 3 sets para loop infinito + margen de drag en
+  // ambas direcciones). El JS calcula W = scrollWidth / 3 y wrappea la
+  // translateX cuando el offset cruza ±W.
   width: max-content;
-  padding-block: 1rem; // espacio para que la sombra-drop de las cards
-                       // (translateY(-2px) en hover) no se recorte arriba.
+  // Padding vertical para la sombra-drop de las cards en hover
+  // (translateY(-4px) + box-shadow ~80px blur abajo) — no se recorta
+  // dentro del viewport overflow:hidden.
+  padding-block: 1.5rem;
+  // will-change: transform — el reel se mueve cada frame. Hint al
+  // compositor para promote a layer y obtener composición GPU.
   will-change: transform;
 
-  // 5 s × 10 cards = 50 s para una pasada completa. Linear es vital — un
-  // easing crearía aceleración perceptible al rebobinar y rompería el loop.
-  &.animate-marquee {
-    animation-duration: 50s;
-    animation-timing-function: linear;
-  }
-}
+  // user-select replicado por la herencia incompleta en Safari. Sin esto,
+  // long-press en una card iOS abre la lupa de selección.
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 
-@media (prefers-reduced-motion: reduce) {
-  .services-marquee__reel.animate-marquee {
-    animation: none;
+  // Todos los descendientes — texto del card incluido — no son
+  // seleccionables ni disparan callout. Aplicar al reel solo no alcanza
+  // porque el shadow DOM-ish de la card-inner queda fuera del cascade en
+  // algunos engines.
+  & * {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 }
 

@@ -22,11 +22,30 @@
     </div>
   </div>
 
-  <div class="services-marquee__reel-wrap">
+  <!--
+    Viewport — único contenedor. Tiene overflow:hidden (no scroll nativo:
+    el reel se posiciona con transform:translate3d desde JS). touch-action:
+    pan-y permite que el browser maneje el scroll vertical de la página
+    cuando el usuario hace swipe vertical sobre el carrusel; los pointer
+    events los procesa el JS sólo cuando el primer movimiento es
+    predominantemente horizontal (axis lock con umbral de 6px). Las edges
+    son siblings del reel — quedan ancladas a las orillas visibles porque
+    el viewport es su padre position:relative y no scrollea.
+  -->
+  <div
+    #viewport
+    class="services-marquee__viewport"
+    [class.is-dragging]="isDragging()"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp($event)"
+    (pointercancel)="onPointerUp($event)"
+    (wheel)="onWheel($event)"
+  >
     <div class="services-marquee__edge services-marquee__edge--left" aria-hidden="true"></div>
     <div class="services-marquee__edge services-marquee__edge--right" aria-hidden="true"></div>
 
-    <div class="services-marquee__reel animate-marquee">
+    <div #reelTrack class="services-marquee__reel">
       @for (sp of reel(); track sp.reelKey) {
         <article
           class="service-card"
