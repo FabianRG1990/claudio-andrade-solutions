@@ -42,7 +42,12 @@
                  recorta al border-radius del glass-core. -->
             <span class="engagement-card__glow" aria-hidden="true"></span>
             <div class="engagement-card__head">
-              <h3 class="engagement-card__name">{{ t.name }}</h3>
+              <div class="engagement-card__head-left">
+                <span class="engagement-card__icon" aria-hidden="true">
+                  <ng-icon [name]="t.icon" size="20" />
+                </span>
+                <h3 class="engagement-card__name">{{ t.name }}</h3>
+              </div>
               @if (t.highlight) {
                 <span class="engagement-card__tag">
                   <span class="engagement-card__tag-pulse" aria-hidden="true"></span>
@@ -55,7 +60,10 @@
               @if (t.originalPrice) {
                 <span class="engagement-card__price-original" aria-label="Precio anterior">{{ t.originalPrice }}</span>
               }
-              <span class="engagement-card__price">{{ t.price }}</span>
+              <span
+                class="engagement-card__price"
+                [class.engagement-card__price--word]="!t.price.startsWith('$')"
+              >{{ t.price }}</span>
               <span class="engagement-card__cadence">{{ t.cadence }}</span>
             </div>
             @if (t.priceBreakdown) {

@@ -406,6 +406,41 @@
   gap: 0.75rem;
 }
 
+// Wrapper interno que agrupa el icon-pill con el nombre — así el tag
+// "El más popular" del card highlight puede quedarse en el extremo derecho
+// del head via space-between sin pelearse con el spacing del icono.
+.engagement-card__head-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0; // permite que el nombre haga ellipsis si fuera necesario
+}
+
+// Icon pill al lado del nombre — square con border-radius medio, subtle
+// background del color foam para los 2 normales y lagoon-electric para el
+// highlight (consistente con el lenguaje "el destacado es eléctrico" que
+// ya usan el tag y el features-icon de highlight).
+.engagement-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 0.625rem;
+  background: rgb(var(--foam) / 0.06);
+  color: rgb(var(--foam) / 0.85);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.10);
+}
+
+.engagement-card--highlight .engagement-card__icon {
+  background: rgb(80 160 255 / 0.18);
+  color: rgb(180 220 255);
+  box-shadow:
+    inset 0 0 0 1px rgb(160 210 255 / 0.40),
+    0 0 14px -2px rgb(80 160 255 / 0.40);
+}
+
 .engagement-card__name {
   font-family: var(--font-display);
   // 1.125rem (18px) en phones → 1.25rem (20px) en desktop. Antes 1.25rem
@@ -496,6 +531,21 @@
   // precio de su plan recomendado — el glow es lo que separa el "premium"
   // del "tech generic".
   text-shadow: 0 0 32px rgb(80 160 255 / 0.50);
+}
+
+// Modifier --word: cuando el precio no es una cifra ("Personalizado",
+// "Contactar", etc.) bajamos el font-size para que la palabra quepa en
+// el ancho de la card. A 80px (--type-mono-display) "Personalizado"
+// requiere ~570px de ancho — la card tiene ~360-440px. Stripe, Linear y
+// muchos productos premium hacen exactamente este trade-off cuando
+// muestran "Custom"/"Contact" en lugar de un número: misma jerarquía
+// visual, font-size reducido al rango que cabe.
+.engagement-card__price--word {
+  font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem); // 24-36px
+}
+
+.engagement-card--highlight .engagement-card__price--word {
+  font-size: clamp(1.875rem, 1.4rem + 1.8vw, 3rem); // 30-48px
 }
 
 .engagement-card__cadence {
@@ -718,46 +768,53 @@
   }
 }
 
-// CTA destacado del plan "más popular" — Pearl Button negro + lightning
-// halo eléctrico (DodgerBlue territory). Esta combinación es EXCLUSIVA
-// del highlight: dentro de las pricing cards sólo este tiene el halo,
-// lo que hace que sea visualmente la única que "llama" al click.
+// CTA destacado del plan "más popular" — Pill amber/brass sólido. Match
+// al diseño de la imagen 2: superficie dorada con depth (gradiente
+// vertical), texto navy oscuro para contraste fuerte, ring brass + glow
+// brass cálido alrededor. La diferencia visual contra los otros 2 CTAs
+// (que son glass oscuros) es lo que hace que este "llame" al click —
+// el ojo va al único elemento dorado del módulo.
 .engagement-card__cta--highlight {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  // Pearl NAVY — mismo material que el .glass-button principal.
-  background-color: rgb(8 11 26);
+  // Amber/brass — superficie dorada con gradiente vertical para depth.
+  // El top más claro (cream-gold) + bottom más oscuro (bronze) leen como
+  // un objeto sólido iluminado desde arriba, no como un rectángulo plano.
+  background-color: rgb(var(--brass));
   background-image: linear-gradient(
     180deg,
-    rgb(14 18 38) 0%,
-    rgb(8 11 26) 50%,
-    rgb(4 6 18) 100%
+    rgb(232 200 140) 0%,
+    rgb(var(--brass)) 50%,
+    rgb(170 130 65) 100%
   );
-  color: rgb(245 241 232 / 0.92);
+  // Texto navy oscuro — contraste WCAG AAA sobre amber. Foam/cream encima
+  // de brass se ve "deslavado" (contraste pobre, ratio ~2:1); navy a
+  // ratio ~7:1 garantiza legibilidad.
+  color: rgb(8 11 26);
 
   box-shadow:
-    // Pearl inset stack MURMULLADO (0.16→0.09, 0.25→0.13) — reflejos
-    // internos discretos, no marcando la forma del botón.
-    inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.09),
-    inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-    inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.13),
-    // Brass ring + primer halo (luz cálida exterior) + electric halos
-    // profundos (energía interior).
-    0 0 0 1px rgb(var(--brass) / 0.55),
-    0 0 0.5rem rgb(232 213 175 / 0.22),
-    0 0 1.1rem rgb(var(--electric) / 0.26),
-    0 0 1.9rem rgb(var(--electric) / 0.26),
-    0 0 2.8rem rgb(20 90 255 / 0.14),
-    // Drop shadow Pearl
+    // Inset stack — luz cremosa arriba (highlight reflection del dome
+    // dorado), sombra cálida abajo (bronze depth interior).
+    inset 0 0.3rem 0.6rem rgb(255 240 200 / 0.45),
+    inset 0 -0.1rem 0.3rem rgb(110 75 30 / 0.45),
+    inset 0 -0.4rem 0.7rem rgb(140 95 40 / 0.30),
+    // Brass ring + halo brass cálido (calidez exterior, no eléctrico).
+    0 0 0 1px rgb(var(--brass) / 0.75),
+    0 0 0.7rem rgb(232 213 175 / 0.40),
+    0 0 1.6rem rgb(var(--brass) / 0.32),
+    0 0 2.6rem rgb(var(--brass) / 0.18),
+    // Drop shadow profunda (igual que Pearl) — el botón flota sobre la card.
     0 3rem 3rem rgb(0 0 0 / 0.30),
-    0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
+    0 1rem 1rem -0.6rem rgb(0 0 0 / 0.65);
 
   transition:
     transform 200ms ease,
     box-shadow 200ms ease;
 
-  // Pearl dome ::before
+  // Dome dorado superior — bulbo de luz cream-gold que sale por encima
+  // del border-top, dando la lectura "objeto curvado" característica del
+  // material Pearl premium.
   &::before {
     content: '';
     position: absolute;
@@ -766,13 +823,14 @@
     top: -100%;
     bottom: 25%;
     border-radius: 50%;
-    background-color: rgb(255 255 255 / 0.05);
+    background-color: rgb(255 240 200 / 0.18);
     z-index: 0;
     pointer-events: none;
     transition: transform 300ms ease;
   }
 
-  // Pearl cresta ::after MURMULLADA (0.45→0.22, 0.14→0.07, bottom 18→30px).
+  // Cresta interior — banda de highlight cream cerca del borde superior,
+  // simula la línea brillante donde la curvatura del dome refracta más luz.
   &::after {
     content: '';
     position: absolute;
@@ -781,10 +839,10 @@
     top: 6px;
     bottom: 30px;
     border-radius: 8px 8px 0 0;
-    box-shadow: inset 0 10px 8px -10px rgb(255 255 255 / 0.22);
+    box-shadow: inset 0 10px 8px -10px rgb(255 240 200 / 0.55);
     background: linear-gradient(
       180deg,
-      rgb(255 255 255 / 0.07) 0%,
+      rgb(255 240 200 / 0.18) 0%,
       rgb(0 0 0 / 0) 50%,
       rgb(0 0 0 / 0) 100%
     );
@@ -800,48 +858,44 @@
     z-index: 1;
   }
 
-  // Hover: Pearl insets murmullados (0.11 / 0.16), halos brass+electric
-  // exteriores sí se intensifican — el botón responde con aura, no con
-  // reflejos internos.
+  // Hover: halos brass se intensifican, dome se eleva, cresta se hunde.
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       box-shadow:
-        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.11),
-        inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.16),
-        0 0 0 1px rgb(var(--brass) / 0.72),
-        0 0 0.7rem rgb(232 213 175 / 0.34),
-        0 0 1.3rem rgb(var(--electric) / 0.38),
-        0 0 2.3rem rgb(var(--electric) / 0.38),
-        0 0 3.4rem rgb(25 95 255 / 0.22),
+        inset 0 0.3rem 0.5rem rgb(255 240 200 / 0.55),
+        inset 0 -0.1rem 0.3rem rgb(110 75 30 / 0.45),
+        inset 0 -0.4rem 0.7rem rgb(140 95 40 / 0.38),
+        0 0 0 1px rgb(var(--brass) / 0.92),
+        0 0 0.9rem rgb(232 213 175 / 0.55),
+        0 0 2rem rgb(var(--brass) / 0.45),
+        0 0 3.4rem rgb(var(--brass) / 0.26),
         0 3rem 3rem rgb(0 0 0 / 0.30),
-        0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
+        0 1rem 1rem -0.6rem rgb(0 0 0 / 0.65);
 
       &::before {
         transform: translateY(-5%);
       }
       &::after {
-        opacity: 0.4;
+        opacity: 0.55;
         transform: translateY(5%);
       }
     }
   }
 
-  // Active: Pearl insets murmullados (0.14 / 0.10) — al hundirse el botón
-  // se siente comprimido, no iluminado por dentro.
+  // Active: hundimiento, insets se invierten ligeramente (más sombra
+  // arriba, menos highlight) — sensación de presión.
   &:active {
     transform: translateY(4px);
     box-shadow:
-      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.14),
-      inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.80),
-      inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.10),
-      0 0 0 1px rgb(var(--brass) / 0.62),
-      0 0 0.5rem rgb(232 213 175 / 0.26),
-      0 0 1.1rem rgb(var(--electric) / 0.32),
-      0 0 1.9rem rgb(var(--electric) / 0.32),
-      0 0 2.8rem rgb(20 90 255 / 0.18),
-      0 3rem 3rem rgb(0 0 0 / 0.30),
-      0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
+      inset 0 0.3rem 0.5rem rgb(110 75 30 / 0.40),
+      inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.55),
+      inset 0 -0.4rem 0.7rem rgb(255 240 200 / 0.20),
+      0 0 0 1px rgb(var(--brass) / 0.85),
+      0 0 0.7rem rgb(232 213 175 / 0.45),
+      0 0 1.6rem rgb(var(--brass) / 0.40),
+      0 0 2.6rem rgb(var(--brass) / 0.22),
+      0 1.5rem 1.5rem rgb(0 0 0 / 0.30),
+      0 0.5rem 0.5rem -0.3rem rgb(0 0 0 / 0.65);
     transition: transform 120ms ease;
   }
 }
@@ -860,29 +914,34 @@
   transition: transform 700ms var(--ease-fluid);
 }
 
-// Icon-pill del highlight — Pearl negro circle (sin lightning propio,
-// el halo del parent ya carga la atención visual).
+// Icon-pill del highlight — círculo navy oscuro dentro del CTA amber.
+// El contraste navy-on-brass invita el ojo al arrow icon (CTA visual
+// affordance) — match al diseño de la imagen 2 donde el pill es
+// claramente más oscuro que el botón.
 .engagement-card__cta-icon--highlight {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  // Pearl NAVY — icon-pill coherente con el CTA highlight principal.
+  // Navy oscuro con leve gradiente vertical — coherente con la lógica
+  // Pearl pero invertida (oscuro dentro de claro). El arrow va en
+  // foam para máximo contraste sobre el navy.
   background-color: rgb(8 11 26);
   background-image: linear-gradient(
     180deg,
-    rgb(14 18 38) 0%,
-    rgb(8 11 26) 50%,
+    rgb(18 24 50) 0%,
+    rgb(8 11 26) 60%,
     rgb(4 6 18) 100%
   );
   color: rgb(245 241 232 / 0.95);
 
-  // Insets murmullados (0.16→0.10, 0.25→0.13) coherentes con el CTA padre.
+  // Insets coherentes con el resto del CTA highlight — destello cream
+  // arriba (luz reflejada del dome amber) + sombra interior abajo.
   box-shadow:
-    inset 0 0.2rem 0.4rem rgb(255 255 255 / 0.10),
+    inset 0 0.2rem 0.4rem rgb(255 240 200 / 0.18),
     inset 0 -0.08rem 0.2rem rgb(0 0 0 / 0.70),
-    inset 0 -0.25rem 0.4rem rgb(255 255 255 / 0.13),
-    0 1rem 1rem rgb(0 0 0 / 0.30),
-    0 0.4rem 0.5rem -0.25rem rgb(0 0 0 / 0.80);
+    inset 0 -0.25rem 0.4rem rgb(255 240 200 / 0.10),
+    0 0.6rem 0.6rem rgb(0 0 0 / 0.30),
+    0 0.25rem 0.3rem -0.15rem rgb(0 0 0 / 0.55);
 
   &::before {
     content: '';
@@ -892,12 +951,13 @@
     top: -100%;
     bottom: 25%;
     border-radius: 50%;
-    background-color: rgb(255 255 255 / 0.06);
+    background-color: rgb(255 240 200 / 0.08);
     z-index: 0;
     pointer-events: none;
   }
 
-  // Cresta murmullada (0.45→0.22, 0.14→0.07).
+  // Cresta de luz cream tenue — el icon pill comparte la fuente de luz
+  // del CTA padre, así que el reflection es del mismo tono.
   &::after {
     content: '';
     position: absolute;
@@ -906,10 +966,10 @@
     top: 12%;
     bottom: 45%;
     border-radius: 50%;
-    box-shadow: inset 0 5px 4px -5px rgb(255 255 255 / 0.22);
+    box-shadow: inset 0 5px 4px -5px rgb(255 240 200 / 0.30);
     background: linear-gradient(
       180deg,
-      rgb(255 255 255 / 0.07) 0%,
+      rgb(255 240 200 / 0.10) 0%,
       rgb(0 0 0 / 0) 50%,
       rgb(0 0 0 / 0) 100%
     );

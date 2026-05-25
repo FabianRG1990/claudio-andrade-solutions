@@ -456,6 +456,9 @@ export const availability = {
 // (app + landing + automatización), y landing page suelto.
 export type Engagement = {
   name: string;
+  // Phosphor icon name (versión "Bold") para el pill al lado del nombre.
+  // Cada vertical su icono visual — match al diseño de la imagen 2.
+  icon: string;
   // Precio actual. Incluye símbolo de moneda cuando aplica ("$250", "$550",
   // "Personalizado"). El estilo del card maneja el peso visual.
   price: string;
@@ -482,6 +485,7 @@ export type Engagement = {
 export const engagements: Engagement[] = [
   {
     name: 'Mantenimiento de apps',
+    icon: 'phosphorMagnifyingGlassBold',
     price: '$250',
     priceBreakdown: 'mensual · sobre apps en producción',
     cadence: 'retainer mensual',
@@ -498,6 +502,7 @@ export const engagements: Engagement[] = [
   },
   {
     name: 'Solución a medida',
+    icon: 'phosphorRocketBold',
     price: 'Personalizado',
     priceBreakdown: 'alcance ajustado a tu caso',
     cadence: 'build cerrado',
@@ -517,6 +522,7 @@ export const engagements: Engagement[] = [
   },
   {
     name: 'Landing page',
+    icon: 'phosphorUsersBold',
     price: '$550',
     priceBreakdown: 'entrega única · 1-2 semanas',
     cadence: 'proyecto cerrado',

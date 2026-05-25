@@ -4,6 +4,9 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorArrowUpRightBold,
   phosphorCheckBold,
+  phosphorMagnifyingGlassBold,
+  phosphorRocketBold,
+  phosphorUsersBold,
 } from '@ng-icons/phosphor-icons/bold';
 
 import { engagements } from '@cas-ui-shared/data/data';
@@ -20,7 +23,13 @@ import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.
   selector: 'app-engagements',
   imports: [RouterLink, NgIcon, Eyebrow, RevealDirective, CompanionDockDirective],
   providers: [
-    provideIcons({ phosphorArrowUpRightBold, phosphorCheckBold }),
+    provideIcons({
+      phosphorArrowUpRightBold,
+      phosphorCheckBold,
+      phosphorMagnifyingGlassBold,
+      phosphorRocketBold,
+      phosphorUsersBold,
+    }),
   ],
   templateUrl: './engagements.html',
   styleUrl: './engagements.scss',
