@@ -38,19 +38,25 @@ type Vec = { x: number; y: number };
 // Tintas brass / oro. Match al italic de los títulos (--brass = rgb 198 161
 // 91 = #C6A15B). 4 variantes dentro de la familia cream-brass-bronze.
 //
-// Alphas: bump suave (~30%) sobre la versión brass original (0.10-0.14 →
-// 0.14-0.18). El usuario aclaró que el hue brass-gold estaba bien, solo
-// quería verlos un poquito más — no más saturados, no de otro hue, solo
-// un escalón más visibles contra el navy.
-const TINTS: ReadonlyArray<{ body: string; tail: string }> = [
-  // Brass base — el tono más cercano al italic de los títulos
-  { body: 'rgba(198, 161, 91, 0.17)', tail: 'rgba(168, 132, 70, 0.12)' },
+// Los colores van OPACOS (sin alpha en la rgb) porque ahora la alpha se
+// controla via globalAlpha en render(), y el blend es ADITIVO
+// (globalCompositeOperation = 'lighter'). Bajo 'lighter', el alpha
+// multiplica cuánta luz se SUMA al navy del fondo en vez de cuán opaco
+// queda el pixel — exactamente lo que produce el efecto "tech glow" que
+// el usuario pidió: los peces brillan dorado, no son siluetas que tapan.
+//
+// `glow` se usa como shadowColor para el halo. Es la versión saturada/clara
+// del body que bleedea hacia afuera con shadowBlur — el bloom que vende el
+// look de luz tecnológica (cf. neon, holograma, fiber-optic readouts).
+const TINTS: ReadonlyArray<{ body: string; tail: string; glow: string }> = [
+  // Brass base — el dorado clásico, match al italic de los títulos
+  { body: 'rgb(232, 195, 130)', tail: 'rgb(210, 175, 105)', glow: 'rgba(255, 215, 140, 1)' },
   // Cream-gold — más claro, lectura "luz reflejada"
-  { body: 'rgba(220, 185, 115, 0.15)', tail: 'rgba(195, 160, 95, 0.11)' },
-  // Bronze — más oscuro/saturado, profundidad
-  { body: 'rgba(170, 130, 65, 0.18)', tail: 'rgba(140, 105, 55, 0.13)' },
-  // Champagne — pálido, el más etéreo
-  { body: 'rgba(232, 200, 140, 0.14)', tail: 'rgba(205, 170, 110, 0.10)' },
+  { body: 'rgb(245, 215, 155)', tail: 'rgb(225, 190, 125)', glow: 'rgba(255, 230, 170, 1)' },
+  // Bronze-warm — un toque más cálido sin caer en naranja
+  { body: 'rgb(220, 180, 105)', tail: 'rgb(195, 155, 80)', glow: 'rgba(250, 205, 130, 1)' },
+  // Champagne — el más pálido y etéreo
+  { body: 'rgb(252, 228, 175)', tail: 'rgb(232, 200, 145)', glow: 'rgba(255, 240, 200, 1)' },
 ];
 
 // ============================================================================
@@ -106,7 +112,7 @@ class ShadowFish {
 
   // Visual.
   baseAlpha: number;
-  tint: { body: string; tail: string };
+  tint: { body: string; tail: string; glow: string };
   // bodyScale mantenido como alias de bodyLength para el sort by-size del
   // tick (los peces lejanos se pintan primero).
   bodyScale: number;
@@ -390,7 +396,23 @@ class ShadowFish {
     };
 
     ctx.save();
-    ctx.globalAlpha = this.baseAlpha;
+    // Blend aditivo: cada fill SUMA su color dorado al navy del fondo (en vez
+    // de taparlo como en el render normal). Combinado con el shadowBlur de
+    // abajo produce el "tech glow" — los peces se leen como trazas luminosas
+    // que iluminan el agua a su alrededor, no como siluetas opacas. Es el
+    // mismo principio que neon/aurora/fiber-optic readouts en interfaces sci-fi.
+    ctx.globalCompositeOperation = 'lighter';
+    // Modulamos baseAlpha por 0.55 porque bajo 'lighter' el alpha es la
+    // FUERZA del aporte luminoso (no la opacidad). 0.55*0.55=0.30 promedio
+    // → contribución golden ~30% sobre navy → brillo claro pero no quemado.
+    ctx.globalAlpha = this.baseAlpha * 0.55;
+    // Bloom dorado alrededor del cuerpo. shadowBlur escala con bodyLength
+    // para que peces "cerca" (más grandes) tengan halo más amplio; shadowColor
+    // es el glow tint completamente saturado — el alpha del fill modula la
+    // fuerza visible del halo. Bajo 'lighter' los shadows también se suman,
+    // así que halos de tail+body se refuerzan en el centro del pez.
+    ctx.shadowColor = this.tint.glow;
+    ctx.shadowBlur = this.bodyLength * 0.30;
 
     ctx.fillStyle = this.tint.tail;
     ctx.beginPath();
