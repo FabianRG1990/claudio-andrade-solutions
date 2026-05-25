@@ -2799,14 +2799,48 @@ export class WolfLakeCanvas {
     // tamaño minimo (0.30x), no a 0.42x como antes.
     const LAKE_TOP_V = FISH_UPPER_LIMIT_V;
     const LAKE_BOTTOM_V = 1.00;
-    const depthScaleAt = (yV: number): number => {
+
+    // ─── Edge dampening lateral ──────────────────────────────────────────
+    // Antes de este dampening, un pez en y_v=1.00 renderizaba a 1.40× sin
+    // importar si su X estaba al medio del lago o pegado a la orilla.
+    // Resultado: peces que nadaban cerca del borde lateral derecho (zona
+    // del botón "Continuar") se veían 2-3× más grandes que sus pares
+    // nadando al medio — visualmente competían con la UI del hero y
+    // rompían el sense of scale del lago.
+    //
+    // Solución: en los 10% laterales del rango X (u ∈ [0.04, 0.14] y
+    // [0.86, 0.96]) aplicamos un multiplicador que va de 0.72 en el borde
+    // hasta 1.0 al salir del falloff. Smoothstep cúbico para que la
+    // transición sea perceptualmente natural (no un cambio lineal abrupto).
+    //
+    // 28% de reducción en el borde es lo que el usuario marcó como
+    // "accesible" — no tan agresivo como para hacer los peces edge
+    // diminutos, pero suficiente para alinearlos al tamaño de los del
+    // centro. Resto del lago (90% del rango X) queda intacto.
+    const FISH_X_MIN_V = 0.04;
+    const FISH_X_MAX_V = 0.96;
+    const EDGE_DAMP_REGION = 0.10;
+    const EDGE_DAMP_MIN = 0.72;
+    const xEdgeDampening = (xV: number): number => {
+      const leftDist = Math.max(0, xV - FISH_X_MIN_V);
+      const rightDist = Math.max(0, FISH_X_MAX_V - xV);
+      const edgeDist = Math.min(leftDist, rightDist);
+      if (edgeDist >= EDGE_DAMP_REGION) return 1.0;
+      const t = Math.max(0, edgeDist / EDGE_DAMP_REGION);
+      const smooth = t * t * (3 - 2 * t); // smoothstep clásico
+      return EDGE_DAMP_MIN + (1.0 - EDGE_DAMP_MIN) * smooth;
+    };
+
+    const depthScaleAt = (xV: number, yV: number): number => {
       const t = Math.max(0, Math.min(1, (yV - LAKE_TOP_V) / (LAKE_BOTTOM_V - LAKE_TOP_V)));
       // Range 0.15→1.40 = ratio 9.3× (era 4.67×). User pidio peces atras
       // "mas pequeños todavia de lo que son" — atras = cerca ciudad =
       // y_v 0.43 = scale 0.15 (la mitad del previo 0.30). Al frente
       // (y_v=1.00) sigue en 1.40 = no toca el tamaño que ya le gusta.
       const curved = t * t;
-      return 0.15 + curved * 1.25;
+      const baseScale = 0.15 + curved * 1.25;
+      // Reduce ~28% en los bordes laterales — ver bloque arriba para why.
+      return baseScale * xEdgeDampening(xV);
     };
 
     // ─── Wander territory — el pez deja de patrullar en una órbita chica y
@@ -3532,11 +3566,11 @@ export class WolfLakeCanvas {
         }
       }
 
-      const cursorHeadVForUpdate = canvasUVToImgUV(
+      const cursorHeadUVForUpdate = canvasUVToImgUV(
         { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
         cw, ch, IMG_W, IMG_H,
-      ).y;
-      cursorFish.update(dt, cursorOnWater, depthScaleAt(cursorHeadVForUpdate));
+      );
+      cursorFish.update(dt, cursorOnWater, depthScaleAt(cursorHeadUVForUpdate.x, cursorHeadUVForUpdate.y));
 
       // GlowFish ambientales — wander libre por todo el lago. Cada pez
       // tiene su propio waypoint y reloj de burst-glide. Resultado:
@@ -3601,10 +3635,10 @@ export class WolfLakeCanvas {
         gboost = Math.max(gboost, Math.max(0, 1 - dCursorFish2 / cfRadius2));
         gf.glowBoostTarget = gboost;
 
-        const gHeadV = canvasUVToImgUV(
+        const gHeadUV = canvasUVToImgUV(
           { x: ghead.x / cw, y: ghead.y / ch }, cw, ch, IMG_W, IMG_H,
-        ).y;
-        gf.update(dt, false, depthScaleAt(gHeadV));
+        );
+        gf.update(dt, false, depthScaleAt(gHeadUV.x, gHeadUV.y));
 
         clampSpineToLake(gf, mask, cw, ch, IMG_W, IMG_H,
           imgUVToCanvasUV({ x: gf.orbit.cx, y: gf.orbit.cy }, cw, ch, IMG_W, IMG_H));
@@ -3641,10 +3675,10 @@ export class WolfLakeCanvas {
       };
       for (let i = 0; i < glowFishes.length; i++) {
         const gf = glowFishes[i];
-        const ghV = canvasUVToImgUV({ x: gf.spine[0].x / cw, y: gf.spine[0].y / ch }, cw, ch, IMG_W, IMG_H).y;
+        const ghUV = canvasUVToImgUV({ x: gf.spine[0].x / cw, y: gf.spine[0].y / ch }, cw, ch, IMG_W, IMG_H);
         if (glowFishHandles[i]) {
           applyWaterTint(glowFishHandles[i], gf.spine[0].x, gf.spine[0].y);
-          fishRenderer.updateFish(glowFishHandles[i], gf, depthScaleAt(ghV));
+          fishRenderer.updateFish(glowFishHandles[i], gf, depthScaleAt(ghUV.x, ghUV.y));
         }
       }
       // Cursor fish: solo lo renderizamos si hay handle (skip en mobile —
@@ -3652,12 +3686,12 @@ export class WolfLakeCanvas {
       // existiendo y corriendo su lógica de hover en CPU, pero su mesh no
       // se actualiza ni se dibuja.
       if (cursorFishHandle) {
-        const cursorHeadV = canvasUVToImgUV(
+        const cursorHeadUV = canvasUVToImgUV(
           { x: cursorFish.spine[0].x / cw, y: cursorFish.spine[0].y / ch },
           cw, ch, IMG_W, IMG_H,
-        ).y;
+        );
         applyWaterTint(cursorFishHandle, cursorFish.spine[0].x, cursorFish.spine[0].y);
-        fishRenderer.updateFish(cursorFishHandle, cursorFish, depthScaleAt(cursorHeadV));
+        fishRenderer.updateFish(cursorFishHandle, cursorFish, depthScaleAt(cursorHeadUV.x, cursorHeadUV.y));
       }
       fishRenderer.render();
 
