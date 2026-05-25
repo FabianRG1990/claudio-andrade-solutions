@@ -37,7 +37,6 @@ export {
   caseStudies,
   availability,
   engagements,
-  engagementFeatures,
 } from './lib/data/data';
 export type {
   Product,

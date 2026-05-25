@@ -452,23 +452,26 @@ export const availability = {
 } as const;
 
 // ---- Modelos de engagement ------------------------------------------------
-// Describen cómo se contrata el trabajo: auditoría puntual, proyecto cerrado,
-// partnership recurrente.
+// Tres ofertas concretas: mantenimiento de apps existentes, proyecto a medida
+// (app + landing + automatización), y landing page suelto.
 export type Engagement = {
   name: string;
-  // Precio actual (sin símbolo de moneda — fricción visual mínima).
+  // Precio actual. Incluye símbolo de moneda cuando aplica ("$250", "$550",
+  // "Personalizado"). El estilo del card maneja el peso visual.
   price: string;
   // Precio ancla (tachado encima del actual) — efecto "Price Anchoring".
+  // No usado por la oferta actual; se conserva por si vuelve a aplicar.
   originalPrice?: string;
-  // Desglose en unidad pequeña (ej. "≈ 150/día") — reduce dolor de pago.
+  // Línea complementaria pequeña debajo del precio (ej. "entrega única
+  // · 1-2 semanas"). Aclara unidades o entregables sin saturar el precio.
   priceBreakdown?: string;
   cadence: string;
   description: string;
-  // `features` es paralelo a `engagementFeatures` (mismo orden + longitud).
-  // `true` = check; `false` = X tenue. Inclusión jerárquica: cada plan superior
-  // es superset del anterior — Auditoría (diagnóstico) ⊂ Proyecto cerrado
-  // (incluye discovery + build) ⊂ Acompañamiento (incluye todo + retainer).
-  features: readonly boolean[];
+  // Lista de capacidades concretas que incluye este engagement. Cada card
+  // tiene su propia lista — no hay matrix de inclusión cumulativa porque la
+  // oferta ya no es jerárquica (un landing NO incluye mantenimiento mensual,
+  // y mantenimiento NO incluye build de landing — son verticales distintas).
+  features: readonly string[];
   // Mensaje de escasez (solo en plan destacado) — refuerza cohorte limitada
   // que ya vive en `availability.ticketingNote`.
   scarcityNote?: string;
@@ -476,56 +479,56 @@ export type Engagement = {
   highlight?: boolean;
 };
 
-// Lista unificada de capacidades — paralela a `Engagement.features`. Orden
-// estructurado en 3 bloques: diagnóstico → construcción → operación. La
-// inclusión es cumulativa: cada plan tiene los anteriores + los suyos.
-export const engagementFeatures: readonly string[] = [
-  'Inventario de stack y procesos',
-  'Hoja de ruta priorizada a 12 meses',
-  'Sesión de cierre con dirección',
-  'Build con alcance y precio cerrados',
-  'Sprints quincenales con demo viva',
-  'Stack premium (Angular · Firebase · IA)',
-  'Documentación técnica completa',
-  'Garantía post-entrega de 30 días',
-  'Equipo de producto fraccional',
-  'CTO fraccional y soporte 24/7',
-];
-
 export const engagements: Engagement[] = [
   {
-    name: 'Auditoría',
-    price: '1.8K',
-    originalPrice: '2.5K',
-    priceBreakdown: '≈ 600 / semana',
-    cadence: 'trabajo de 2 a 4 semanas',
+    name: 'Mantenimiento de apps',
+    price: '$250',
+    priceBreakdown: 'mensual · sobre apps en producción',
+    cadence: 'retainer mensual',
     description:
-      'Diagnóstico tecnológico completo. Mapeo de stack, riesgos, oportunidades de automatización e IA, y una hoja de ruta priorizada por impacto.',
-    features: [true, true, true, false, false, false, false, false, false, false],
+      'Servicio independiente para una aplicación que ya está viva. Bug fixes, actualizaciones de dependencias, monitoreo y mejoras incrementales — para mantener tu plataforma estable y al día.',
+    features: [
+      'Bug fixes y hotfixes',
+      'Actualizaciones de dependencias',
+      'Monitoreo de salud y errores',
+      'Mejoras incrementales mensuales',
+      'Soporte por canal directo',
+    ],
     accent: 'foam',
   },
   {
-    name: 'Proyecto cerrado',
-    price: '14K',
-    originalPrice: '18K',
-    priceBreakdown: '≈ 700 / semana',
-    cadence: 'alcance fijo',
+    name: 'Solución a medida',
+    price: 'Personalizado',
+    priceBreakdown: 'alcance ajustado a tu caso',
+    cadence: 'build cerrado',
     description:
-      'Construcción integral de una solución concreta. Estimación cerrada, hitos quincenales, demo viva en cada sprint y entrega documentada.',
-    features: [true, true, true, true, true, true, true, true, false, false],
+      'Aplicación a medida con su landing y un sistema robusto de automatización integrado. Discovery, arquitectura, sprints quincenales con demo viva y entrega documentada con garantía.',
+    features: [
+      'Discovery y arquitectura',
+      'App + landing + automatización IA',
+      'Sprints quincenales con demo viva',
+      'Stack premium (Angular · Firebase · IA)',
+      'Documentación técnica completa',
+      'Garantía post-entrega de 30 días',
+    ],
     scarcityNote: '2 cupos abiertos · cohorte actual',
     accent: 'lagoon',
     highlight: true,
   },
   {
-    name: 'Acompañamiento',
-    price: '4.5K',
-    originalPrice: '6K',
-    priceBreakdown: '≈ 150 / día',
-    cadence: 'mensual',
+    name: 'Landing page',
+    price: '$550',
+    priceBreakdown: 'entrega única · 1-2 semanas',
+    cadence: 'proyecto cerrado',
     description:
-      'Compromiso a largo plazo: equipo de producto fraccional, sprints continuos, soporte 24/7 y prioridad en agenda. Ideal para empresas en crecimiento sostenido.',
-    features: [true, true, true, true, true, true, true, true, true, true],
+      'Sitio de una página premium para vender un producto o servicio. Diseño, copy, performance, SEO técnico y deploy listo para producción.',
+    features: [
+      'Diseño y copy a medida',
+      'Performance optimizada (Lighthouse ≥ 95)',
+      'SEO técnico y metadata',
+      'Stack moderno y deploy incluido',
+      'Mobile-first responsive',
+    ],
     accent: 'coral',
   },
 ];

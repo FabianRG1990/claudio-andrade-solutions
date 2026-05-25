@@ -599,10 +599,6 @@
   color: rgb(var(--foam) / 0.85);
 }
 
-.engagement-card__feature--absent {
-  color: rgb(var(--foam) / 0.32);
-}
-
 .engagement-card__feature-icon {
   margin-top: 0.125rem;
   flex-shrink: 0;
@@ -616,18 +612,12 @@
   color: rgb(var(--foam) / 0.85);
 }
 
-.engagement-card--highlight .engagement-card__feature:not(.engagement-card__feature--absent) .engagement-card__feature-icon {
+.engagement-card--highlight .engagement-card__feature-icon {
   background: rgb(80 160 255 / 0.18);
   color: rgb(180 220 255);
   box-shadow:
     inset 0 0 0 1px rgb(160 210 255 / 0.40),
     0 0 8px -1px rgb(80 160 255 / 0.30);
-}
-
-.engagement-card__feature--absent .engagement-card__feature-icon {
-  background: transparent;
-  color: rgb(var(--foam) / 0.28);
-  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.08);
 }
 
 .engagement-card__feature-label {
