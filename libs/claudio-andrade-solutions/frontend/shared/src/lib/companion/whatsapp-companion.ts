@@ -103,26 +103,61 @@ export class WhatsappCompanion {
   private swimStart: Vec = { x: 0, y: 0 };
   private swimEnd: Vec = { x: 0, y: 0 };
   private swimStartTime = 0;
-  // Timing del swim, dividido en tres tramos:
-  //   • MORPH_HEAD_MS — uncurl del orbe en swimStart (hub→pez)
-  //   • Path swim — duración efectiva del path A→B
-  //   • MORPH_TAIL_MS — curl del pez en swimEnd (pez→hub)
+
+  // Timing del swim, dividido en tres tramos (HEAD curl + PATH + TAIL curl).
   //
-  // Total = HEAD + PATH + TAIL. El path queda en ~1400ms (similar al swim
-  // antiguo de 1500ms) y los 250ms de cada extremo cubren la transformación.
-  // 250ms es la cadencia premium documentada para morphs orgánicos cortos
-  // (Pixar character pose change, Apple Vision Pro icon coalescence): rápido
-  // pero leíble — el ojo registra la transición sin sentirse "tirado" por
-  // la animación. Más corto se siente "cut"; más largo, "lazy".
-  private readonly MORPH_HEAD_MS = 250;
-  // Tail morph 350ms (vs 250ms anterior) — la transformación tail es
-  // donde el user juzga la calidad del morph. Con 250ms el bend +
-  // spin + scale-down se atropellaban: el ojo no alcanzaba a apreciar
-  // el detalle de la flexión antes de que la rotación tomara el
-  // escenario. 350ms da ~120ms extra para que la flexión easeOutCubic
-  // se "lea" como movimiento orgánico de pez antes del spiral.
-  private readonly MORPH_TAIL_MS = 350;
-  private readonly SWIM_DURATION_MS = 1900;
+  // ADAPTATIVO POR DISTANCIA. Dos anclas calibradas con el user:
+  //   • distancia ≤ 1 viewport  → 1900ms total (scroll suave, "perfecto")
+  //   • distancia ≥ 3 viewports → 800ms total (scroll rápido entre secciones)
+  //
+  // Principio: en motion design (Material/Apple HIG), las animaciones que
+  // recorren más distancia NO deberían durar más — se resuelven con mayor
+  // velocidad pico, no con mayor duración. Función del pez: introducir el
+  // segmento al que el user llega; debe arrivar mientras el ojo todavía
+  // está localizando el header, no después de que ya empezó a leer.
+  //
+  // La curva es plana cerca de 1 viewport (preserva el "perfecto" del
+  // scroll suave) y acelera hacia el target 800ms:
+  //
+  //   t      = clamp((distance/vh - 1) / 2, 0, 1)   // 0 en ≤1vh, 1 en ≥3vh
+  //   factor = 1 - t²                                // ease-out cuadrático
+  //   head   = HEAD_MIN + (HEAD_BASE - HEAD_MIN) · factor
+  //   tail   = TAIL_MIN + (TAIL_BASE - TAIL_MIN) · factor
+  //   path   = PATH_MIN + (PATH_BASE - PATH_MIN) · factor
+  //   total  = head + path + tail
+  //
+  // El "1 - t²" decae lento al inicio (1vh → 1.2vh apenas cae) y rápido al
+  // final (2vh → 3vh es la mayor caída). Esto preserva el feel del scroll
+  // entre docks contiguos.
+  //
+  // Resultados de referencia (vh = 800):
+  //   • distance ≤ vh    → 250 + 1300 + 350 = 1900ms (igual a antes)
+  //   • distance = 1.5vh → ~247 + ~1219 + ~346 = ~1812ms (apenas cambió)
+  //   • distance = 2vh   → ~238 + ~1055 + ~333 = ~1625ms
+  //   • distance = 2.5vh → ~222 + ~749 + ~311 = ~1281ms
+  //   • distance ≥ 3vh   → 200 + 320 + 280 = 800ms ✓ target del user
+  //
+  // Más allá de 3vh la duración se mantiene en 800ms (el pez se mueve
+  // visualmente más rápido para cubrir la distancia extra). HEAD/TAIL MIN
+  // se mantienen ≥200ms — umbral de readability del morph (Material).
+  private readonly MORPH_HEAD_BASE_MS = 250;
+  private readonly MORPH_HEAD_MIN_MS = 200;
+  private readonly MORPH_TAIL_BASE_MS = 350;
+  private readonly MORPH_TAIL_MIN_MS = 280;
+  private readonly PATH_BASE_MS = 1300;
+  private readonly PATH_MIN_MS = 320;
+  // Rango de distancia (en viewports) donde aplica el ramp BASE→MIN.
+  // Antes de RAMP_START_VH el timing es BASE puro; después de RAMP_END_VH
+  // es MIN puro. Entre ambos se interpola con `1 - t²`.
+  private readonly RAMP_START_VH = 1.0;
+  private readonly RAMP_END_VH = 3.0;
+
+  // Duración resuelta del swim en curso. Computadas en startSwim() en función
+  // de la distancia real entre swimStart y swimEnd. Inicializadas con los
+  // BASE para que un tick accidental antes del primer swim use valores sanos.
+  private currentSwimDurationMs = 1900;
+  private currentMorphHeadMs = 250;
+  private currentMorphTailMs = 350;
   // Duración del crossfade pez↔hub (último tramo del swim). 180ms es
   // el sweet spot: suficiente para que el ojo lerpe entre ambos sin
   // ver "salto", corto enough para no quedarse con ambos visibles
@@ -511,6 +546,28 @@ export class WhatsappCompanion {
 
     this.swimStart = aPage;
     this.swimEnd = bPage;
+    // Resolver timing adaptativo según la distancia A→B. Ver el bloque de
+    // constantes BASE/MIN para la curva y la justificación.
+    //   t      = clamp((dist/vh - RAMP_START_VH) / (RAMP_END_VH - RAMP_START_VH), 0, 1)
+    //   factor = 1 - t²        (ease-out: plano cerca de 1vh, agresivo cerca de 3vh)
+    const distance = Math.hypot(bPage.x - aPage.x, bPage.y - aPage.y);
+    const distanceInVh = distance / Math.max(vh, 1);
+    const rampT = Math.min(
+      1,
+      Math.max(0, (distanceInVh - this.RAMP_START_VH) / (this.RAMP_END_VH - this.RAMP_START_VH)),
+    );
+    const distanceFactor = 1 - rampT * rampT;
+    this.currentMorphHeadMs =
+      this.MORPH_HEAD_MIN_MS
+      + (this.MORPH_HEAD_BASE_MS - this.MORPH_HEAD_MIN_MS) * distanceFactor;
+    this.currentMorphTailMs =
+      this.MORPH_TAIL_MIN_MS
+      + (this.MORPH_TAIL_BASE_MS - this.MORPH_TAIL_MIN_MS) * distanceFactor;
+    const pathMs =
+      this.PATH_MIN_MS + (this.PATH_BASE_MS - this.PATH_MIN_MS) * distanceFactor;
+    this.currentSwimDurationMs =
+      this.currentMorphHeadMs + pathMs + this.currentMorphTailMs;
+
     this.swimStartTime = performance.now();
     this.swimPhase = 0;
     this.swimState.set('swimming');
@@ -546,7 +603,7 @@ export class WhatsappCompanion {
         }
         this.hubVisible.set(true);
       }
-    }, this.SWIM_DURATION_MS - this.CROSSFADE_DUR_MS) as unknown as number;
+    }, this.currentSwimDurationMs - this.CROSSFADE_DUR_MS) as unknown as number;
 
     this.scheduleRaf();
   }
@@ -605,7 +662,7 @@ export class WhatsappCompanion {
   private tickSwim(): void {
     const now = performance.now();
     const elapsed = now - this.swimStartTime;
-    const t = Math.min(1, elapsed / this.SWIM_DURATION_MS);
+    const t = Math.min(1, elapsed / this.currentSwimDurationMs);
 
     // ─── Fase de la transformación ────────────────────────────────────
     // El swim se divide en HEAD (uncurl) → PATH → TAIL (curl). Cada fase
@@ -616,23 +673,24 @@ export class WhatsappCompanion {
     //   • waveGate   — 0 → 1 durante HEAD; 1 durante PATH; 1 → 0 durante TAIL
     //                  ramping cuadrático para que la onda carangiform no
     //                  "arranque de golpe" desde el orbe-curled
-    const pathDurMs = this.SWIM_DURATION_MS - this.MORPH_HEAD_MS - this.MORPH_TAIL_MS;
-    const tailStartMs = this.SWIM_DURATION_MS - this.MORPH_TAIL_MS;
+    const pathDurMs =
+      this.currentSwimDurationMs - this.currentMorphHeadMs - this.currentMorphTailMs;
+    const tailStartMs = this.currentSwimDurationMs - this.currentMorphTailMs;
     let pathT: number;
     let curlPhase: number;
     let waveGate: number;
-    if (elapsed < this.MORPH_HEAD_MS) {
-      const h = elapsed / this.MORPH_HEAD_MS;
+    if (elapsed < this.currentMorphHeadMs) {
+      const h = elapsed / this.currentMorphHeadMs;
       pathT = 0;
       curlPhase = 1 - h;
       waveGate = h * h; // quadratic ramp-up — wave amplitude empieza en 0
     } else if (elapsed >= tailStartMs) {
-      const ti = Math.min(1, (elapsed - tailStartMs) / this.MORPH_TAIL_MS);
+      const ti = Math.min(1, (elapsed - tailStartMs) / this.currentMorphTailMs);
       pathT = 1;
       curlPhase = ti;
       waveGate = (1 - ti) * (1 - ti); // quadratic ramp-down
     } else {
-      pathT = (elapsed - this.MORPH_HEAD_MS) / pathDurMs;
+      pathT = (elapsed - this.currentMorphHeadMs) / pathDurMs;
       curlPhase = 0;
       waveGate = 1;
     }
@@ -702,7 +760,7 @@ export class WhatsappCompanion {
       // El timing se compute desde swim-end (no desde tail-start) así
       // queda independiente de cuánto dure el curl: al swim end siempre
       // el handoff está completo.
-      const HUB_EMERGE_START_MS = this.SWIM_DURATION_MS - this.CROSSFADE_DUR_MS;
+      const HUB_EMERGE_START_MS = this.currentSwimDurationMs - this.CROSSFADE_DUR_MS;
       let meshOpacity = 1;
       if (elapsed >= HUB_EMERGE_START_MS) {
         meshOpacity = Math.max(0, 1 - (elapsed - HUB_EMERGE_START_MS) / this.CROSSFADE_DUR_MS);
