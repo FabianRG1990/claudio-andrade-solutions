@@ -88,10 +88,12 @@
 }
 
 // =============================================================================
-// ExhibitCard — premium 3D estático sin animaciones hover.
-// Mismo enfoque que .tech-card: sombras atmosféricas multi-capa + gradient
-// border directional via mask-composite (chamfer biselado) + bevels insets.
-// Ver timeline.scss .tech-card para la receta y por qué.
+// ProductCard — mismo lenguaje visual que `.program-card` (nosotros) e
+// `.info-card` (contacto). El user pidió que TODOS los cards de imagen
+// compartan el mismo "borde y estilo de card" — 3-point lighting OKLCH +
+// directional gradient-border. La receta abajo es idéntica byte-a-byte a
+// la de program-card; cualquier ajuste futuro debe propagarse a las tres
+// cards (program-card, product-card, product-row__media, case-row__media).
 // =============================================================================
 .product-card {
   position: relative;
@@ -102,21 +104,39 @@
   padding: 0.5rem;
   isolation: isolate;
 
-  // Sombras atmosféricas multi-capa — el card flota físicamente sobre el
-  // fondo. Ring interior 1px brass tenue + ring foam tenue — marco premium
-  // visible que coordina con el resto del sistema brass del sitio.
-  box-shadow:
-    0 32px 64px -24px rgb(6 9 26 / 0.78),
-    0 14px 28px -10px rgb(6 9 26 / 0.52),
-    0 4px 8px -2px rgb(6 9 26 / 0.36),
-    inset 0 0 0 1px rgb(245 241 232 / 0.08),
-    0 0 0 1px rgb(var(--brass) / 0.16);
+  // Surface — 3-point lighting OKLCH (TR LED glow + BL ambient + linear
+  // navy gradient). Visible en el ring de 0.5rem alrededor del media.
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
 
-  // Chamfer biselado via mask-composite — antes blanco-puro→negro-puro
-  // genérico que se leía como borde de PowerPoint. Ahora brass shimmer
-  // top-left → cream → neutral → deep shadow. Patrón Luxe Hotel Lobby:
-  // luz cálida cae sobre marco metálico, profundidad al bottom-right.
-  // Es lo que separa "div con border" de "marco de cristal premium".
+  border: 1px solid oklch(0.62 0.14 248 / 0.55);
+
+  box-shadow:
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
+
+  // Gradient-border directional via mask-composite — TR lit, falloff hacia
+  // BL. Mismo recipe que program-card.
   &::after {
     content: '';
     position: absolute;
@@ -125,16 +145,15 @@
     padding: 1px;
     background: linear-gradient(
       155deg,
-      rgb(var(--brass) / 0.85) 0%,           // brass shimmer top-left
-      rgb(232 213 175 / 0.45) 14%,           // brass→cream transición
-      rgb(255 255 255 / 0.18) 32%,           // neutral mid
-      rgb(255 255 255 / 0.05) 52%,           // fade
-      rgb(0 0 0 / 0.22) 78%,                 // shadow deepening
-      rgb(0 0 0 / 0.38) 100%                 // deep bottom-right
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
     );
     -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
             mask-composite: exclude;
     pointer-events: none;
