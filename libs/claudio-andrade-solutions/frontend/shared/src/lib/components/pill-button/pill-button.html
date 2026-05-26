@@ -1,9 +1,9 @@
 @if (href(); as link) {
-  <a [routerLink]="link" class="pill-button glass-button">
+  <a [routerLink]="link" class="pill-button gold-pill-button">
     <ng-container *ngTemplateOutlet="content" />
   </a>
 } @else {
-  <button [type]="type()" class="pill-button glass-button" (click)="clicked.emit()">
+  <button [type]="type()" class="pill-button gold-pill-button" (click)="clicked.emit()">
     <ng-container *ngTemplateOutlet="content" />
   </button>
 }
