@@ -16,9 +16,38 @@
         appReveal
         [delay]="0.2"
       >
+        <span class="featured-products__cta-emblem glass-button-icon" aria-hidden="true">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <!-- Brilliant-cut diamond ESTILO OUTLINE: solo bordes en brass,
+                 cuerpo transparente. Composición:
+                   • Path outline: table (top horizontal) + crown shoulders
+                     + girdle corners + pavilion converging a culet.
+                   • Girdle: línea horizontal al ancho máximo.
+                   • Pavilion main diagonals: desde los extremos de la table
+                     hacia el culet (point bottom).
+                   • Crown kite facet: el triangulito ▽ en el center-top — V
+                     desde dos puntos sobre la table convergiendo a un punto
+                     sobre el girdle. Es la firma de un brilliant-cut visto
+                     de frente, lo que el user identificó como "triangulito". -->
+            <path d="M6.5 4 L17.5 4 L22.5 9 L12 21 L1.5 9 Z" />
+            <line x1="1.5" y1="9" x2="22.5" y2="9" />
+            <line x1="6.5" y1="4" x2="12" y2="21" />
+            <line x1="17.5" y1="4" x2="12" y2="21" />
+            <path d="M9.5 4 L12 9 L14.5 4" />
+          </svg>
+        </span>
         <span class="featured-products__cta-label">Ver los 6 productos</span>
         <span class="featured-products__cta-icon glass-button-icon">
-          <ng-icon name="phosphorArrowUpRightBold" size="14" />
+          <ng-icon name="phosphorArrowRightBold" size="14" />
         </span>
       </a>
     </div>

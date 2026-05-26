@@ -53,22 +53,32 @@
   }
 }
 
-// CTA "Ver las 6 galerías" — patrón pill-button inline (sin componente).
+// CTA "Ver los 6 productos" — pattern emblem-left + label-center + arrow-right,
+// según referencia del user. El frame visual (border brass, halo upward,
+// specular top-center) lo provee el mixin .gold-pill-button.
 .featured-products__cta {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   border-radius: 14px;
-  padding: 0.375rem 0.375rem 0.375rem 1.5rem;
+  padding: 0.625rem 1.25rem;
   flex-shrink: 0;
-  // Tipografía gobernada por el mixin .gold-pill-button.
-  // Touch target AAA — el pill completo debe ≥44px alto.
-  min-height: 44px;
+  // Touch target AAA — el pill completo ≥44px alto.
+  min-height: 56px;
 
   &:hover .featured-products__cta-icon,
   &:active .featured-products__cta-icon {
-    transform: translate(2px, -2px);
+    transform: translateX(3px);
   }
+}
+
+.featured-products__cta-emblem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .featured-products__cta-label {
@@ -76,12 +86,12 @@
 }
 
 .featured-products__cta-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 9999px;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
   transition: transform 700ms var(--ease-fluid);
 }
 

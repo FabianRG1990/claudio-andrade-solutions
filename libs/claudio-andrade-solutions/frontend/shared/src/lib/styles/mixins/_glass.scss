@@ -335,13 +335,16 @@
   box-shadow:
     // Ring cálido apenas perceptible (interior, hint de "metal densely lit").
     inset 0 0 0 1px rgb(255 210 110 / 0.06),
-    // RESPLANDOR DORADO — stack de 3 anillos dorados ceñidos al silueta,
-    // cada uno con alpha bajo para mantener la lectura "surgical, tenuous,
-    // elegant" (close-up que el user mandó). Closest 4px / mid 10px / wider
-    // 22px — el halo decrece exponencialmente como una fuente de luz real.
-    0 0 4px 0 rgb(255 210 100 / 0.30),
-    0 0 10px 0 rgb(255 200 90 / 0.20),
-    0 0 22px 0 rgb(255 195 80 / 0.10),
+    // RESPLANDOR DORADO UPWARD — el user mandó imagen referencia donde el
+    // halo está concentrado ARRIBA del botón (luz cenital cayendo), NO un
+    // anillo 360°. Stack de 3 capas con negative Y offset, cada una más
+    // ancha que la anterior; la fuente de luz parece estar entre la cámara
+    // y el top del botón. Spread negativo recorta lateralmente para evitar
+    // que el glow se derrame a los lados. Alphas calibradas para coincidir
+    // con la referencia (luz presente pero contenida, no dramática).
+    0 -2px 6px -1px rgb(255 230 165 / 0.38),
+    0 -5px 14px -3px rgb(255 210 110 / 0.22),
+    0 -12px 28px -10px rgb(255 195 90 / 0.12),
     // Drop sombra para elevación.
     0 8px 28px -6px rgb(6 9 26 / 0.55),
     0 1px 0 rgb(0 0 0 / 0.30);
@@ -429,6 +432,37 @@
     // lento. El user pidió "más notorio y premium", esta combinación de
     // peak warm-white + duración savored es la firma del look pulido.
     transition: background-position 1.6s var(--ease-spring);
+  }
+
+  // Specular hot spot en el top-center del borde — el punto exacto donde
+  // la luz cenital golpea el filo del oro. Banda warm-white horizontal,
+  // ~28% del ancho del button, blur generoso para que se lea como un
+  // catchlight real (no como una pintura). Vive justo sobre el borde
+  // superior (top: -1px) para fusionar con el oro del ring. La banda es
+  // más brillante en el centro y se desvanece a los flancos, exactamente
+  // como una lens flare óptica. Alphas calibradas para coincidir con la
+  // referencia (subtle highlight, no destello).
+  &::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28%;
+    height: 5px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 15%,
+      rgb(255 240 195 / 0.40) 32%,
+      rgb(255 252 235 / 0.78) 50%,
+      rgb(255 240 195 / 0.40) 68%,
+      transparent 85%,
+      transparent 100%
+    );
+    filter: blur(2.2px);
+    pointer-events: none;
+    z-index: 3;
   }
 
   .glass-button-icon {
