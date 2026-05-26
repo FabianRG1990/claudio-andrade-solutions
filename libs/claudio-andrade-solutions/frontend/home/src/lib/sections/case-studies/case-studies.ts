@@ -11,8 +11,11 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { phosphorArrowUpRightBold } from '@ng-icons/phosphor-icons/bold';
+
 import { caseStudies } from '@cas-ui-shared/data/data';
-import { PillButton } from '@cas-ui-shared/components/pill-button/pill-button';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 import { SectionHeading } from '@cas-ui-shared/components/section-heading/section-heading';
 
@@ -46,7 +49,8 @@ const STAGGER_OFFSET_MS = 700;
  */
 @Component({
   selector: 'app-case-studies',
-  imports: [PillButton, RevealDirective, SectionHeading],
+  imports: [RouterLink, NgIcon, RevealDirective, SectionHeading],
+  providers: [provideIcons({ phosphorArrowUpRightBold })],
   templateUrl: './case-studies.html',
   styleUrl: './case-studies.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

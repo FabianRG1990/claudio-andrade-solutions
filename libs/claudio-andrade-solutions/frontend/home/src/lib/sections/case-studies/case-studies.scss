@@ -38,17 +38,100 @@
     max(var(--container-px), env(safe-area-inset-right));
 }
 
+// Head: section-heading (col izquierda) + CTA (col derecha). Usamos el
+// MISMO grid 1fr/1fr que la case-row debajo — el CTA cae en la columna
+// derecha alineado a su borde derecho (`justify-self: end`), que coincide
+// horizontalmente con el final del título "Plataforma para proveedores
+// Walmart" de la primera case-row (donde termina la "t" final de
+// "Walmart"). El user marcó esa alineación como referencia.
+//
+// Vertical: `align-items: end` ancla el bottom del CTA al baseline de la
+// segunda línea del título ("dramatúrgicas."), preservando el pairing del
+// duo.
 .case-studies__head {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 2.5rem;
+  gap: 2rem;
 
   @media (min-width: 1024px) {
-    flex-direction: row;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+    column-gap: 3.5rem;
   }
+}
+
+.case-studies__cta {
+  @media (min-width: 1024px) {
+    justify-self: end;
+  }
+}
+
+// CTA card-size "Ver casos completos" — variante con eyebrow + title stacked
+// + arrow diagonal a la derecha. El frame (border brass, halo upward, dual
+// specular top edge) lo provee `.gold-pill-button--card`.
+//
+// Sizing v3: el user quiere MÁS PEQUEÑO en volumen, pero PRESERVANDO la
+// distribución espacial de la referencia (padding generoso, no apretado
+// contra el borde). La estrategia: shrink el texto (title 14px, eyebrow
+// 10px floor) y mantener padding ABSOLUTO ~14×24px que reproduce el ratio
+// padding:text de la referencia (≈ 1:1 vertical, 1.7:1 horizontal). Así
+// el botón total baja de volumen sin colapsar el aire interno.
+.case-studies__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 12px;
+  padding: 0.875rem 1.5rem;
+  min-height: 3.25rem;
+  text-decoration: none;
+
+  &:hover .case-studies__cta-icon,
+  &:active .case-studies__cta-icon {
+    transform: translate(3px, -3px);
+  }
+}
+
+.case-studies__cta-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.case-studies__cta-eyebrow {
+  font-size: 0.625rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--brass));
+  line-height: 1;
+}
+
+.case-studies__cta-title {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(var(--foam));
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.15;
+  text-transform: none;
+  text-wrap: balance;
+}
+
+.case-studies__cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: rgb(var(--brass));
+  transition: transform 700ms var(--ease-fluid);
 }
 
 .case-studies__cases {
@@ -59,6 +142,7 @@
   // pero sin huecos vacíos), desktop 5.5rem.
   gap: clamp(3rem, 2rem + 3vw, 5.5rem);
 }
+
 
 // ─── Case row · grid 2-col con alternancia ─────────────────────────────────
 .case-row {

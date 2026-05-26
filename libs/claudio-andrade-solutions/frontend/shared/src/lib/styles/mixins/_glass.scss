@@ -499,6 +499,50 @@
   }
 }
 
+// ---- gold-pill-button--card ---------------------------------------------
+// Variante card-size del .gold-pill-button — para CTAs grandes que llevan
+// jerarquía interna (eyebrow + title en dos líneas). Reference: el CTA
+// "Ver casos completos" del capítulo 04 que el user mandó como imagen.
+//
+// Cambios vs base:
+//   1. Resetea tipografía base (font-size 14px UPPERCASE tracking 0.06em)
+//      para que el contenido proyectado controle su propia jerarquía. El
+//      base es pill-CTA de una línea; este variante es card-CTA de dos.
+//   2. Override del ::after — dos specular hot spots en el top edge (vs
+//      uno centrado en el base). Posiciones ~22% y ~60% del ancho, ambos
+//      con peak warm-white-cream. Esto matchea la referencia donde la
+//      luz cenital deja dos "catchlights" sobre el filo del oro por la
+//      mayor superficie del borde superior.
+.gold-pill-button--card {
+  font-size: inherit;
+  font-weight: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+
+  &::after {
+    left: 0;
+    transform: none;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 12%,
+      rgb(255 240 195 / 0.38) 18%,
+      rgb(255 252 235 / 0.78) 23%,
+      rgb(255 240 195 / 0.38) 28%,
+      transparent 34%,
+      transparent 50%,
+      rgb(255 240 195 / 0.42) 55%,
+      rgb(255 252 235 / 0.82) 60%,
+      rgb(255 240 195 / 0.42) 65%,
+      transparent 72%,
+      transparent 100%
+    );
+  }
+}
+
 // ---- glass-bubble-icon ---------------------------------------------------
 // Versión interior tipo esfera concentrada — usada dentro de pill-buttons.
 .glass-bubble-icon {

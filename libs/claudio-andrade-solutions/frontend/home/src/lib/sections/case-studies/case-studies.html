@@ -1,6 +1,6 @@
 <section class="case-studies">
   <div class="case-studies__container">
-    <!-- Header: title + CTA -->
+    <!-- Header: title + CTA paired (protagonista junto al título) -->
     <div class="case-studies__head">
       <app-section-heading
         eyebrow="Capítulo 04 · Casos destacados"
@@ -10,9 +10,20 @@
         dockId="cap-04"
         [dockOrder]="40"
       />
-      <div appReveal [delay]="0.2">
-        <app-pill-button href="/nosotros">Ver casos completos</app-pill-button>
-      </div>
+      <a
+        routerLink="/nosotros"
+        class="case-studies__cta gold-pill-button gold-pill-button--card"
+        appReveal
+        [delay]="0.2"
+      >
+        <span class="case-studies__cta-body">
+          <span class="case-studies__cta-eyebrow">Casos reales</span>
+          <span class="case-studies__cta-title">Ver casos completos</span>
+        </span>
+        <span class="case-studies__cta-icon glass-button-icon">
+          <ng-icon name="phosphorArrowUpRightBold" size="14" />
+        </span>
+      </a>
     </div>
 
     <!-- Lista de casos. Estos son TEASER cards (gustito), no detalle de

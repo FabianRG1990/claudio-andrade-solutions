@@ -38,9 +38,8 @@ const SHOTS = [
   {
     name: 'home-case-studies-ver-casos',
     url: `${BASE}/`,
-    selector: 'app-pill-button .gold-pill-button',
-    nth: 0,
-    waitMs: 800,
+    selector: '.case-studies__cta',
+    waitMs: 1200,
   },
   {
     name: 'productos-pedir-propuesta',
