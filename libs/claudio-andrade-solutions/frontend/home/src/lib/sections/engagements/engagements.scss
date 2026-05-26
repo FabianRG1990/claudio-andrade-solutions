@@ -146,34 +146,50 @@
   flex-direction: column;
   height: 100%;
   border-radius: 22px;
-  padding: 1.5rem 1.5rem 1.25rem;
+  padding: 1.75rem 1.5rem 1.25rem;
   overflow: hidden;
 
+  // Surface — 3-point lighting calibrado para "sale de la pantalla":
+  // 1) Top-right radial glow visible (LED apuntando desde la esquina sup-der).
+  // 2) Bottom-left ambient sutilísimo — la luz de relleno del set.
+  // 3) Base vertical gradient navy claro → navy profundo — refuerza top-down.
   background:
     radial-gradient(
-      ellipse 55% 45% at 88% 5%,
-      oklch(0.30 0.11 256 / 0.32),
-      oklch(0.22 0.09 256 / 0.10) 38%,
-      transparent 68%
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
     ),
     radial-gradient(
-      ellipse 48% 40% at 6% 96%,
-      oklch(0.22 0.08 256 / 0.20),
-      transparent 62%
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
     ),
     linear-gradient(
       180deg,
-      oklch(0.17 0.07 256) 0%,
-      oklch(0.10 0.05 256) 100%
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
     );
 
-  border: 1px solid oklch(0.58 0.12 256 / 0.50);
+  border: 1px solid oklch(0.62 0.14 248 / 0.55);
 
+  // Shadow stack — el "3D pop":
+  // - Inset top: línea de luz blanca-azulada en el borde superior (curvatura
+  //   iluminada desde arriba).
+  // - Inset bottom: sombra interior sutil → da volumen.
+  // - Drop shadows en capas (24px / 12px / 4px) → el card flota.
+  // - Ambient occlusion (1px line) → lo despega del fondo.
   box-shadow:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.04),
-    0 16px 32px -12px rgb(0 0 0 / 0.55),
-    0 6px 12px -4px rgb(0 0 0 / 0.30);
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
 
+  // Border directional via mask — TR brillante (filo iluminado) → diluye
+  // hacia la base. Stops calibrados para que el matiz azul-blanco se VEA.
   &::before {
     content: '';
     position: absolute;
@@ -181,11 +197,12 @@
     border-radius: inherit;
     padding: 1px;
     background: linear-gradient(
-      170deg,
-      oklch(0.78 0.14 256 / 0.55) 0%,
-      oklch(0.62 0.11 256 / 0.30) 25%,
-      oklch(0.52 0.10 256 / 0.18) 70%,
-      oklch(0.48 0.09 256 / 0.14) 100%
+      155deg,
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
     );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
@@ -197,6 +214,50 @@
   }
 
   &::after { display: none; }
+}
+
+// Highlight card — misma estructura, glow TR más intenso, border más lit,
+// halo azul exterior sutilísimo para diferenciar del grupo.
+.engagement-card--highlight .engagement-card__inner {
+  background:
+    radial-gradient(
+      ellipse 75% 60% at 92% -5%,
+      oklch(0.68 0.22 245 / 0.70),
+      oklch(0.48 0.17 250 / 0.28) 35%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 50% 42% at 5% 100%,
+      oklch(0.34 0.12 256 / 0.26),
+      transparent 62%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.22 0.085 254) 0%,
+      oklch(0.14 0.06 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
+
+  border-color: oklch(0.70 0.16 248 / 0.65);
+
+  box-shadow:
+    inset 0 1px 0 0 rgb(210 235 255 / 0.26),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.42),
+    0 1px 0 0 rgb(0 0 0 / 0.55),
+    0 28px 56px -18px rgb(0 0 0 / 0.70),
+    0 16px 28px -10px rgb(0 0 0 / 0.45),
+    0 0 32px -8px rgb(120 180 255 / 0.18);
+
+  &::before {
+    background: linear-gradient(
+      155deg,
+      oklch(0.96 0.05 250 / 0.80) 0%,
+      oklch(0.82 0.15 248 / 0.65) 18%,
+      oklch(0.66 0.13 252 / 0.42) 45%,
+      oklch(0.54 0.11 256 / 0.28) 75%,
+      oklch(0.46 0.10 258 / 0.20) 100%
+    );
+  }
 }
 
 // Glow halos accent — eliminados (no aparecen en la imagen referencia).
@@ -238,27 +299,64 @@
 // background del color foam para los 2 normales y lagoon-electric para el
 // highlight (consistente con el lenguaje "el destacado es eléctrico" que
 // ya usan el tag y el features-icon de highlight).
-// Badge icon — port exacto del .badge del HTML standalone del user.
-// Mismo patrón que .info-row__icon. El highlight engagement-card hereda
-// (sin override) para mantener unidad visual del icono entre todos los cards.
+// Icon-pill — cuadrado redondeado "futurista" (NO círculo). Match a la
+// imagen referencia donde los iconos son contenedores square con corners
+// medianos, no badges circulares. El look 3D viene de: gradient diagonal
+// para simular curvatura + inset top white highlight + border ligeramente
+// más claro arriba + drop shadow propio bajo el icon.
 .engagement-card__icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
 
-  background: radial-gradient(
-    circle at 30% 30%,
-    oklch(0.40 0.12 256 / 0.55),
-    oklch(0.18 0.07 256 / 0.55)
+  // Gradient diagonal — TR claro (luz incidente desde la misma fuente que
+  // ilumina el card) → BL oscuro (sombra). Da volumen sin necesitar glow.
+  background: linear-gradient(
+    155deg,
+    oklch(0.32 0.10 250) 0%,
+    oklch(0.20 0.08 254) 50%,
+    oklch(0.14 0.06 258) 100%
   );
-  border: 1px solid oklch(0.65 0.16 256 / 0.35);
-  // Sin glow externo — el bloom del icono bleed hacia el border del card.
+  border: 1px solid oklch(0.55 0.13 250 / 0.45);
+
+  // Shadow stack del icon:
+  // - Inset top: highlight de luz blanca-azulada arriba (curvatura iluminada).
+  // - Inset bottom: oscurito → da concavidad interior sutil.
+  // - Drop shadow propia → el icon flota sobre el card.
   box-shadow:
-    inset 0 0 0 1px oklch(0.85 0.10 256 / 0.18);
-  color: oklch(0.92 0.05 256);
+    inset 0 1px 0 0 rgb(200 225 255 / 0.30),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.45),
+    0 4px 8px -2px rgb(0 0 0 / 0.45),
+    0 2px 4px -1px rgb(0 0 0 / 0.30);
+
+  color: oklch(0.94 0.04 250);
+
+  > ng-icon {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Highlight card icon — el matiz azul-eléctrico se nota apenas más; la
+// diferenciación principal sigue siendo el tag + CTA gold.
+.engagement-card--highlight .engagement-card__icon {
+  background: linear-gradient(
+    155deg,
+    oklch(0.38 0.13 248) 0%,
+    oklch(0.24 0.10 252) 50%,
+    oklch(0.16 0.07 258) 100%
+  );
+  border-color: oklch(0.62 0.16 248 / 0.55);
+  box-shadow:
+    inset 0 1px 0 0 rgb(215 235 255 / 0.38),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.45),
+    0 4px 8px -2px rgb(0 0 0 / 0.45),
+    0 2px 4px -1px rgb(0 0 0 / 0.30),
+    0 0 16px -4px rgb(120 180 255 / 0.30);
 }
 
 .engagement-card__name {
@@ -287,31 +385,40 @@
     0 0 20px -2px rgb(var(--electric) / 0.40);
 }
 
-// Override del tag del card destacado: brass apagado en lugar de electric.
-// Es el "marker" textual que dice "este es el premium" sin necesidad de
-// copy más explícito. La pill brass + el frame brass del overlay-edge
-// trabajan juntos como signal coherente.
+// Override del tag del card destacado: OUTLINED en oro BRILLANTE — match
+// a la imagen referencia donde el pill es solo un borde dorado sobre el
+// bg del card, no un objeto sólido. El --brass del proyecto (#C6A15B) es
+// un brass apagado; aquí necesitamos oro brillante tipo metal precioso,
+// así que override local a rgb(245 200 90) (≈#F5C85A) — saturado y vivo.
+// - Background: transparente (el bg del card se ve a través)
+// - Border 1px oro brillante visible
+// - Texto y estrella en oro brillante (no navy)
+// - white-space nowrap para que NUNCA wrap a 2 líneas
 .engagement-card--highlight .engagement-card__tag {
-  background: rgb(var(--brass) / 0.14);
-  color: rgb(232 213 175);  // brass + cream lift, foam para legibilidad
-  box-shadow:
-    inset 0 0 0 1px rgb(var(--brass) / 0.42),
-    0 0 20px -2px rgb(var(--brass) / 0.32);
+  background: transparent;
+  color: rgb(245 200 90);
+  padding: 0.3rem 0.85rem;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgb(245 200 90 / 0.85);
 }
 
-.engagement-card__tag-pulse {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 9999px;
-  background: rgb(180 220 255);
-  box-shadow: 0 0 8px 2px rgb(var(--electric) / 0.55);
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+// Star icon dentro del tag — oro brillante también (override del navy
+// default del tag-icon). Hereda del color del tag pero por especificidad
+// del .tag-icon { color: rgb(8 11 26) } necesitamos forzar el oro acá.
+.engagement-card--highlight .engagement-card__tag-icon {
+  color: rgb(245 200 90);
 }
 
-// Pulse dot del card destacado matchea el tag: brass apagado.
-.engagement-card--highlight .engagement-card__tag-pulse {
-  background: rgb(232 213 175);
-  box-shadow: 0 0 8px 2px rgb(var(--brass) / 0.50);
+// Star icon inside the "EL MÁS POPULAR" pill — sólido navy oscuro sobre el
+// pill gold para máximo contraste, mismo color que el texto del tag. La
+// estrella reemplaza el pulse-dot animado: el contenedor gold ya llama
+// suficiente atención sin necesidad de motion.
+.engagement-card__tag-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(8 11 26);
+  flex-shrink: 0;
 }
 
 .engagement-card__price-row {
@@ -368,11 +475,29 @@
   font-size: clamp(1.875rem, 1.4rem + 1.8vw, 3rem); // 30-48px
 }
 
+// Cadence tag al lado del precio — separador vertical sutil + cyan-blue
+// label uppercase. Match a la imagen referencia donde "ALCANCE FIJO" /
+// "TRABAJO DE 2 A 4 SEMANAS" / "MENSUAL" tienen acento azul claro y un
+// hairline separador del precio grande.
 .engagement-card__cadence {
+  position: relative;
+  padding-left: 0.75rem;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  color: rgb(var(--foam) / 0.55);
+  color: rgb(180 220 255 / 0.78);
+  font-weight: 600;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 0.85rem;
+    background: rgb(180 220 255 / 0.30);
+  }
 }
 
 // Desglose en unidad pequeña — R6 (≈ 150/día, ≈ 700/semana). Reduce la
@@ -431,6 +556,10 @@
   color: rgb(var(--foam) / 0.85);
 }
 
+// Feature check icons — círculos AZULES en TODOS los cards (match a la
+// imagen referencia). Antes el non-highlight usaba foam neutro y solo el
+// highlight era azul; en la referencia los checkmarks son azules siempre,
+// solo cambia ligeramente la intensidad para el card destacado.
 .engagement-card__feature-icon {
   margin-top: 0.125rem;
   flex-shrink: 0;
@@ -440,16 +569,18 @@
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: rgb(var(--foam) / 0.1);
-  color: rgb(var(--foam) / 0.85);
+  background: rgb(80 160 255 / 0.15);
+  color: rgb(180 220 255);
+  box-shadow:
+    inset 0 0 0 1px rgb(160 210 255 / 0.32);
 }
 
 .engagement-card--highlight .engagement-card__feature-icon {
-  background: rgb(80 160 255 / 0.18);
-  color: rgb(180 220 255);
+  background: rgb(80 160 255 / 0.22);
+  color: rgb(190 225 255);
   box-shadow:
-    inset 0 0 0 1px rgb(160 210 255 / 0.40),
-    0 0 8px -1px rgb(80 160 255 / 0.30);
+    inset 0 0 0 1px rgb(160 210 255 / 0.48),
+    0 0 10px -1px rgb(80 160 255 / 0.35);
 }
 
 .engagement-card__feature-label {

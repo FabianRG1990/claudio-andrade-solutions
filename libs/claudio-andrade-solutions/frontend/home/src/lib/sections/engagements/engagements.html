@@ -44,13 +44,15 @@
             <div class="engagement-card__head">
               <div class="engagement-card__head-left">
                 <span class="engagement-card__icon" aria-hidden="true">
-                  <ng-icon [name]="t.icon" size="20" />
+                  <ng-icon [name]="t.icon" size="24" />
                 </span>
                 <h3 class="engagement-card__name">{{ t.name }}</h3>
               </div>
               @if (t.highlight) {
                 <span class="engagement-card__tag">
-                  <span class="engagement-card__tag-pulse" aria-hidden="true"></span>
+                  <span class="engagement-card__tag-icon" aria-hidden="true">
+                    <ng-icon name="phosphorStarFill" size="13" />
+                  </span>
                   El más popular
                 </span>
               }
