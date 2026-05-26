@@ -126,17 +126,86 @@
 }
 
 // ─── Form ─────────────────────────────────────────────────────────────────
+// Wrapper transparente — antes tenía .glass-shell (capa exterior con bg +
+// blur + ring) y 0.5rem padding para el efecto "shell + core". Migramos al
+// nuevo card system (engagement-card pattern) donde TODO el visual vive en
+// el inner element, así el wrapper exterior debe ser invisible.
 .contacto__form {
-  border-radius: var(--radius-squircle);
-  padding: 0.5rem;
+  border-radius: 22px;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .contacto__form-inner {
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  position: relative;
+  border-radius: 22px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 1.25rem;
+  overflow: hidden;
+
+  // Mismo surface system que .info-card__inner / .engagement-card__inner —
+  // 3-point lighting (TR glow + BL ambient + vertical gradient navy).
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
+
+  border: 1px solid oklch(0.62 0.14 248 / 0.55);
+
+  box-shadow:
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      155deg,
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  // Form children por encima del ::before (z:1) para que se vean.
+  > * {
+    position: relative;
+    z-index: 2;
+  }
 
   @media (min-width: 768px) {
     padding: 1.75rem;
@@ -333,33 +402,19 @@
 .info-card {
   position: relative;
   display: block;
-  border-radius: var(--radius-squircle-sm);
-  padding: 0.375rem;
+  border-radius: 22px;
   text-decoration: none;
   color: inherit;
   isolation: isolate;
-
-  // Drop shadow stack idéntico a tech-card (timeline). Atmosférica
-  // multi-capa que hace flotar la card. Antes este card usaba glass-shell
-  // con backdrop-filter + foam radial — visualmente material distinto al
-  // tech-card. El user pidió que todas las info-cards del sitio matcheen
-  // el lenguaje del tech-card (excluyendo pricing, image-cards, y Cap. 02).
-  box-shadow:
-    0 32px 64px -24px rgb(6 9 26 / 0.78),
-    0 14px 28px -10px rgb(6 9 26 / 0.52),
-    0 4px 8px -2px rgb(6 9 26 / 0.36);
-
-  transition:
-    transform 700ms var(--ease-fluid),
-    box-shadow 700ms var(--ease-fluid);
+  // Wrapper transparente — antes tenía padding + drop-shadow propio
+  // (patrón shell+core). Migrado al engagement-card pattern: todo el
+  // visual (surface, border, drop-shadow) vive en __inner. El outer
+  // solo provee hover/transform.
+  transition: transform 600ms var(--ease-fluid);
 
   @media (hover: hover) and (pointer: fine) {
     &:is(a):hover {
       transform: translateY(-2px);
-      box-shadow:
-        0 40px 80px -24px rgb(6 9 26 / 0.85),
-        0 20px 40px -10px rgb(6 9 26 / 0.62),
-        0 6px 12px -2px rgb(6 9 26 / 0.44);
     }
   }
 
@@ -371,85 +426,82 @@
 .info-card__inner {
   position: relative;
   height: 100%;
-  border-radius: calc(var(--radius-squircle-sm) - 0.375rem);
+  border-radius: 22px;
   padding: 1.125rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 1rem;
+  overflow: hidden;
 
-  // Surface treatment idéntico al tech-card. Sobre-escribe el background
-  // default del glass-core. Modelado direccional top-left (specular 14%,
-  // key light 4%, fill 2%) sobre base navy --shoal/--tide.
+  // Surface idéntico al engagement-card — 3-point lighting (TR glow LED,
+  // BL ambient sutil, vertical gradient navy claro → navy profundo).
+  // El user pidió que las info-cards de contacto matcheen el lenguaje
+  // visual del nuevo card system (engagement-card → tech-card → info-row).
   background:
     radial-gradient(
-      ellipse 18% 14% at 22% 6%,
-      rgb(255 255 255 / 0.14) 0%,
-      rgb(255 255 255 / 0.04) 40%,
-      transparent 75%
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
     ),
     radial-gradient(
-      ellipse 110% 42% at 38% -6%,
-      rgb(245 232 200 / 0.04) 0%,
-      rgb(245 232 200 / 0.01) 35%,
-      transparent 62%
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
     ),
-    radial-gradient(
-      ellipse 55% 32% at 86% 8%,
-      rgb(180 210 240 / 0.02) 0%,
-      transparent 55%
-    ),
-    linear-gradient(162deg, rgb(var(--shoal) / 0.96) 0%, rgb(var(--tide) / 0.98) 100%);
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
 
-  // Borde cyan→blue gradient + bevel 3D + ring cyan exterior. Idéntico al
-  // tech-card de timeline. El user pidió expresamente "borde celeste/cyan
-  // arriba que degrade a azul abajo" en TODAS las info-cards del sitio.
+  border: 1px solid oklch(0.62 0.14 248 / 0.55);
+
+  // Shadow stack — el "3D pop". Mismo patrón que engagement-card.
   box-shadow:
-    // 1) TOP edge hairline LAGOON — "borde celeste" arriba claramente visible
-    inset 0 1px 0 rgb(var(--lagoon) / 0.65),
-    // 2) BOTTOM edge hairline ELECTRIC — degrade hacia azul al pie
-    inset 0 -1px 0 rgb(var(--electric) / 0.45),
-    // 3) Top rim asimétrico (bevel 3D)
-    inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.28),
-    inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.08),
-    // 4) Soft inner glow top — tintado cool
-    inset 0 14px 28px -14px rgb(180 220 255 / 0.12),
-    // 5) Side edges asimétricos
-    inset 1px 0 0 rgb(255 255 255 / 0.08),
-    inset -1px 0 0 rgb(0 0 0 / 0.20),
-    // 6) Ring exterior LAGOON perceptible
-    0 0 0 1px rgb(var(--lagoon) / 0.30);
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
 
-  // Noise overlay del glass-core a 0.045 — match exacto al tech-card.
+  // Border directional via mask — TR lit, falloff hacia BL. Mismo del
+  // engagement-card base.
   &::before {
-    opacity: 0.045;
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      155deg,
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+    // Sobre-escribe la opacidad noise default del glass-core (0.045);
+    // acá usamos el ::before para gradient-border, no para grain.
+    opacity: 1;
   }
 }
 
-// Halo de color por accent — en la esquina superior derecha. Pintado vía
-// `--accent-rgb` para mantener una sola regla.
-// Glow specs idénticas al tech-card de timeline (12rem × -3rem × blur 26px
-// × opacity 0.62). Match exacto al lenguaje visual compartido por todas
-// las cards informáticas del sitio.
+// Halo de color por accent — ELIMINADO. El nuevo surface (3-point lighting)
+// ya pinta el TR glow en el background gradient, así que el accent-halo
+// flotante duplicaba la fuente de luz y rompía la unidad visual. Se
+// conserva el atributo data-accent solo para tintar el icono.
 .info-card__glow {
-  position: absolute;
-  top: -3rem;
-  right: -3rem;
-  width: 12rem;
-  height: 12rem;
-  border-radius: 9999px;
-  pointer-events: none;
-  filter: blur(26px);
-  opacity: 0.62;
-  z-index: 0;
-  transition:
-    opacity 800ms var(--ease-fluid),
-    transform 800ms var(--ease-fluid);
-  background: radial-gradient(
-    circle,
-    rgb(var(--accent-rgb, var(--lagoon)) / 0.45) 0%,
-    rgb(var(--accent-rgb, var(--lagoon)) / 0.10) 38%,
-    transparent 72%
-  );
+  display: none;
 }
 
 [data-accent='lagoon'] {
@@ -472,24 +524,34 @@
 .info-card__icon,
 .info-card__copy {
   position: relative;
-  z-index: 1;
+  // z-index 2 — encima del ::before (z-index 1) que pinta el gradient-border.
+  z-index: 2;
 }
 
+// Icon-pill — cuadrado redondeado "futurista" (NO círculo). Mismo patrón
+// que engagement-card__icon: gradient diagonal TR claro → BL oscuro para
+// volumen + inset top highlight + drop shadow propio.
 .info-card__icon {
   display: inline-flex;
   flex-shrink: 0;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 48px;
+  height: 48px;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  background: rgb(var(--accent-rgb, var(--lagoon)) / 0.14);
+  border-radius: 12px;
+
+  background: linear-gradient(
+    155deg,
+    oklch(0.32 0.10 250) 0%,
+    oklch(0.20 0.08 254) 50%,
+    oklch(0.14 0.06 258) 100%
+  );
+  border: 1px solid oklch(0.55 0.13 250 / 0.45);
   box-shadow:
-    inset 0 0 0 1px rgb(var(--accent-rgb, var(--lagoon)) / 0.40),
-    inset 0 1px 0 rgb(var(--foam) / 0.25),
-    0 4px 10px -3px rgb(6 9 26 / 0.45);
+    inset 0 1px 0 0 rgb(200 225 255 / 0.30),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.45),
+    0 4px 8px -2px rgb(0 0 0 / 0.45),
+    0 2px 4px -1px rgb(0 0 0 / 0.30);
 }
 
 .info-card[data-accent='lagoon'] .info-card__icon {
