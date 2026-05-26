@@ -159,33 +159,32 @@
 
   isolation: isolate;
 
-  // Specular catchlight en el top edge — el punto donde la luz cenital
-  // golpea el filo del card. Recipe del .gold-pill-button::after en
-  // versión cool: 5-stop gradient simétrico, blur 2.2px. Width 36%
-  // (vs button 28% — el card más alto necesita catchlight más visible).
-  // Peak es cool-WHITE (`rgb 230 245 255` casi-blanco con cool tint),
-  // alpha 0.80 — matchea button's `rgb 255 252 235 / 0.78` warm-white.
+  // Specular catchlight ON THE BORDER LINE — fino, tenue, sobre la
+  // línea del top border (no debajo). El border del card es 1.5px;
+  // el destello vive en ese mismo grosor (height 2px, top: -0.5px
+  // para alinearse al center del border). Blur mínimo (1px) para que
+  // sea sharp como un highlight real, no un wash difuso.
   &::before {
     content: '';
     position: absolute;
-    top: -1px;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 36%;
-    height: 6px;
+    width: 92%;
+    height: 1px;
     background: linear-gradient(
       90deg,
       transparent 0%,
-      transparent 15%,
-      rgb(180 220 255 / 0.42) 32%,
-      rgb(230 245 255 / 0.80) 50%,
-      rgb(180 220 255 / 0.42) 68%,
-      transparent 85%,
+      rgb(220 240 255 / 0.55) 12%,
+      rgb(250 254 255 / 1) 40%,
+      rgb(255 255 255 / 1) 50%,
+      rgb(250 254 255 / 1) 60%,
+      rgb(220 240 255 / 0.55) 88%,
       transparent 100%
     );
-    filter: blur(2.2px);
+    filter: blur(0.4px);
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
   }
 }
 
@@ -238,31 +237,35 @@
     0 24px 56px -16px rgb(0 0 0 / 0.6),
     0 8px 20px -4px rgb(0 0 0 / 0.4);
 
-  // Dual catchlight en el top edge — recipe del .gold-pill-button--card
-  // ::after en versión cool con alphas boosted. Dos peaks: uno al ~28%
-  // (izquierda, alpha 0.75) y otro al ~58% (centro-derecha, un poquito
-  // más marcado, alpha 0.85). Esto matchea la observación del user en
-  // la referencia: "dos pequeños destellos, uno al lado izquierdo y
-  // otro un poquito más marcadito al centro".
+  // Dual catchlight ON THE BORDER LINE — fino, tenue, sobre la línea.
+  // Misma height (2px) y blur (1px) que sides — esto se trata de un
+  // destello DEL BORDER, no algo separado. Dos peaks: ~28% (izquierda)
+  // y ~58% (centro-derecha, un poquito más marcado).
+  // Middle: streak ancho con DOS peaks brillantes dentro de la franja
+  // (~32% y ~58%, el segundo un poquito más marcado), conectados por
+  // valley intermedio. Width 98% — el card central tiene más presencia.
   &::before {
-    width: 100%;
-    height: 7px;
+    width: 98%;
+    height: 2px;
     background: linear-gradient(
       90deg,
       transparent 0%,
-      transparent 16%,
-      rgb(180 220 255 / 0.42) 22%,
-      rgb(230 245 255 / 0.75) 28%,
-      rgb(180 220 255 / 0.42) 34%,
-      transparent 40%,
-      transparent 50%,
-      rgb(180 220 255 / 0.48) 54%,
-      rgb(235 248 255 / 0.85) 58%,
-      rgb(180 220 255 / 0.48) 62%,
-      transparent 68%,
+      rgb(170 215 255 / 0.30) 4%,
+      rgb(210 235 255 / 0.70) 20%,
+      rgb(245 252 255 / 0.95) 28%,
+      rgb(255 255 255 / 1) 32%,
+      rgb(245 252 255 / 0.95) 36%,
+      rgb(210 235 255 / 0.60) 44%,
+      rgb(200 230 255 / 0.55) 50%,
+      rgb(225 240 255 / 0.85) 54%,
+      rgb(252 254 255 / 1) 58%,
+      rgb(255 255 255 / 1) 60%,
+      rgb(252 254 255 / 1) 62%,
+      rgb(220 240 255 / 0.80) 68%,
+      rgb(170 215 255 / 0.30) 96%,
       transparent 100%
     );
-    filter: blur(2.4px);
+    filter: blur(0.8px);
   }
 }
 
