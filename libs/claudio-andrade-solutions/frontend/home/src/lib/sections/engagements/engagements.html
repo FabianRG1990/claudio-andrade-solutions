@@ -32,32 +32,26 @@
           [class.engagement-card--highlight]="t.highlight"
           [attr.data-accent]="t.accent"
         >
-          @if (t.highlight) {
-            <div class="engagement-card__overlay" aria-hidden="true"></div>
-            <div class="engagement-card__overlay-edge" aria-hidden="true"></div>
-          }
-          <div class="engagement-card__inner glass-core">
-            <!-- Halo de color por accent — mismo lenguaje visual que las
-                 service-cards del capítulo 2. Vive bajo el contenido y se
-                 recorta al border-radius del glass-core. -->
-            <span class="engagement-card__glow" aria-hidden="true"></span>
+          <div class="engagement-card__inner">
+            <!-- Head: icon + title + opcional badge "El más popular" -->
             <div class="engagement-card__head">
               <div class="engagement-card__head-left">
                 <span class="engagement-card__icon" aria-hidden="true">
-                  <ng-icon [name]="t.icon" size="24" />
+                  <ng-icon [name]="t.icon" size="20" />
                 </span>
                 <h3 class="engagement-card__name">{{ t.name }}</h3>
               </div>
               @if (t.highlight) {
                 <span class="engagement-card__tag">
                   <span class="engagement-card__tag-icon" aria-hidden="true">
-                    <ng-icon name="phosphorStarFill" size="13" />
+                    <ng-icon name="phosphorStarFill" size="11" />
                   </span>
                   El más popular
                 </span>
               }
             </div>
 
+            <!-- Price block: striked original + current price huge + cadence inline -->
             <div class="engagement-card__price-row">
               @if (t.originalPrice) {
                 <span class="engagement-card__price-original" aria-label="Precio anterior">{{ t.originalPrice }}</span>
@@ -87,7 +81,9 @@
 
             @if (t.scarcityNote) {
               <p class="engagement-card__scarcity" role="status">
-                <span class="engagement-card__scarcity-dot" aria-hidden="true"></span>
+                <span class="engagement-card__scarcity-icon" aria-hidden="true">
+                  <ng-icon name="phosphorUsersBold" size="13" />
+                </span>
                 {{ t.scarcityNote }}
               </p>
             }
@@ -96,12 +92,14 @@
               <a
                 routerLink="/contacto"
                 class="engagement-card__cta"
-                [class.gold-pill-button]="t.highlight"
-                [class.glass-button]="!t.highlight"
+                [class.engagement-card__cta--highlight]="t.highlight"
               >
                 <span class="engagement-card__cta-label">Elegir {{ t.name }}</span>
-                <span class="engagement-card__cta-icon glass-button-icon">
-                  <ng-icon name="phosphorArrowUpRightBold" size="12" />
+                <span class="engagement-card__cta-icon" aria-hidden="true">
+                  <ng-icon
+                    name="phosphorArrowRightBold"
+                    [size]="t.highlight ? '16' : '12'"
+                  />
                 </span>
               </a>
             </div>

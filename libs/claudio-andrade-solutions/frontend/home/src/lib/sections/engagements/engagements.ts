@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  phosphorArrowRightBold,
   phosphorArrowUpRightBold,
   phosphorCheckBold,
   phosphorMagnifyingGlassBold,
@@ -25,6 +26,7 @@ import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.
   imports: [RouterLink, NgIcon, Eyebrow, RevealDirective, CompanionDockDirective],
   providers: [
     provideIcons({
+      phosphorArrowRightBold,
       phosphorArrowUpRightBold,
       phosphorCheckBold,
       phosphorMagnifyingGlassBold,
