@@ -154,13 +154,9 @@
   gap: 0.75rem;
   padding: 0.375rem 0.375rem 0.375rem 1.25rem;
   border-radius: 14px;
-  font-family: var(--font-button);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: var(--tracking-button);
   cursor: pointer;
-  // Touch target AAA — el cta-icon vive en 2rem (32px). Forzamos 44px en
-  // el pill para que el hit-box sea cómodo en mobile.
+  // Tipografía gobernada por el mixin .gold-pill-button.
+  // Touch target AAA — pill completo ≥44px alto.
   min-height: 44px;
 }
 

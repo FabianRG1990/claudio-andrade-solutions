@@ -306,14 +306,16 @@
   isolation: isolate;
   border: none;
 
-  // Typography del CTA — UPPERCASE + tracking ancho, font-weight bold. Sobreescribe
-  // los `letter-spacing: var(--tracking-button)` (0.04em) que setea cada wrapper de
-  // sección para que los 5 floating pills lean igual al goal-image.
+  // Typography del CTA — UPPERCASE + tracking ancho, font-weight light.
+  // 300 es el peso más ligero CARGADO por el proyecto (Roboto vía Google
+  // Fonts trae 300/400/500); bajar a 200 forzaría síntesis de peso falsa
+  // que rinde blurry. El 300 + uppercase + tracking 0.14em da la lectura
+  // fina y aireada premium sin sacrificar nitidez.
   font-family: var(--font-button);
-  font-weight: 700;
+  font-weight: 500;
   font-size: clamp(13px, 0.78rem + 0.18vw, 15px);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
 
   // Cuerpo limpio — navy abyss puro, sin bleeds de luz adicionales. El
   // user pidió un destello PUNTUAL premium tipo "sparkle", no un rectángulo
@@ -333,11 +335,16 @@
   box-shadow:
     // Ring cálido apenas perceptible (interior, hint de "metal densely lit").
     inset 0 0 0 1px rgb(255 210 110 / 0.06),
-    // Warm ambient halo saturado (oro real, no apagado) + drop oscuro
-    // para densidad y elevación.
-    0 4px 22px -4px rgb(255 200 90 / 0.22),
-    0 10px 32px -6px rgb(6 9 26 / 0.62),
-    0 1px 0 rgb(0 0 0 / 0.35);
+    // RESPLANDOR DORADO — stack de 3 anillos dorados ceñidos al silueta,
+    // cada uno con alpha bajo para mantener la lectura "surgical, tenuous,
+    // elegant" (close-up que el user mandó). Closest 4px / mid 10px / wider
+    // 22px — el halo decrece exponencialmente como una fuente de luz real.
+    0 0 4px 0 rgb(255 210 100 / 0.30),
+    0 0 10px 0 rgb(255 200 90 / 0.20),
+    0 0 22px 0 rgb(255 195 80 / 0.10),
+    // Drop sombra para elevación.
+    0 8px 28px -6px rgb(6 9 26 / 0.55),
+    0 1px 0 rgb(0 0 0 / 0.30);
 
   // Borde 1px tipo metal pulido — DOS capas stacked:
   //   1. (top) Sheen translúcido — thin bright band que vive fuera de
@@ -372,13 +379,16 @@
     //      real, NO brass NO cobre). Top-bright #ffe580 → bottom-
     //      saturated #e3a92d. Todos los stops mantienen sat ≥ 88%.
     background:
+      // Sheen GOLD (no blanco): la franja que viaja al hover es oro
+      // saturado brillante, no luz blanca. Lectura: "el metal momentanea-
+      // mente brilla más", no "pasa una luz blanca sobre el oro".
       linear-gradient(
         90deg,
         transparent 0%,
         transparent 40%,
-        rgb(255 250 215 / 0.50) 47%,
-        rgb(255 255 245 / 0.92) 50%,
-        rgb(255 250 215 / 0.50) 53%,
+        rgb(255 220 110 / 0.55) 47%,
+        rgb(255 215 80 / 1) 50%,
+        rgb(255 220 110 / 0.55) 53%,
         transparent 60%,
         transparent 100%
       ),
@@ -420,9 +430,13 @@
     &:hover {
       box-shadow:
         inset 0 0 0 1px rgb(255 210 110 / 0.10),
-        0 4px 26px -4px rgb(255 200 90 / 0.32),
-        0 12px 36px -6px rgb(6 9 26 / 0.68),
-        0 1px 0 rgb(0 0 0 / 0.35);
+        // Halos dorados intensificados — el resplandor "respira" en hover
+        // (closest +0.15, mid +0.08, wider +0.05 alpha).
+        0 0 6px 0 rgb(255 220 110 / 0.45),
+        0 0 14px 0 rgb(255 210 100 / 0.28),
+        0 0 28px 0 rgb(255 200 85 / 0.15),
+        0 10px 32px -6px rgb(6 9 26 / 0.62),
+        0 1px 0 rgb(0 0 0 / 0.30);
     }
 
     // Slide del sheen — solo la capa 1 (banda translúcida sobre bg-size
