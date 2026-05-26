@@ -668,43 +668,6 @@
   }
 }
 
-// Override scoped: dentro de las pricing cards los CTAs no-highlight
-// (left/right) usan .glass-button pero NO deben tener lightning. El halo
-// eléctrico se reserva exclusivamente al highlight del centro, así sólo
-// esa tarjeta "llama" al click. Otros .glass-button del sitio mantienen
-// el lightning default del mixin.
-.engagement-card__cta.glass-button {
-  // Pearl murmullado — sin lightning (este override es para los CTAs
-  // non-highlight de pricing), insets bajados consistentes con el
-  // .glass-button base (0.16→0.09, 0.25→0.13).
-  box-shadow:
-    inset 0 0.3rem 0.6rem rgb(255 255 255 / 0.09),
-    inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-    inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.13),
-    0 3rem 3rem rgb(0 0 0 / 0.30),
-    0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      box-shadow:
-        inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.13),
-        inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.70),
-        inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.19),
-        0 3rem 3rem rgb(0 0 0 / 0.30),
-        0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
-    }
-  }
-
-  &:active {
-    box-shadow:
-      inset 0 0.3rem 0.5rem rgb(255 255 255 / 0.16),
-      inset 0 -0.1rem 0.3rem rgb(0 0 0 / 0.80),
-      inset 0 -0.4rem 0.7rem rgb(255 255 255 / 0.10),
-      0 3rem 3rem rgb(0 0 0 / 0.30),
-      0 1rem 1rem -0.6rem rgb(0 0 0 / 0.80);
-  }
-}
-
 // CTA destacado del plan "más popular" — Pill amber/brass sólido. Match
 // al diseño de la imagen 2: superficie dorada con depth (gradiente
 // vertical), texto navy oscuro para contraste fuerte, ring brass + glow
