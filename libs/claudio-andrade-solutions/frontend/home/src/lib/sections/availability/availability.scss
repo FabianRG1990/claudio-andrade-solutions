@@ -144,25 +144,65 @@
   padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
   overflow: hidden;
 
-  // Azul premium — mismo chroma del spec standalone (0.07/0.05), solo L
-  // bajada para "profundidad" sin saturar. Saturar (intento previo a 0.11)
-  // desentonaba con el bg #02040E.
-  background: linear-gradient(
-    180deg,
-    oklch(0.17 0.07 256) 0%,
-    oklch(0.10 0.05 256) 100%
-  );
-  border: 1px solid oklch(0.45 0.10 256 / 0.22);
+  // Surface — navy premium con corner lighting sutil.
+  // Tres capas: top-right glow (tenue pero perceptible) + bottom-left
+  // ambient (casi imperceptible) + base navy profundo. Patrón 3-point
+  // lighting de premium product photography. Todo contained DENTRO del
+  // card por overflow:hidden — no bleed externo, son detalles internos.
+  background:
+    // 1) Top-right corner glow — la luz "premium" tenue
+    radial-gradient(
+      ellipse 55% 45% at 88% 5%,
+      oklch(0.30 0.11 256 / 0.32),
+      oklch(0.22 0.09 256 / 0.10) 38%,
+      transparent 68%
+    ),
+    // 2) Bottom-left ambient — casi imperceptible, anchor de la esquina opuesta
+    radial-gradient(
+      ellipse 48% 40% at 6% 96%,
+      oklch(0.22 0.08 256 / 0.20),
+      transparent 62%
+    ),
+    // 3) Base — navy profundo
+    linear-gradient(
+      180deg,
+      oklch(0.17 0.07 256) 0%,
+      oklch(0.10 0.05 256) 100%
+    );
 
-  // Sin brillo. Drop shadow neutro + 1px top highlight estructural sutil.
-  // ::before doble borde luminoso y ::after halo corner eliminados —
-  // el user pidió quitar el brillo de los cards.
+  // Border base — visible en todo el perímetro. El ::before agrega el "lit
+  // edge" direccional encima. Sin un base alpha alto, el border queda
+  // invisible salvo en el top (donde el ::before brilla).
+  border: 1px solid oklch(0.58 0.12 256 / 0.50);
+
   box-shadow:
     inset 0 1px 0 0 rgb(255 255 255 / 0.04),
     0 16px 32px -12px rgb(0 0 0 / 0.55),
     0 6px 12px -4px rgb(0 0 0 / 0.30);
 
-  &::before { display: none; }
+  // Border gradient direccional — top bright, perímetro presente todo el camino.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      170deg,
+      oklch(0.78 0.14 256 / 0.55) 0%,
+      oklch(0.62 0.11 256 / 0.30) 25%,
+      oklch(0.52 0.10 256 / 0.18) 70%,
+      oklch(0.48 0.09 256 / 0.14) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
   &::after { display: none; }
 }
 
