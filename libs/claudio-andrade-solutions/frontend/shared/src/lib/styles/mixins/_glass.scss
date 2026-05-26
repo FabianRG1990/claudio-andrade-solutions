@@ -379,17 +379,24 @@
     //      real, NO brass NO cobre). Top-bright #ffe580 → bottom-
     //      saturated #e3a92d. Todos los stops mantienen sat ≥ 88%.
     background:
-      // Sheen GOLD (no blanco): la franja que viaja al hover es oro
-      // saturado brillante, no luz blanca. Lectura: "el metal momentanea-
-      // mente brilla más", no "pasa una luz blanca sobre el oro".
+      // Sheen — banda especular ancha con peak WARM-WHITE flanqueado por
+      // oro saturado. La óptica real del oro pulido bajo luz cenital: el
+      // catchlight peak es casi blanco-cálido (no amarillo puro), porque
+      // el metal refleja la fuente de luz, no su propia tonalidad. Los
+      // flancos retornan al oro saturado para que la "luz" se lea como
+      // un haz pasando, no como una franja de pintura blanca. Banda
+      // ensanchada (38→62 vs 40→60) para que el pase sea una "ola de
+      // luz" en lugar de un láser.
       linear-gradient(
         90deg,
         transparent 0%,
-        transparent 40%,
-        rgb(255 220 110 / 0.55) 47%,
-        rgb(255 215 80 / 1) 50%,
-        rgb(255 220 110 / 0.55) 53%,
-        transparent 60%,
+        transparent 38%,
+        rgb(255 215 100 / 0.45) 44%,
+        rgb(255 235 165 / 0.95) 48%,
+        rgb(255 248 220 / 1) 50%,
+        rgb(255 235 165 / 0.95) 52%,
+        rgb(255 215 100 / 0.45) 56%,
+        transparent 62%,
         transparent 100%
       ),
       linear-gradient(
@@ -414,7 +421,14 @@
             mask-composite: exclude;
     pointer-events: none;
     z-index: 1;
-    transition: background-position 1.4s ease;
+    // Easing premium tipo luxury-watch web (Rolex/Patek): ease-spring
+    // (cubic-bezier(0.16, 1, 0.3, 1)) hace que el pase de luz arranque
+    // con velocidad y desacelere elegantemente sobre el final del recorrido
+    // — el ojo "saborea" el peak en lugar de verlo zumbar. 1.6s da el
+    // tempo crafted; más rápido se siente nervioso, más lento se siente
+    // lento. El user pidió "más notorio y premium", esta combinación de
+    // peak warm-white + duración savored es la firma del look pulido.
+    transition: background-position 1.6s var(--ease-spring);
   }
 
   .glass-button-icon {
@@ -427,22 +441,20 @@
   }
 
   @media (hover: hover) and (pointer: fine) {
+    // Slide del sheen — la capa 1 (banda warm-white ancha sobre bg-size
+    // 300%) viaja del extremo derecho (off-screen) al extremo izquierdo,
+    // atravesando todo el ancho del pill durante 1.6s. Las capas 2 y 3
+    // (specular top + base lit gold) quedan fijas.
+    //
+    // Micro-lift de -1.5px: feedback táctil que NO toca el resplandor.
+    // Apple/Rolex/Patek aplican este lift sutil en CTAs premium — el botón
+    // "sube hacia el usuario" 1.5px sin animar la luz, una respuesta física
+    // que se siente craft. El user pidió explícitamente que el halo no se
+    // intensifique en hover, así que el lift queda gateado a transform.
     &:hover {
-      box-shadow:
-        inset 0 0 0 1px rgb(255 210 110 / 0.10),
-        // Halos dorados intensificados — el resplandor "respira" en hover
-        // (closest +0.15, mid +0.08, wider +0.05 alpha).
-        0 0 6px 0 rgb(255 220 110 / 0.45),
-        0 0 14px 0 rgb(255 210 100 / 0.28),
-        0 0 28px 0 rgb(255 200 85 / 0.15),
-        0 10px 32px -6px rgb(6 9 26 / 0.62),
-        0 1px 0 rgb(0 0 0 / 0.30);
+      transform: translateY(-1.5px);
     }
 
-    // Slide del sheen — solo la capa 1 (banda translúcida sobre bg-size
-    // 300%) viaja del extremo derecho (off-screen) al extremo izquierdo,
-    // atravesando todo el ancho del pill durante 1.4s. Las capas 2 y 3
-    // (specular top + base lit gold) quedan fijas.
     &:hover::before {
       background-position: 100% 50%, 0% 0%, 0% 0%;
     }
