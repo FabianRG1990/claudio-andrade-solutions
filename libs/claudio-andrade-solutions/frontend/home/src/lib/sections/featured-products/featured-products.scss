@@ -1,6 +1,35 @@
 .featured-products {
   position: relative;
   padding-block: clamp(4rem, 5vw + 3rem, 10rem);
+
+  // Fish vanishing zone — el ocean-bg global (position: fixed) pinta peces
+  // dorados en toda la ventana. Su mask interno fade solo en los 140px
+  // superiores/inferiores del VIEWPORT, no en los boundaries de sección.
+  // Al pasar del hero a chapter 1, los peces que entran bajo el techo del
+  // hero quedan cortados abruptamente porque la imagen del hero es opaca.
+  //
+  // Esto agrega un fade abyss → transparente DENTRO del techo de chapter 1.
+  // Continúa el darkening que el .hero__seam ya tiene (sin tocar el hero),
+  // así los peces que nadan justo bajo el boundary se desvanecen en abyss
+  // antes de chocar con la línea de corte del hero. El color de inicio
+  // (#06091A) matchea exactamente el bottom-stop del hero seam — el
+  // blend que ya rendía bien queda intacto, solo se extiende ~140px más.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 140px;
+    background: linear-gradient(
+      to bottom,
+      #06091A 0%,
+      rgb(6 9 26 / 0.55) 45%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
 }
 
 .featured-products__container {
