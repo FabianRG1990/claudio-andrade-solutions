@@ -317,36 +317,32 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
-  box-shadow: inset 0 0 0 1px;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  // Outline-only — el user pidió quitar el fondo y dejar solo letra y
+  // marco. Sin fill = sin necesidad de backdrop-filter ni capa traslúcida.
+  // El frame (inset 0 0 0 1px) se sube en opacidad respecto a la versión
+  // anterior porque ya no hay un campo de color que lo ancle visualmente.
+  background: transparent;
   white-space: nowrap;
 
   &[data-status='estable'] {
-    background: rgb(var(--kelp) / 0.20);
     color: rgb(var(--bioluminescent));
-    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.30);
+    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.45);
   }
-  // Vulnerable / En peligro / Crítico — antes coral (rgb 240 135 107) en
-  // intensidades crecientes para señalizar urgencia. El usuario rechazó el
-  // contraste anaranjado contra las cards azules: rompía la unidad visual
-  // del marquee. Movido a lagoon (mismo blue del resto del sitio) en las
-  // mismas tres intensidades — la jerarquía de urgencia sobrevive por
-  // opacidad (15% → 25% → 35%) sin meter un hue caliente desentonado.
+  // Vulnerable / En peligro / Crítico — la jerarquía de urgencia sobrevive
+  // por opacidad creciente del frame (0.40 → 0.55 → 0.70) ahora que no hay
+  // fill de fondo que aporte intensidad. Color del texto y del border se
+  // mantiene en lagoon (sin naranja, regla del marquee).
   &[data-status='vulnerable'] {
-    background: rgb(var(--lagoon) / 0.15);
-    color: rgb(var(--lagoon));
-    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.30);
-  }
-  &[data-status='en-peligro'] {
-    background: rgb(var(--lagoon) / 0.25);
     color: rgb(var(--lagoon));
     box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.40);
   }
+  &[data-status='en-peligro'] {
+    color: rgb(var(--lagoon));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.55);
+  }
   &[data-status='critico'] {
-    background: rgb(var(--lagoon) / 0.35);
     color: rgb(var(--foam));
-    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.60);
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.70);
   }
 }
 

@@ -150,7 +150,9 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorFileCodeBold',
     accent: 'lagoon',
-    iconColor: '#5EC4D1',
+    // Sky cyan — diagnóstico/auditoría. Posición 01: arranca el rango con
+    // un blue limpio que ancla la lectura técnica del eyebrow "Diagnóstico".
+    iconColor: '#5EC2E6',
   },
   {
     slug: 'sistemas-medida',
@@ -163,7 +165,10 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorBracketsCurlyBold',
     accent: 'kelp',
-    iconColor: '#7FE3A8',
+    // Mint emerald — el ÚNICO verde de la serie de 10 (el user pidió bajar
+    // la dominancia verde). Mantenido aquí porque "desarrollo / sistemas"
+    // tiene asociación universal con verde (Matrix, terminal, build green).
+    iconColor: '#62D29A',
   },
   {
     slug: 'integraciones-ia',
@@ -176,7 +181,11 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorRobotBold',
     accent: 'bioluminescent',
-    iconColor: '#9C8AF5',
+    // Violet — convención cross-industry para AI (Anthropic claude.ai,
+    // Vercel v0, Linear AI features). Mantenido pero subido en luminancia
+    // de #9C8AF5 → #B19BFA para que rinda igual de brillante que los
+    // vecinos sin verse "morado oscuro" en mobile.
+    iconColor: '#B19BFA',
   },
   {
     slug: 'apps-walmart',
@@ -189,11 +198,12 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorDatabaseBold',
     accent: 'coral',
-    // Antes #F0B870 (amarillo-naranja Walmart). El usuario pidió eliminar
-    // todo naranja de las cards del marquee — el icono se ve en un tile de
-    // 24px pero el hue cálido contra el resto azul rompía la unidad. Cambio
-    // a sky-blue para mantenerlo distinguible del resto de iconos azules.
-    iconColor: '#5BB8E5',
+    // Amber-gold. Antes #F0B870 → #5BB8E5 (sky) por la regla "sin naranja"
+    // cuando el marquee debía leerse unificado en azul. Ahora el user pidió
+    // que cada card tenga su propio color, así que vuelve un cálido — pero
+    // un amber refinado (no naranja saturado de marca Walmart), Linear/Vercel
+    // tier. Premium, no fluorescente.
+    iconColor: '#F4B952',
   },
   {
     slug: 'landing-premium',
@@ -206,7 +216,11 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorBrowsersBold',
     accent: 'lagoon',
-    iconColor: '#E879B8',
+    // Rose pink — landing premium / marca = asociación editorial con
+    // branding/lifestyle (Stripe atlas, Dropbox, Notion). Ajustado de
+    // #E879B8 → #F178B5 para empujar la saturación un punto y que rinda
+    // como "pink premium", no "lila apagado".
+    iconColor: '#F178B5',
   },
   {
     slug: 'apps-moviles',
@@ -219,7 +233,10 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorDevicesBold',
     accent: 'kelp',
-    iconColor: '#7B98F0',
+    // Cornflower — apps móviles. Mantengo en familia azul (devices/apps
+    // tienen lectura blue), pero ajusto a #74A5F4 para diferenciarse claro
+    // del #5EC2E6 (auditoria, sky cyan) y del #8B96F0 (cloud, indigo).
+    iconColor: '#74A5F4',
   },
   {
     slug: 'analisis-flujos',
@@ -232,7 +249,11 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorChartScatterBold',
     accent: 'bioluminescent',
-    iconColor: '#7FE3D6',
+    // Teal-aqua brillante — operaciones/análisis tiene asociación clásica
+    // con dashboards data-viz (Tableau, Looker). Antes #7FE3D6 leía mint
+    // pegado al verde del 02; ahora #3DD5D5 es teal puro, claramente fuera
+    // de la zona verde.
+    iconColor: '#3DD5D5',
   },
   {
     slug: 'automatizacion',
@@ -245,10 +266,11 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorGearSixBold',
     accent: 'coral',
-    // Antes #F0876B (coral). Mismo motivo que apps-walmart — sin naranja en
-    // los iconos del marquee. Lavender-blue distinto del #7B98F0 (apps-moviles)
-    // y del #9DAEEF (consultoria-cloud) para que no luzca duplicado.
-    iconColor: '#88A8F2',
+    // Coral-rose — automatización/gear, posición 08. El reset de la regla
+    // "sin naranja" permite volver a un cálido aquí, pero hue rose (no
+    // anaranjado bruto). Se diferencia del amber del 04 (warm-yellow) y
+    // del pink del 05 (rose-saturado) por estar en el rojo cálido.
+    iconColor: '#F47373',
   },
   {
     slug: 'consultoria-cloud',
@@ -261,7 +283,10 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorCloudArrowUpBold',
     accent: 'lagoon',
-    iconColor: '#9DAEEF',
+    // Indigo lavender — cloud/infraestructura. Mantengo blue-violet pero
+    // ajustado a #8B96F0 para separarse del cornflower del 06 (apps-móviles,
+    // azul más limpio) y del violet del 03 (IA, más púrpura).
+    iconColor: '#8B96F0',
   },
   {
     slug: 'consultoria-estrategica',
@@ -274,7 +299,11 @@ export const services: Service[] = [
     image: '',
     icon: 'phosphorCpuBold',
     accent: 'kelp',
-    iconColor: '#5FD89F',
+    // Gold-yellow — consultoría estratégica / CTO fraccional cierra la
+    // serie con un cálido refinado (premium/asesoría = oro, no plata).
+    // Antes #5FD89F era el SEGUNDO verde de la serie; con esto se elimina
+    // la duplicación verde que el user marcó.
+    iconColor: '#F5C547',
   },
 ];
 
