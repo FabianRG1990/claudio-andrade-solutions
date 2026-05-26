@@ -99,141 +99,45 @@
 // =============================================================================
 // Ticket card
 // =============================================================================
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║ CARD DESIGN — derivado ÚNICAMENTE de la imagen referencia.            ║
+// ║ Sistema previo eliminado: aurora overlay, gradient-border-via-mask,   ║
+// ║ brass shimmer del highlight, 8-layer box-shadow, electric blue halos. ║
+// ║ NO restaurar. Patrón clonado en timeline.scss (tech-card) y           ║
+// ║ availability.scss (info-row).                                         ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD STYLE — port exacto del HTML/SCSS standalone que el user proveyó.
+// Mismo patrón que .info-row (availability) y .tech-card (timeline).
+// ═══════════════════════════════════════════════════════════════════════════
 .engagement-card {
   position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
-  border-radius: var(--radius-squircle);
-  // Sin glass-shell, sin padding 0.5rem, sin insets rim: el wrapper deja
-  // de ser un chasis visual y solo aporta las drop shadows atmosféricas
-  // que hacen flotar el card. El borde y el modelado viven en
-  // .engagement-card__inner (un único borde visible).
-  box-shadow:
-    0 48px 96px -32px rgb(6 9 26 / 0.85),
-    0 18px 36px -14px rgb(6 9 26 / 0.55);
-  transition:
-    transform 600ms var(--ease-fluid),
-    box-shadow 600ms var(--ease-fluid);
+  border-radius: 22px;
+  // Sin box-shadow aquí — todo el detalle vive en __inner per spec.
+  transition: transform 600ms var(--ease-fluid);
 
-  @media (min-width: 1024px) {
-    opacity: 0.9;
-  }
-
-  // Hover lift exclusivo de cards no-highlight — la highlight ya viene
-  // elevada por su translateY/scale.
   @media (hover: hover) and (pointer: fine) {
     &:not(.engagement-card--highlight):hover {
       transform: translateY(-2px);
-      box-shadow:
-        0 60px 120px -32px rgb(6 9 26 / 0.95),
-        0 24px 48px -14px rgb(6 9 26 / 0.65);
     }
   }
 }
 
 .engagement-card--highlight {
-  // El Pearl + lightning del CTA proyectado a escala de tarjeta: drops
-  // profundas + halos eléctricos azules. Sin insets rim (los quitamos
-  // junto al glass-shell para evitar doble-borde con el inner).
-  box-shadow:
-    // Drops atmosféricas — esta es la hero del set, más profundas que
-    // las non-highlight
-    0 60px 120px -32px rgb(6 9 26 / 0.92),
-    0 24px 48px -16px rgb(6 9 26 / 0.65),
-    // Borde fino azul + halos eléctricos concéntricos (atmosféricos, no
-    // chasis — viven fuera del card, no en su borde)
-    0 0 0 1px rgb(160 210 255 / 0.45),
-    0 0 0 2px rgb(80 160 255 / 0.18),
-    0 0 24px -4px rgb(80 160 255 / 0.28),
-    0 0 60px -16px rgb(40 120 255 / 0.40);
-
+  // Mismo shadow que el resto — la diferenciación del "más popular" vive
+  // en el contenido (badge, CTA, precio) y en el translateY/scale del lift.
   @media (min-width: 1024px) {
-    opacity: 1;
     transform: translateY(-0.75rem) scale(1.03);
   }
 }
 
-.engagement-card__overlay {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-squircle);
-  // Aurora real adentro del card (sólo en el highlight, este element
-  // es @if t.highlight en el template). Segunda capa de glow más
-  // concentrado encima del aurora del __inner, blureado y en screen
-  // blend para que se siente como "luz proyectada desde adentro" en
-  // vez de un tinte plano. Es lo que diferencia un "premium card" de
-  // un "tinted card".
-  background:
-    radial-gradient(
-      ellipse 50% 28% at 50% 22%,
-      rgb(80 160 255 / 0.24) 0%,
-      rgb(40 120 255 / 0.08) 40%,
-      transparent 75%
-    ),
-    radial-gradient(
-      ellipse 70% 30% at 50% 105%,
-      rgb(20 60 150 / 0.14) 0%,
-      transparent 70%
-    );
-  filter: blur(12px);
-  opacity: 0.85;
-  mix-blend-mode: screen;
-}
-
+// Overlays heredados (aurora + gradient-border-via-mask) — eliminados.
+.engagement-card__overlay,
 .engagement-card__overlay-edge {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-squircle);
-  // Real gradient border via mask technique. Dos máscaras componibles:
-  // una llena el content-box, otra el padding-box; con composite "exclude"
-  // sólo queda el padding (1.5px) cubierto por el gradient — un borde
-  // gradient real, no un box-shadow ring plano.
-  //
-  // Direccionalidad 155deg: top-left brilla (specular bright white-blue),
-  // bottom-right cae a azul profundo. Esto es lo que separa un "tinted
-  // ring" de un "physical object under directional light".
-  //
-  // Default (cards no-highlight): luz fría specular → azul profundo. El
-  // highlight tiene su propio override más abajo con tinte brass arriba —
-  // patrón "Luxe Hotel Lobby": luz cálida cayendo sobre cristal frío,
-  // signal premium clásico (navy + brass restrained).
-  padding: 1.5px;
-  background: linear-gradient(
-    155deg,
-    rgb(220 235 255 / 0.95) 0%,
-    rgb(160 210 255 / 0.62) 20%,
-    rgb(var(--electric) / 0.36) 48%,
-    rgb(30 70 160 / 0.20) 75%,
-    rgb(20 30 70 / 0.12) 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.95;
-}
-
-// Override del marco del card destacado — brass shimmer top-left + electric
-// abajo. Es el cambio visual que diferencia "tarjeta de precio premium" de
-// "tarjeta de precio con borde azul". Las 4 referencias premium consultadas
-// (Brass Observatory, Luxe Hotel Lobby, OWDT Millennium, Linear) coinciden:
-// navy + brass apagado en hairlines y trim, electric (o accent equivalente)
-// para acción. Acá el brass es un 5-15% del píxel del marco, no más.
-.engagement-card--highlight .engagement-card__overlay-edge {
-  background: linear-gradient(
-    155deg,
-    rgb(var(--brass) / 0.92) 0%,            // brass specular top-left
-    rgb(230 215 180 / 0.55) 14%,            // brass→cream transición cálida
-    rgb(255 255 255 / 0.32) 32%,            // neutral mid-top
-    rgb(var(--electric) / 0.28) 58%,        // electric vuelve en bottom
-    rgb(30 70 160 / 0.18) 80%,
-    rgb(20 30 70 / 0.12) 100%
-  );
+  display: none;
 }
 
 .engagement-card__inner {
@@ -241,153 +145,68 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-radius: var(--radius-squircle);
-  // padding compactado de 1.75rem → 1.5rem (top/bottom): ahorra ~0.5rem
-  // de altura sin que las cards se sientan cramped.
+  border-radius: 22px;
   padding: 1.5rem 1.5rem 1.25rem;
+  overflow: hidden;
 
-  // Override del background del glass-core — PREMIUM GLASS real.
-  //
-  // Antes el modelado de luz era "PowerPoint": key cenital simétrica + dos
-  // fills idénticos en top-left/top-right + AO radial centrado = forma
-  // geométrica con relleno, no superficie física bajo luz. Patrón "cartón".
-  //
-  // Ahora: una sola FUENTE de luz dominante diagonal arriba-izquierda
-  // (consistente con cómo el ojo lee dirección de luz en occidente: top-left
-  // primero). Eso genera:
-  //   • Key light asimétrica con specular spot brillante puntual
-  //   • Fill secundario más débil top-right (rebote, no luz directa)
-  //   • Ambient occlusion DIAGONAL hacia bottom-right (consistente con la luz)
-  //   • Tinte sutil brass apagado en el upper mid (luz cálida real, no
-  //     blanco puro neón)
-  //   • Stops asimétricos (0/22/45/72/100) — el cerebro lee 0/60/100 como
-  //     "diseño matemático", los stops naturales como "objeto físico"
-  // LUZ DISCRETA — restauramos el modelado direccional top-left pero
-  // bajado ~50% del nivel original. El usuario quería luz pero discreta:
-  // que se sienta material físico bajo luz suave, no destello dramático.
-  // Specular 32→14%, key light 8→4%, fill 4→2%.
-  background:
-    // 1. Specular spot top-left — discreto (14% en lugar de 32%)
-    radial-gradient(
-      ellipse 18% 14% at 22% 6%,
-      rgb(255 255 255 / 0.14) 0%,
-      rgb(255 255 255 / 0.04) 40%,
-      transparent 75%
-    ),
-    // 2. Key light brass apagado — discreto (4% en lugar de 8%)
-    radial-gradient(
-      ellipse 110% 42% at 38% -6%,
-      rgb(245 232 200 / 0.04) 0%,
-      rgb(245 232 200 / 0.01) 35%,
-      transparent 62%
-    ),
-    // 3. Fill secundario top-right — discreto (2% en lugar de 4%)
-    radial-gradient(
-      ellipse 55% 32% at 86% 8%,
-      rgb(180 210 240 / 0.02) 0%,
-      transparent 55%
-    ),
-    // 4. Surface base — ladder shoal→tide. Antes terminaba en `--ink` (#0A0D26)
-    //    a 100%, casi indistinguible de `--abyss` (#06091A, fondo de página),
-    //    así que el pie del card se fundía con el bg. Ahora el endpoint queda
-    //    en `--tide` (#0F1338), ~12 luminance units más claro que el bg.
-    linear-gradient(
-      162deg,
-      rgb(var(--shoal) / 0.96) 0%,
-      rgb(var(--tide) / 0.98) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    oklch(0.22 0.07 256) 0%,
+    oklch(0.15 0.05 256) 100%
+  );
+  border: 1px solid oklch(0.45 0.12 256 / 0.35);
 
-  // Box-shadow sin fade negro al pie: removidos `inset 0 -28px 56px -22px
-  // rgb(0 0 0 / 0.58)` y `inset 0 -1px 0 rgb(0 0 0 / 0.48)` que fundían el
-  // bottom del card en negro. Mantengo top rim, inner glow top, side edges
-  // y trim brass exterior — esos modelan sin tapar la base.
   box-shadow:
-    // Top rim asimétrico discreto — bright en lit-side, dim en shadow-side
-    inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.20),
-    inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.05),
-    // Soft inner glow del top — extiende la specular hacia abajo
-    inset 0 14px 28px -14px rgb(255 255 255 / 0.05),
-    // Side edges asimétricos — lit-left bright, shadow-right dark
-    inset 1px 0 0 rgb(255 255 255 / 0.08),
-    inset -1px 0 0 rgb(0 0 0 / 0.16),
-    // Trim brass tenue exterior — coordinación con el sistema
-    0 0 0 1px rgb(var(--brass) / 0.10);
+    0 0 0 1px oklch(0.45 0.14 256 / 0.10),
+    inset 0 1px 0 0 oklch(0.85 0.08 256 / 0.06),
+    0 20px 50px -20px oklch(0.30 0.18 256 / 0.25),
+    0 0 60px -10px oklch(0.45 0.20 256 / 0.08);
 
-  // Noise visible — antes 0.015 era ruido invisible. 0.045 le da textura
-  // perceptible de cristal real (lo que diferencia "render" de "objeto
-  // físico"). Mismo nivel que el glass-core default que la decisión
-  // anterior había bajado porque "se leía sucio" — pero el problema era
-  // que la surface era translúcida y el noise se mezclaba con el bg
-  // animado. Acá la surface es opaca (96-99%), el noise queda contenido
-  // dentro de la card.
   &::before {
-    opacity: 0.045;
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      oklch(0.85 0.10 256 / 0.28),
+      oklch(0.45 0.12 256 / 0) 40%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 1;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 380px;
+    height: 380px;
+    top: -180px;
+    right: -160px;
+    background: radial-gradient(
+      circle,
+      oklch(0.65 0.20 256 / 0.07),
+      transparent 60%
+    );
+    pointer-events: none;
+    z-index: 0;
   }
 }
 
-// ─── Halo de color por accent ────────────────────────────────────────────────
-// Mismo patrón que las service-cards del capítulo 2. Vive bajo el contenido
-// (z-index 0) y se recorta al border-radius del glass-core (overflow:hidden).
-// Cada plan (foam/lagoon/coral) tiene su propio resplandor en la esquina
-// superior derecha — refuerza la identidad de cada modelo de engagement.
+// Glow halos accent — eliminados (no aparecen en la imagen referencia).
 .engagement-card__glow {
-  position: absolute;
-  top: -3.5rem;
-  right: -3.5rem;
-  width: 14rem;
-  height: 14rem;
-  border-radius: 9999px;
-  pointer-events: none;
-  filter: blur(28px);
-  opacity: 0.6;
-  z-index: 0;
-  transition:
-    opacity 800ms var(--ease-fluid),
-    transform 800ms var(--ease-fluid);
+  display: none;
 }
 
-.engagement-card[data-accent='foam'] .engagement-card__glow {
-  background: radial-gradient(
-    circle,
-    rgb(245 241 232 / 0.18) 0%,
-    rgb(245 241 232 / 0.06) 38%,
-    transparent 72%
-  );
-}
-.engagement-card[data-accent='lagoon'] .engagement-card__glow {
-  // Highlight = blue eléctrico (matchea el Pearl + lightning del CTA).
-  // foam y coral mantienen su tono original — sólo el "más popular"
-  // cambia a azul para reforzar coherencia con su botón.
-  background: radial-gradient(
-    circle,
-    rgb(80 160 255 / 0.48) 0%,
-    rgb(80 160 255 / 0.14) 38%,
-    transparent 72%
-  );
-}
-.engagement-card[data-accent='coral'] .engagement-card__glow {
-  // Antes: glow coral (rgb 240 135 107) — leía como contraste anaranjado
-  // sin lógica visual contra el resto de cards azules del sitio. Movido a
-  // lagoon (mismo tono que el highlight central) para que las tres cards
-  // del set lean coherentes — la diferenciación queda en intensidad +
-  // contenido + badge, no en hue caliente vs frío.
-  background: radial-gradient(
-    circle,
-    rgb(80 160 255 / 0.40) 0%,
-    rgb(80 160 255 / 0.10) 38%,
-    transparent 72%
-  );
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .engagement-card:hover .engagement-card__glow {
-    opacity: 0.85;
-    transform: scale(1.08);
-  }
-}
-
-// Todos los hijos del inner viven en z-index 1+ para sentarse sobre el
-// halo (que está en z-index 0 del mismo stacking context).
+// Todos los hijos del inner sentados sobre los pseudo-elementos
+// (::before z-index 1, ::after z-index 0).
 .engagement-card__head,
 .engagement-card__price-row,
 .engagement-card__price-breakdown,
@@ -396,7 +215,7 @@
 .engagement-card__scarcity,
 .engagement-card__cta-wrap {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .engagement-card__head {
@@ -420,25 +239,28 @@
 // background del color foam para los 2 normales y lagoon-electric para el
 // highlight (consistente con el lenguaje "el destacado es eléctrico" que
 // ya usan el tag y el features-icon de highlight).
+// Badge icon — port exacto del .badge del HTML standalone del user.
+// Mismo patrón que .info-row__icon. El highlight engagement-card hereda
+// (sin override) para mantener unidad visual del icono entre todos los cards.
 .engagement-card__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
-  border-radius: 0.625rem;
-  background: rgb(var(--foam) / 0.06);
-  color: rgb(var(--foam) / 0.85);
-  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.10);
-}
 
-.engagement-card--highlight .engagement-card__icon {
-  background: rgb(80 160 255 / 0.18);
-  color: rgb(180 220 255);
+  background: radial-gradient(
+    circle at 30% 30%,
+    oklch(0.40 0.12 256 / 0.55),
+    oklch(0.18 0.07 256 / 0.55)
+  );
+  border: 1px solid oklch(0.65 0.16 256 / 0.55);
   box-shadow:
-    inset 0 0 0 1px rgb(160 210 255 / 0.40),
-    0 0 14px -2px rgb(80 160 255 / 0.40);
+    0 0 0 4px oklch(0.55 0.18 256 / 0.10),
+    0 0 18px 2px oklch(0.65 0.20 256 / 0.30),
+    inset 0 0 0 1px oklch(0.85 0.10 256 / 0.18);
+  color: oklch(0.92 0.05 256);
 }
 
 .engagement-card__name {
@@ -600,47 +422,9 @@
 // con cast cool azul (en lugar de blanco neutro) + aurora interna sutil
 // concentrada en el upper-third donde está el precio. Todo bajado ~50%
 // del nivel original (key light azul 14→7%, fills 8/7→4/3.5%, aurora 12→6%).
-.engagement-card--highlight .engagement-card__inner {
-  background:
-    // Key light cool discreto (7% en lugar de 14%)
-    radial-gradient(
-      ellipse 130% 50% at 50% -8%,
-      rgb(220 235 255 / 0.07) 0%,
-      rgb(140 180 255 / 0.025) 30%,
-      transparent 60%
-    ),
-    // Fill top-left azul discreto (4% en lugar de 8%)
-    radial-gradient(
-      ellipse 65% 38% at 12% 0%,
-      rgb(160 200 255 / 0.04) 0%,
-      transparent 50%
-    ),
-    // Fill top-right cool discreto (3.5% en lugar de 7%)
-    radial-gradient(
-      ellipse 65% 38% at 88% 0%,
-      rgb(180 210 240 / 0.035) 0%,
-      transparent 50%
-    ),
-    // Aurora interna discreta — glow azul difuso en el área del precio (6%)
-    radial-gradient(
-      ellipse 75% 50% at 50% 28%,
-      rgb(80 160 255 / 0.06) 0%,
-      rgb(40 120 255 / 0.025) 35%,
-      transparent 70%
-    ),
-    // (AO direccional bottom-right removido — fundía el pie del card en negro.
-    // Mismo cleanup que en `.engagement-card__inner` base, info-row y tech-card.)
-    // Surface highlight — un peldaño más claro que el non-highlight con
-    // tinte cool sutil
-    // Surface highlight — endpoint subido para que el pie del card destacado
-    // no caiga a #101840 (luminance ~22, demasiado cerca de --abyss del bg).
-    // Ahora el bottom queda en #18245A (luminance ~30), borde inferior visible.
-    linear-gradient(
-      162deg,
-      rgb(36 50 120 / 0.94) 0%,
-      rgb(24 36 90 / 0.97) 100%
-    );
-}
+// El highlight card hereda el mismo background unificado que el resto. La
+// diferenciación "destacado" vive en tag, icon glow, price color, features
+// y el translateY/scale del lift — NO en una superficie distinta.
 
 .engagement-card__feature {
   display: flex;

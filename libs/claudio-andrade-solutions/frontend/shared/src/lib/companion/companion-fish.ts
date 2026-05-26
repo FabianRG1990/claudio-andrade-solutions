@@ -64,14 +64,19 @@ const EMISSIVE_IDLE = new THREE.Color(0x4ae285);
 const EMISSIVE_MORPH = new THREE.Color(0x25d366);
 // Bloom strength durante swim normal vs durante curl peak. El bloom alto
 // durante el curl crea el "orbe pesado" que disimula visualmente el corte
-// topológico (truco Pixar/Apple Vision Pro).
-const BLOOM_STRENGTH_BASE = 3.20;
-const BLOOM_STRENGTH_MORPH = 4.50;
-// Emissive intensity también escala — el pez idle pulsa fuerte (2.0); en
-// peak morph el cuerpo se vuelve casi puro emissive (3.2) para que el
-// halo verde domine la lectura visual.
-const EMISSIVE_INTENSITY_BASE = 2.0;
-const EMISSIVE_INTENSITY_MORPH = 3.2;
+// topológico (truco Pixar/Apple Vision Pro). BASE bumpeado de 3.20→3.50
+// para dar más halo durante el path (pez merece protagonismo); MORPH se
+// mantiene en proporción para que el contraste base→morph siga leyéndose.
+const BLOOM_STRENGTH_BASE = 3.50;
+const BLOOM_STRENGTH_MORPH = 4.80;
+// Emissive intensity también escala — el pez idle pulsa fuerte (2.3); en
+// peak morph el cuerpo se vuelve casi puro emissive (3.5) para que el
+// halo verde domine la lectura visual. BASE bumpeado de 2.0→2.3 (+15%)
+// para dar más body brightness sin perder readability del PBR. En mobile
+// el lowPowerBoost ×1.6 lleva esto a 3.68 (vs 3.20 anterior), compensando
+// la falta de bloom con más emissive directo.
+const EMISSIVE_INTENSITY_BASE = 2.3;
+const EMISSIVE_INTENSITY_MORPH = 3.5;
 
 interface CompanionFishUniforms {
   uSpine: { value: Float32Array };
@@ -291,9 +296,9 @@ export class CompanionFishRenderer {
       // rim cyan haga halo, no solo los puntos hot.
       this.bloomPass = new UnrealBloomPass(
         new THREE.Vector2(width, height),
-        3.20, // strength (was 2.40)
-        1.00, // radius (was 0.85)
-        0.22, // threshold (was 0.30)
+        3.50, // strength — matches BLOOM_STRENGTH_BASE (update() lo sobrescribe igual)
+        1.00, // radius
+        0.22, // threshold
       );
       this.composer.addPass(this.bloomPass);
       const copyPass = new ShaderPass(CopyShader);
@@ -360,15 +365,16 @@ export class CompanionFishRenderer {
     // del environment dark de la página. Roughness sube un toque para
     // dispersar más la luz key y dar lift uniforme. envMapIntensity
     // alto para que las pocas reflexiones sean blue-bright (no oscuras).
-    // emissiveIntensity 2.0 — los marks de la texture (incluyendo el
-    // ojo verde) pulsan fuerte.
+    // emissiveIntensity 2.3 — matches EMISSIVE_INTENSITY_BASE (update() lo
+    // sobrescribe igual; el init queda en el valor canónico para que el
+    // primer frame pre-update lea correctamente).
     this.baseMaterial.metalness = 0.62;
     this.baseMaterial.roughness = 0.28;
     this.baseMaterial.envMapIntensity = 3.4;
     this.baseMaterial.color = new THREE.Color(0xffffff);
     this.baseMaterial.emissiveMap = this.baseMaterial.map;
     this.baseMaterial.emissive = new THREE.Color(0x4ae285);
-    this.baseMaterial.emissiveIntensity = 2.0;
+    this.baseMaterial.emissiveIntensity = 2.3;
     this.baseMaterial.transparent = true;
     this.baseMaterial.needsUpdate = true;
 
@@ -551,19 +557,37 @@ export class CompanionFishRenderer {
           gl_FragColor.rgb += mixColor * neonLum * neonMaskAdd * 5.0;
         #endif
 
-        // Rim fresnel a DOBLE capa — la firma premium de objetos 3D
-        // sobre fondo dark (Apple Vision Pro / Linear / Stripe). La
-        // capa ancha (pow 1.4) baña todo el contorno con cyan pastel
-        // suave dando sensación de "objeto levitando sobre dark glow";
-        // la capa sharp (pow 4.0) afina el edge exacto en cyan-bright
-        // para que la silueta esté siempre definida. El bloom amplifica
-        // ambas y genera el halo amplio característico.
+        // Rim fresnel a TRIPLE capa — la firma premium de objetos 3D
+        // sobre fondo dark (Apple Vision Pro / Linear / Stripe), ahora
+        // con accent warm para protagonismo:
+        //
+        //   • Wide (pow 1.4)  — cyan pastel, baña el contorno suave;
+        //                       lectura "objeto levitando sobre dark glow".
+        //   • Sharp (pow 4.0) — cyan-bright, afina el edge para silueta
+        //                       definida.
+        //   • Gold (pow 5.0)  — warm honey-gold HDR, solo en los ángulos
+        //                       más extremos del fresnel (silueta outer).
+        //
+        // El gold sigue el patrón cinematográfico canónico "key cool +
+        // rim warm" (Pixar lighting, Apple promo renders): la luz key
+        // verde define el objeto; un rim warm sutil da protagonismo
+        // sin perder identidad. Verde + gold = pattern de lujo
+        // establecido (Rolex Submariner, Hermès) — el pez se lee
+        // premium pero sigue siendo el ícono WhatsApp del companion.
+        //
+        // pow 5.0 concentra el gold a los ~25% más extremos del rim,
+        // así el frente del pez (donde el ojo verde HDR domina) no
+        // se contamina — solo los bordes laterales y dorsales atrapan
+        // el warm glint. El bloom amplifica el oro a halo dorado en
+        // la silueta sin opacar al verde central.
         vec3 vRimViewDir = normalize(vViewPosition);
         float vRimNoV = max(0.0, dot(normalize(vNormal), vRimViewDir));
         float vRimWide = pow(1.0 - vRimNoV, 1.4);
         float vRimSharp = pow(1.0 - vRimNoV, 4.0);
+        float vRimGold = pow(1.0 - vRimNoV, 5.0);
         gl_FragColor.rgb += vec3(0.30, 0.65, 1.30) * vRimWide * 1.40;
         gl_FragColor.rgb += vec3(0.55, 1.10, 1.95) * vRimSharp * 3.20;
+        gl_FragColor.rgb += vec3(1.85, 1.20, 0.45) * vRimGold * 2.40;
 
         #include <output_fragment>
         `,

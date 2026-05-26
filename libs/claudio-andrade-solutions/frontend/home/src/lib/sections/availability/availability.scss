@@ -118,135 +118,97 @@
 // =============================================================================
 // InfoRow card
 // =============================================================================
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║ CARD DESIGN — derivado ÚNICAMENTE de la imagen referencia.            ║
+// ║ Sistema previo eliminado. NO restaurar. Patrón clonado en             ║
+// ║ timeline.scss (tech-card) y engagements.scss (engagement-card).       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD STYLE — port exacto del HTML/SCSS standalone que el user proveyó.
+// Técnica: oklch(--hue 256) + gradient-border via mask-composite (::before)
+// + halo radial top-right (::after) + 4-layer box-shadow (inner ring +
+// inset top highlight + atmospheric drop + outer bloom).
+// MISMO patrón clonado en timeline.scss (.tech-card) y engagements.scss
+// (.engagement-card). NO improvisar — esto es spec del user.
+// ═══════════════════════════════════════════════════════════════════════════
 .info-row {
   position: relative;
-  border-radius: var(--radius-squircle);
+  border-radius: 22px;
   isolation: isolate;
-
-  // Drop shadows atmosféricas para que el card flote físicamente sobre
-  // el fondo (mismo lenguaje que .tech-card / .engagement-card).
-  box-shadow:
-    0 32px 64px -24px rgb(6 9 26 / 0.78),
-    0 14px 28px -10px rgb(6 9 26 / 0.52),
-    0 4px 8px -2px rgb(6 9 26 / 0.36);
+  // Sin box-shadow aquí — todo el detalle vive en __inner per spec.
 }
 
 .info-row__inner {
   position: relative;
-  border-radius: var(--radius-squircle);
-  // Padding inner fluido — 1.25rem en phones (más aire entre contenido y
-  // borde sin gastar mucho), 1.75rem en desktop.
+  border-radius: 22px;
   padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  overflow: hidden;
 
-  // LUZ DISCRETA — modelado direccional top-left bajado ~50%. Mismo
-  // patrón que engagement-card y tech-card.
-  background:
-    radial-gradient(
-      ellipse 18% 14% at 22% 6%,
-      rgb(255 255 255 / 0.14) 0%,
-      rgb(255 255 255 / 0.04) 40%,
-      transparent 75%
-    ),
-    radial-gradient(
-      ellipse 110% 42% at 38% -6%,
-      rgb(245 232 200 / 0.04) 0%,
-      rgb(245 232 200 / 0.01) 35%,
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 55% 32% at 86% 8%,
-      rgb(180 210 240 / 0.02) 0%,
-      transparent 55%
-    ),
-    // Surface base — antes terminaba en `--ink` (#0A0D26), a solo ~4 unidades
-    // de luminancia de `--abyss` (#06091A, fondo de página). El pie del card
-    // se fundía con el bg. Ahora el endpoint queda en `--tide` (#0F1338) —
-    // ~12 unidades de luminancia más claro que el bg, borde inferior visible.
-    linear-gradient(162deg, rgb(var(--shoal) / 0.96) 0%, rgb(var(--tide) / 0.98) 100%);
+  background: linear-gradient(
+    180deg,
+    oklch(0.22 0.07 256) 0%,
+    oklch(0.15 0.05 256) 100%
+  );
+  border: 1px solid oklch(0.45 0.12 256 / 0.35);
 
-  // Sin oscurecimiento al pie: antes había un radial-gradient negro en 75% 108%
-  // + un inset shadow grueso (inset 0 -28px 56px -22px) + 1px dark line abajo
-  // que hacían que el borde inferior del card se fundiera en negro. Ahora la
-  // superficie inferior mantiene su tono `--ink` del linear-gradient y el
-  // borde se ve completo.
+  // Brightness reducido ~50% del spec original. El user pidió cards menos
+  // glow-heavy — el bloom excesivo bleed afuera de los bordes era demasiado.
   box-shadow:
-    inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.20),
-    inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.05),
-    inset 0 14px 28px -14px rgb(255 255 255 / 0.05),
-    inset 1px 0 0 rgb(255 255 255 / 0.08),
-    inset -1px 0 0 rgb(0 0 0 / 0.16),
-    0 0 0 1px rgb(var(--brass) / 0.10);
+    0 0 0 1px oklch(0.45 0.14 256 / 0.10),
+    inset 0 1px 0 0 oklch(0.85 0.08 256 / 0.06),
+    0 20px 50px -20px oklch(0.30 0.18 256 / 0.25),
+    0 0 60px -10px oklch(0.45 0.20 256 / 0.08);
 
+  // Doble borde luminoso superior — gradient-border via mask-composite.
   &::before {
-    opacity: 0.045;
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      oklch(0.85 0.10 256 / 0.28),
+      oklch(0.45 0.12 256 / 0) 40%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 1;
+  }
+
+  // Halo radial difuso esquina superior derecha.
+  &::after {
+    content: '';
+    position: absolute;
+    width: 380px;
+    height: 380px;
+    top: -180px;
+    right: -160px;
+    background: radial-gradient(
+      circle,
+      oklch(0.65 0.20 256 / 0.07),
+      transparent 60%
+    );
+    pointer-events: none;
+    z-index: 0;
   }
 }
 
-// ─── Halo de color por accent ────────────────────────────────────────────────
-// Mismo patrón que las service-cards del capítulo 2 + ticket-cards del
-// capítulo 3. Cada info-row tiene su accent inline en el HTML — aquí en
-// visit son lagoon/kelp/bioluminescent (Disponibilidad/Operación/Discovery).
+// Glow halos accent — eliminados.
 .info-row__glow {
-  position: absolute;
-  top: -3rem;
-  right: -3rem;
-  width: 12rem;
-  height: 12rem;
-  border-radius: 9999px;
-  pointer-events: none;
-  filter: blur(24px);
-  opacity: 0.55;
-  z-index: 0;
-  transition:
-    opacity 800ms var(--ease-fluid),
-    transform 800ms var(--ease-fluid);
+  display: none;
 }
 
-.info-row[data-accent='lagoon'] .info-row__glow {
-  background: radial-gradient(
-    circle,
-    rgb(var(--lagoon) / 0.40) 0%,
-    rgb(var(--lagoon) / 0.10) 38%,
-    transparent 72%
-  );
-}
-.info-row[data-accent='kelp'] .info-row__glow {
-  background: radial-gradient(
-    circle,
-    rgb(var(--kelp) / 0.45) 0%,
-    rgb(var(--kelp) / 0.12) 38%,
-    transparent 72%
-  );
-}
-.info-row[data-accent='coral'] .info-row__glow {
-  background: radial-gradient(
-    circle,
-    rgb(var(--coral) / 0.38) 0%,
-    rgb(var(--coral) / 0.10) 38%,
-    transparent 72%
-  );
-}
-.info-row[data-accent='bioluminescent'] .info-row__glow {
-  background: radial-gradient(
-    circle,
-    rgb(var(--bioluminescent) / 0.38) 0%,
-    rgb(var(--bioluminescent) / 0.10) 38%,
-    transparent 72%
-  );
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .info-row:hover .info-row__glow {
-    opacity: 0.80;
-    transform: scale(1.06);
-  }
-}
-
-// Hijos del inner sobre el halo.
+// Hijos del inner sobre los pseudo-elementos (::before z-index 1, ::after 0).
 .info-row__head,
 .info-row__body {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .info-row__head {
@@ -275,16 +237,27 @@
   gap: 0.75rem;
 }
 
+// Badge icon — port exacto del .badge del HTML standalone del user.
+// 44px circle + radial gradient + border + outer ring shadow + glow + inset ring.
 .info-row__icon {
-  display: flex;
-  width: 2.25rem;
-  height: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: rgb(var(--foam) / 0.06);
-  color: rgb(var(--lagoon));
-  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.1);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  background: radial-gradient(
+    circle at 30% 30%,
+    oklch(0.40 0.12 256 / 0.55),
+    oklch(0.18 0.07 256 / 0.55)
+  );
+  border: 1px solid oklch(0.65 0.16 256 / 0.55);
+  box-shadow:
+    0 0 0 4px oklch(0.55 0.18 256 / 0.10),
+    0 0 18px 2px oklch(0.65 0.20 256 / 0.30),
+    inset 0 0 0 1px oklch(0.85 0.10 256 / 0.18);
+  color: oklch(0.92 0.05 256);
 }
 
 .info-row__title {

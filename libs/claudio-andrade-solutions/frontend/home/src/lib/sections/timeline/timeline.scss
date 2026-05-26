@@ -284,21 +284,26 @@
 // laterales + ambient occlusion + bevels en el borde + sombras
 // atmosféricas multi-capa. Mismo enfoque que premium cards de Linear /
 // Stripe / Vercel cuando no usan tilt 3D.
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║ CARD DESIGN — derivado ÚNICAMENTE de la imagen referencia.            ║
+// ║ Se eliminó por completo el sistema previo (3 spotlights radiales,     ║
+// ║ gradient diagonal 162°, 11-layer box-shadow, brass key light, ring    ║
+// ║ brass, glow halos top-right). NO restaurarlo bajo ningún pretexto.    ║
+// ║ Mismo patrón clonado en engagements.scss e availability.scss.         ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD STYLE — port exacto del HTML/SCSS standalone que el user proveyó.
+// Mismo patrón que .info-row (availability) y .engagement-card (engagements).
+// Técnica: oklch(--hue 256) + gradient-border via mask-composite + halo
+// radial top-right + 4-layer box-shadow.
+// ═══════════════════════════════════════════════════════════════════════════
 .tech-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-squircle);
+  border-radius: 22px;
   isolation: isolate;
-
-  // Sin glass-shell (quitado el doble-borde): el wrapper deja de ser un
-  // chasis visual y solo aporta las drop shadows atmosféricas que hacen
-  // flotar el card. El borde y el modelado viven exclusivamente en
-  // .tech-card__inner — un único borde visible.
-  box-shadow:
-    0 32px 64px -24px rgb(6 9 26 / 0.78),
-    0 14px 28px -10px rgb(6 9 26 / 0.52),
-    0 4px 8px -2px rgb(6 9 26 / 0.36);
+  // Sin box-shadow aquí — todo el detalle vive en __inner per spec.
 }
 
 .tech-card__inner {
@@ -306,53 +311,65 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-radius: var(--radius-squircle);
+  border-radius: 22px;
   padding: 1.5rem 1.5rem 1.625rem;
   gap: 1rem;
+  overflow: hidden;
 
-  // LUZ DISCRETA — modelado direccional top-left bajado ~50% del original.
-  // Mismo patrón que engagement-card e info-row. Specular 14%, key light
-  // 4%, fill 2%. Suficiente para material físico, no destello.
-  background:
-    radial-gradient(
-      ellipse 18% 14% at 22% 6%,
-      rgb(255 255 255 / 0.14) 0%,
-      rgb(255 255 255 / 0.04) 40%,
-      transparent 75%
-    ),
-    radial-gradient(
-      ellipse 110% 42% at 38% -6%,
-      rgb(245 232 200 / 0.04) 0%,
-      rgb(245 232 200 / 0.01) 35%,
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 55% 32% at 86% 8%,
-      rgb(180 210 240 / 0.02) 0%,
-      transparent 55%
-    ),
-    // Surface base — endpoint en `--tide` en lugar de `--ink` para que el
-    // pie del card no se funda con `--abyss` (fondo de página). Mismo cambio
-    // en availability.scss y engagements.scss.
-    linear-gradient(162deg, rgb(var(--shoal) / 0.96) 0%, rgb(var(--tide) / 0.98) 100%);
+  background: linear-gradient(
+    180deg,
+    oklch(0.22 0.07 256) 0%,
+    oklch(0.15 0.05 256) 100%
+  );
+  border: 1px solid oklch(0.45 0.12 256 / 0.35);
 
-  // Top rim asimétrico discreto + side edges + ring brass. Sin oscurecimiento
-  // al pie: removidos el radial-gradient negro de 75% 108% + insets bottom
-  // (`inset 0 -28px 56px -22px` y `inset 0 -1px 0`) que fundían el borde
-  // inferior en negro.
   box-shadow:
-    inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.20),
-    inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.05),
-    inset 0 14px 28px -14px rgb(255 255 255 / 0.05),
-    inset 1px 0 0 rgb(255 255 255 / 0.08),
-    inset -1px 0 0 rgb(0 0 0 / 0.16),
-    0 0 0 1px rgb(var(--brass) / 0.10);
+    0 0 0 1px oklch(0.45 0.14 256 / 0.10),
+    inset 0 1px 0 0 oklch(0.85 0.08 256 / 0.06),
+    0 20px 50px -20px oklch(0.30 0.18 256 / 0.25),
+    0 0 60px -10px oklch(0.45 0.20 256 / 0.08);
 
-  // Noise visible — antes 0.015 era invisible. 0.045 le da textura física
-  // que diferencia "render" de "objeto bajo luz".
   &::before {
-    opacity: 0.045;
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      oklch(0.85 0.10 256 / 0.28),
+      oklch(0.45 0.12 256 / 0) 40%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 1;
   }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 380px;
+    height: 380px;
+    top: -180px;
+    right: -160px;
+    background: radial-gradient(
+      circle,
+      oklch(0.65 0.20 256 / 0.07),
+      transparent 60%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+// Glow halos top-right ELIMINADOS — no aparecen en la imagen referencia.
+.tech-card__glow {
+  display: none;
 }
 
 // Halo de color por accent — copia de service-card. Un sibling absoluto en
@@ -408,12 +425,12 @@
   );
 }
 
-// Hijos sobre el halo
+// Hijos sobre los pseudo-elementos (::before z-index 1, ::after 0).
 .tech-card__head,
 .tech-card__name,
 .tech-card__reason {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .tech-card__head {

@@ -337,6 +337,31 @@
   padding: 0.375rem;
   text-decoration: none;
   color: inherit;
+  isolation: isolate;
+
+  // Drop shadow stack idéntico a tech-card (timeline). Atmosférica
+  // multi-capa que hace flotar la card. Antes este card usaba glass-shell
+  // con backdrop-filter + foam radial — visualmente material distinto al
+  // tech-card. El user pidió que todas las info-cards del sitio matcheen
+  // el lenguaje del tech-card (excluyendo pricing, image-cards, y Cap. 02).
+  box-shadow:
+    0 32px 64px -24px rgb(6 9 26 / 0.78),
+    0 14px 28px -10px rgb(6 9 26 / 0.52),
+    0 4px 8px -2px rgb(6 9 26 / 0.36);
+
+  transition:
+    transform 700ms var(--ease-fluid),
+    box-shadow 700ms var(--ease-fluid);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:is(a):hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 40px 80px -24px rgb(6 9 26 / 0.85),
+        0 20px 40px -10px rgb(6 9 26 / 0.62),
+        0 6px 12px -2px rgb(6 9 26 / 0.44);
+    }
+  }
 
   @media (min-width: 1024px) {
     flex: 1;
@@ -351,20 +376,70 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+
+  // Surface treatment idéntico al tech-card. Sobre-escribe el background
+  // default del glass-core. Modelado direccional top-left (specular 14%,
+  // key light 4%, fill 2%) sobre base navy --shoal/--tide.
+  background:
+    radial-gradient(
+      ellipse 18% 14% at 22% 6%,
+      rgb(255 255 255 / 0.14) 0%,
+      rgb(255 255 255 / 0.04) 40%,
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 110% 42% at 38% -6%,
+      rgb(245 232 200 / 0.04) 0%,
+      rgb(245 232 200 / 0.01) 35%,
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 55% 32% at 86% 8%,
+      rgb(180 210 240 / 0.02) 0%,
+      transparent 55%
+    ),
+    linear-gradient(162deg, rgb(var(--shoal) / 0.96) 0%, rgb(var(--tide) / 0.98) 100%);
+
+  // Borde cyan→blue gradient + bevel 3D + ring cyan exterior. Idéntico al
+  // tech-card de timeline. El user pidió expresamente "borde celeste/cyan
+  // arriba que degrade a azul abajo" en TODAS las info-cards del sitio.
+  box-shadow:
+    // 1) TOP edge hairline LAGOON — "borde celeste" arriba claramente visible
+    inset 0 1px 0 rgb(var(--lagoon) / 0.65),
+    // 2) BOTTOM edge hairline ELECTRIC — degrade hacia azul al pie
+    inset 0 -1px 0 rgb(var(--electric) / 0.45),
+    // 3) Top rim asimétrico (bevel 3D)
+    inset 0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.28),
+    inset -0.5rem 1.5px 0 -0.4rem rgb(255 255 255 / 0.08),
+    // 4) Soft inner glow top — tintado cool
+    inset 0 14px 28px -14px rgb(180 220 255 / 0.12),
+    // 5) Side edges asimétricos
+    inset 1px 0 0 rgb(255 255 255 / 0.08),
+    inset -1px 0 0 rgb(0 0 0 / 0.20),
+    // 6) Ring exterior LAGOON perceptible
+    0 0 0 1px rgb(var(--lagoon) / 0.30);
+
+  // Noise overlay del glass-core a 0.045 — match exacto al tech-card.
+  &::before {
+    opacity: 0.045;
+  }
 }
 
 // Halo de color por accent — en la esquina superior derecha. Pintado vía
 // `--accent-rgb` para mantener una sola regla.
+// Glow specs idénticas al tech-card de timeline (12rem × -3rem × blur 26px
+// × opacity 0.62). Match exacto al lenguaje visual compartido por todas
+// las cards informáticas del sitio.
 .info-card__glow {
   position: absolute;
-  top: -2.25rem;
-  right: -2.25rem;
-  width: 9rem;
-  height: 9rem;
+  top: -3rem;
+  right: -3rem;
+  width: 12rem;
+  height: 12rem;
   border-radius: 9999px;
   pointer-events: none;
-  filter: blur(22px);
-  opacity: 0.55;
+  filter: blur(26px);
+  opacity: 0.62;
   z-index: 0;
   transition:
     opacity 800ms var(--ease-fluid),
