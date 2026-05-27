@@ -140,7 +140,22 @@
   }
 }
 
-// SIDE CARDS (standard) — fondo navy royal con borde azul eléctrico real.
+// =============================================================================
+// SIDE CARDS — técnica direccional cenital. Reescrito desde la ref por
+// muestreo de pixels: borde sutil top-bright que decae rápido a navy
+// invisible en sides y bottom. Sin halo exagerado.
+//
+// Datos del sampleo (ref engagements-reference.png, middle card top edge):
+//   • Border top center: lum 229 (rgb 200,240,255 ≈ cyan-blanco)
+//   • Border sides: lum 17-20 (perdidos contra bg lum 13-16)
+//   • Border bottom: lum 26-39 (apenas visible)
+//   • Glow lateral exterior: máx 30 lum @ ~35px from border (casi nada)
+//   • Falloff vertical above border: 8px → lum 37 → 4px → background
+//
+// Implementación: border 1px solid color muy oscuro + ::before mask-composite
+// con vertical gradient direccional. NO box-shadow halo extendido — el
+// realismo viene de la PRECISIÓN del border y catchlight, no del halo.
+// =============================================================================
 .engagement-card__inner {
   position: relative;
   display: flex;
@@ -149,26 +164,54 @@
   padding: 1.25rem 1.375rem 1.25rem;
   border-radius: 0.875rem;
 
-  // Surface — navy profundo según paleta hex (#071126 → #09162D).
+  // Surface — navy profundo (palette dual stop).
   background: linear-gradient(
     180deg,
     rgb(7 17 38) 0%,
     rgb(9 22 45) 100%
   );
 
-  // Border royal blue PROFUNDO oscuro (#053375) — más oscuro que #07419A.
-  border: 1px solid rgb(5 51 117 / 0.95);
+  // Border invisible solid; el ::before mask-composite provee la línea visible.
+  border: 1px solid transparent;
 
-  // Glow exterior #053375 family — más oscuro, intensidad mantenida.
+  // Cast shadow — side cards quieren halo MÍNIMO (NO competir con middle).
+  // Ref muestra side cards con borde sutil pero sin glow exterior llamativo.
   box-shadow:
-    inset 0 1px 0 rgb(140 180 230 / 0.06),
-    inset 0 -1px 0 rgb(0 0 0 / 0.45),
-    0 0 0.875rem rgb(10 70 150 / 0.40),
-    0 0 2rem -0.5rem rgb(10 70 150 / 0.24),
+    inset 0 1px 0 rgb(140 180 230 / 0.04),
+    inset 0 -1px 0 rgb(0 0 0 / 0.40),
+    0 -1px 4px rgb(31 132 240 / 0.08),
     0 14px 32px -14px rgb(0 0 0 / 0.55),
     0 4px 10px -3px rgb(0 0 0 / 0.30);
 
   isolation: isolate;
+
+  // Border via mask-composite — top spectacular crest se conserva, luego
+  // degradación LEVE manteniendo azul visible todo el recorrido (sides + bottom).
+  // Match ref: el borde nunca desaparece, solo se atenúa un poco abajo.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgb(70 145 235 / 0.95) 0%,      // rim top bright crest (idéntico al actual feel)
+      rgb(50 125 215 / 0.88) 2%,
+      rgb(40 110 200 / 0.82) 8%,      // crest decay leve
+      rgb(35 100 188 / 0.78) 25%,
+      rgb(32 92 178 / 0.75) 50%,      // mid: still clearly visible blue
+      rgb(30 86 170 / 0.72) 75%,
+      rgb(28 80 160 / 0.70) 100%      // bottom: degradado leve, NUNCA invisible
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
 }
 
 // =============================================================================
@@ -194,6 +237,24 @@
 //
 // Border 1px solid se elimina — el ::before mask-composite ES el border.
 // =============================================================================
+// =============================================================================
+// MIDDLE / HIGHLIGHT CARD — reescrito con técnica direccional cenital.
+//
+// Datos del sampleo de referencia (engagements-reference.png):
+//   • Peak catchlight: x=722 y=265, lum 229 ≈ rgb(200, 240, 255) cyan-blanco
+//   • Catchlight ancho útil: ~30-40px wide (NO un strip across)
+//   • Falloff vertical arriba del catchlight: 8px → lum 37 (background)
+//   • Border lateral (x=540 y=325..400): lum 17-23 (CASI INVISIBLE)
+//   • Border bottom (y=1010): lum 26-39 (apenas más claro que bg)
+//   • Glow lateral exterior @ 35px del border: lum 30 (12 puntos sobre bg)
+//
+// Técnica:
+//   1. Border via mask-composite: vertical gradient SHARP top→dark, con
+//      capa horizontal radial que concentra el catchlight central.
+//   2. ::after = UN solo catchlight ELLIPSE radial concentrado, no strip.
+//   3. Box-shadow ASIMÉTRICO: top glow sutil + cast shadow abajo.
+//      Eliminado el halo simétrico (era el efecto "Bootstrap card de lujo").
+// =============================================================================
 .engagement-card--highlight .engagement-card__inner {
   position: relative;
   padding: 1.25rem 1.375rem 1.25rem;
@@ -201,77 +262,56 @@
   isolation: isolate;
   overflow: visible;
 
-  // Surface — navy profundo sin blob interno.
+  // Surface limpio sin glow interno. Match ref: navy uniforme.
   background: linear-gradient(
     180deg,
     rgb(8 21 51) 0%,
     rgb(10 26 58) 100%
   );
 
-  // El border solid se elimina; el ::before mask-composite lo provee.
-  border: none;
+  border: 1px solid transparent;  // ::before provee la línea visible.
 
-  // NEON GLOW 360° — 4 capas concéntricas en familia #053375 (el mismo
-  // tono que los side cards). De brighter cerca del border (color caliente
-  // de neón) hacia darker en el halo exterior. Sin offsets Y, simétrico
-  // alrededor del card.
+  // Glow exterior ASIMÉTRICO — atenuado vs versión anterior (user feedback:
+  // "demasiada luz"). Color azul PURO saturated (no cyan), bias top + alas
+  // laterales más cortas. Cast shadow negra abajo + halo azul arriba.
   box-shadow:
-    inset 0 0 0 1px rgb(120 175 235 / 0.10),
-    inset 0 0 1.5rem rgb(15 93 197 / 0.12),
-    0 0 0.5rem rgb(15 93 197 / 0.85),
-    0 0 1rem rgb(15 93 197 / 0.55),
-    0 0 2rem rgb(8 75 165 / 0.35),
-    0 0 3.5rem rgb(5 51 117 / 0.22),
+    inset 0 1px 0 rgb(120 175 235 / 0.05),
+
+    // Halo top tight (el más visible, próximo al rim)
+    0 -1px 6px rgb(45 130 230 / 0.30),
+    0 -2px 14px rgb(31 110 215 / 0.22),
+
+    // Halo top extendido (atmospheric bloom arriba)
+    0 -6px 28px rgb(20 95 200 / 0.18),
+
+    // Halo lateral CORTO (no extendido como antes — match ref)
+    -6px 0 18px -6px rgb(20 95 200 / 0.14),
+    6px 0 18px -6px rgb(20 95 200 / 0.14),
+
+    // Cast shadow negra (anchor abajo)
     0 14px 32px -14px rgb(0 0 0 / 0.55),
     0 4px 10px -3px rgb(0 0 0 / 0.30);
 
-  // Border 2px tipo metal pulido vía mask-composite — 3 capas stacked:
-  //   1. Sheen warm-white-cyan (banda especular que slide en hover).
-  //   2. Specular top sheen (vena cream-cyan sobre la mitad superior).
-  //   3. Base vertical lit blue (top bright #A5D2FF → bottom #1C72E0).
+  // Border via mask-composite — REWORK: azul PURO saturated (no cyan),
+  // falloff vertical RÁPIDO (a 5% ya casi navy), falloff lateral RÁPIDO
+  // (sides + bottom casi invisible). Padding 1.5px (no 2.5) — más fino,
+  // más premium. La ref muestra borde DELGADO definido, no banda gruesa.
   &::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    padding: 2px;
-    background:
-      // Sheen (anima en hover) — peak blue-cyan tinted, no white puro,
-      // para que el slide left→right sea visible pero no rompa la dominancia
-      // del royal blue.
-      linear-gradient(
-        90deg,
-        transparent 0%,
-        transparent 38%,
-        rgb(120 180 240 / 0.45) 44%,
-        rgb(180 215 250 / 0.85) 48%,
-        rgb(210 230 255 / 0.95) 50%,
-        rgb(180 215 250 / 0.85) 52%,
-        rgb(120 180 240 / 0.45) 56%,
-        transparent 62%,
-        transparent 100%
-      ),
-      // Specular top sheen — TENUE para no lavar el royal blue. Alphas
-      // bajadas (0.55→0.18, 0.20→0.08) porque el azul es más oscuro que
-      // el oro y un overlay claro lo blanquea entero. El "metal lit from
-      // above" tiene que respetar la dominancia del color base.
-      linear-gradient(
-        180deg,
-        rgb(145 195 235 / 0.18) 0%,
-        rgb(110 170 220 / 0.08) 35%,
-        transparent 60%
-      ),
-      // Base vertical lit ROYAL BLUE PROFUNDO — más oscuro, mismo hue 216°.
-      // Stops bajados en lightness; el azul queda más navy/menos brillante.
-      linear-gradient(
-        180deg,
-        #0e4fa0 0%,
-        #08418a 28%,
-        #053375 60%,
-        #032555 100%
-      );
-    background-size: 300% 100%, 100% 100%, 100% 100%;
-    background-position: 0% 50%, 0% 0%, 0% 0%;
+    padding: 1.5px;
+    background: linear-gradient(
+      180deg,
+      rgb(70 150 240 / 1) 0%,           // rim top: azul saturated (no cyan)
+      rgb(40 120 220 / 0.95) 2%,        // banda fina
+      rgb(20 75 175 / 0.85) 5%,         // start falloff (fast)
+      rgb(8 35 95 / 0.75) 12%,
+      rgb(4 22 65 / 0.70) 25%,
+      rgb(3 18 55 / 0.65) 50%,
+      rgb(3 16 50 / 0.60) 100%          // bottom: casi invisible
+    );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -281,37 +321,41 @@
     z-index: 1;
   }
 
-  // Dual specular hot-spots (~22% y ~60%) en top edge — catchlights pale-
-  // cyan-blue (tinted azul, no white). Alphas bajadas (0.78→0.50, 0.82→0.55)
-  // para que el royal blue del ring siga siendo dominante.
+  // DESTELLOS — tres puntos brillantes sutiles en el top edge, simulando
+  // microreflexiones especulares de luz cenital sobre metal pulido.
+  // Posiciones a ~22%, 50%, 78% del width. Cada uno: radial pequeño, alpha
+  // bajo, blur sutil. NO un underline marcado.
   &::after {
     content: '';
     position: absolute;
     top: -1px;
     left: 0;
-    width: 100%;
-    height: 5px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 12%,
-      rgb(160 200 240 / 0.28) 18%,
-      rgb(195 220 250 / 0.50) 23%,
-      rgb(160 200 240 / 0.28) 28%,
-      transparent 34%,
-      transparent 50%,
-      rgb(160 200 240 / 0.32) 55%,
-      rgb(195 220 250 / 0.55) 60%,
-      rgb(160 200 240 / 0.32) 65%,
-      transparent 72%,
-      transparent 100%
-    );
-    filter: blur(2.2px);
+    right: 0;
+    height: 3px;
+    background:
+      radial-gradient(
+        ellipse 8px 2px at 22% 50%,
+        rgb(220 235 255 / 0.85) 0%,
+        rgb(180 215 250 / 0.45) 40%,
+        transparent 80%
+      ),
+      radial-gradient(
+        ellipse 12px 2px at 50% 50%,
+        rgb(235 245 255 / 0.90) 0%,
+        rgb(200 225 252 / 0.55) 40%,
+        transparent 80%
+      ),
+      radial-gradient(
+        ellipse 8px 2px at 78% 50%,
+        rgb(220 235 255 / 0.85) 0%,
+        rgb(180 215 250 / 0.45) 40%,
+        transparent 80%
+      );
+    filter: blur(0.3px);
     pointer-events: none;
     z-index: 3;
   }
 
-  // Contenido proyectado sobre el ::before ring.
   > * {
     position: relative;
     z-index: 2;
@@ -492,7 +536,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
   flex: 1 1 auto;
 }
 
@@ -526,14 +570,15 @@
   flex: 1;
 }
 
-// Excluded feature — apagado pero legible, no fantasma.
+// Excluded feature — apagado pero legible, no fantasma. Match ref:
+// tono navy oscuro tintado (no gris neutro), todavía con tinte azul.
 .engagement-card__feature--excluded {
-  color: rgb(90 99 126);
+  color: rgb(108 122 156);
 
   .engagement-card__feature-icon {
-    background: rgb(76 85 112 / 0.18);
-    border-color: rgb(76 85 112 / 0.40);
-    color: rgb(76 85 112);
+    background: rgb(80 100 140 / 0.16);
+    border-color: rgb(95 115 155 / 0.45);
+    color: rgb(100 120 158);
     box-shadow: none;
   }
 }
@@ -617,21 +662,41 @@
   transition: background 250ms ease, border-color 250ms ease,
     box-shadow 250ms ease, transform 200ms ease;
 
-  // Standard: borde royal blue #1B84F0 más sobrio, sin halo interior.
-  background: rgb(6 23 59);
-  border: 1px solid rgb(27 132 240 / 0.50);
-  color: rgb(233 241 255);
+  // Standard CTA — rediseñado premium. Match ref:
+  //   • Borde azul MÁS BRIGHT definido (rim light, no apagado).
+  //   • Vertical gradient sutil top-bright bottom-darker (depth).
+  //   • Inset highlight banda arriba (luz cenital cayendo).
+  //   • Inset bottom shadow muy sutil (depth abajo).
+  //   • Sutil outer glow azul (1px range, no exagerado).
+  background: linear-gradient(
+    180deg,
+    rgb(12 34 78) 0%,
+    rgb(8 26 64) 60%,
+    rgb(6 20 52) 100%
+  );
+  border: 1.5px solid rgb(45 130 225 / 0.75);
+  color: rgb(225 235 252);
   box-shadow:
-    inset 0 1px 0 rgb(180 215 255 / 0.05),
-    0 1px 2px rgb(0 0 0 / 0.30);
+    inset 0 1px 0 rgb(160 200 250 / 0.18),
+    inset 0 4px 8px -3px rgb(60 145 240 / 0.18),
+    inset 0 -1px 0 rgb(0 0 0 / 0.40),
+    0 0 0.625rem -3px rgb(40 120 215 / 0.25),
+    0 2px 4px rgb(0 0 0 / 0.30);
 
   &:hover {
-    background: rgb(12 37 87);
-    border-color: rgb(27 132 240 / 0.75);
+    background: linear-gradient(
+      180deg,
+      rgb(18 50 110) 0%,
+      rgb(14 40 92) 60%,
+      rgb(10 32 78) 100%
+    );
+    border-color: rgb(55 145 240 / 0.90);
     box-shadow:
-      inset 0 1px 0 rgb(180 215 255 / 0.08),
-      0 0 0.625rem -3px rgb(27 132 240 / 0.28),
-      0 1px 2px rgb(0 0 0 / 0.30);
+      inset 0 1px 0 rgb(170 210 255 / 0.22),
+      inset 0 4px 8px -3px rgb(60 145 240 / 0.22),
+      inset 0 -1px 0 rgb(0 0 0 / 0.40),
+      0 0 0.875rem -2px rgb(45 130 225 / 0.40),
+      0 2px 4px rgb(0 0 0 / 0.30);
   }
 
   &:active {
@@ -639,39 +704,77 @@
   }
 }
 
-// CTA HIGHLIGHT: brass dorado limpio premium con bottom más amarillo (menos ámbar).
+// =============================================================================
+// CTA BRASS HIGHLIGHT — rediseñado premium. La versión anterior era un
+// "rectángulo dorado plano". Match ref:
+//   • Borde dorado MÁS CLARO definido (1.5px) — rim light visible.
+//   • Inset highlight arriba — banda de luz dentro del botón.
+//   • Vertical gradient top-bright bottom-dark con CONTRASTE alto.
+//   • Bottom inset shadow — depth.
+//   • Outer halo brass sutil.
+//   • Text rendering: weight 700 + letter-spacing positivo + font-smoothing
+//     antialiased + text-shadow sutil para evitar bordes raros.
+// =============================================================================
 .engagement-card__cta--highlight {
   padding: 0.875rem 1.25rem;
   font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.005em;
+  color: rgb(20 14 4);
+
+  // Vertical gradient con MAYOR contraste — match ref: top bright cream,
+  // bottom darker amber. La luz cae desde arriba (cenital).
   background: linear-gradient(
     180deg,
-    rgb(242 201 93) 0%,
-    rgb(232 182 66) 50%,
-    rgb(224 168 50) 100%
+    rgb(252 222 130) 0%,     // top: cream bright
+    rgb(245 205 95) 25%,
+    rgb(235 188 60) 60%,
+    rgb(218 162 38) 100%     // bottom: amber darker
   );
-  border: 1px solid rgb(224 168 50 / 0.75);
-  color: rgb(29 22 10);
+
+  // Borde claro definido — rim light dorado más bright que el fill
+  // (NO un borde más oscuro que se pierde).
+  border: 1.5px solid rgb(255 230 150 / 0.95);
+
+  // Layers de profundidad:
+  //   1. Inset top: highlight crisp (1px banda blanca tenue arriba)
+  //   2. Inset top wide: banda dorada bright (4px de bleed downward)
+  //   3. Inset bottom: shadow ámbar oscuro (depth abajo)
+  //   4. Outer halo brass: glow exterior sutil (1.25rem range)
+  //   5. Cast shadow: negra anchor abajo
   box-shadow:
-    inset 0 1px 0 rgb(255 250 230 / 0.55),
-    inset 0 -2px 4px rgb(120 80 0 / 0.06),
-    0 0.625rem 1.25rem rgb(232 182 66 / 0.30),
-    0 2px 4px rgb(0 0 0 / 0.25);
+    inset 0 1px 0 rgb(255 250 230 / 0.85),
+    inset 0 4px 8px -2px rgb(255 235 175 / 0.30),
+    inset 0 -1px 0 rgb(140 90 10 / 0.35),
+    inset 0 -6px 12px -4px rgb(120 75 5 / 0.20),
+    0 0.5rem 1.25rem -0.25rem rgb(232 175 50 / 0.40),
+    0 0 0.875rem rgb(232 175 50 / 0.18),
+    0 4px 10px -3px rgb(0 0 0 / 0.35),
+    0 1px 2px rgb(0 0 0 / 0.30);
+
+  // Render limpio del texto (Windows: dejar default, no forzar antialiased
+  // según memory_no_force_font_smoothing_on_windows). Solo aseguramos no
+  // pixel-snapping raro con sutil text-shadow.
+  text-shadow: 0 1px 0 rgb(255 240 200 / 0.35);
 
   &:hover {
     background: linear-gradient(
       180deg,
-      rgb(248 210 110) 0%,
-      rgb(240 192 80) 50%,
-      rgb(232 180 64) 100%
+      rgb(255 230 145 ) 0%,
+      rgb(250 215 110) 25%,
+      rgb(240 198 75) 60%,
+      rgb(225 172 50) 100%
     );
-    border-color: rgb(232 180 64 / 0.90);
+    border-color: rgb(255 235 165 / 1);
     box-shadow:
-      inset 0 1px 0 rgb(255 250 230 / 0.60),
-      inset 0 -2px 4px rgb(120 80 0 / 0.06),
-      0 0.75rem 1.5rem rgb(232 182 66 / 0.40),
-      0 2px 4px rgb(0 0 0 / 0.25);
+      inset 0 1px 0 rgb(255 250 230 / 0.90),
+      inset 0 4px 8px -2px rgb(255 235 175 / 0.35),
+      inset 0 -1px 0 rgb(140 90 10 / 0.35),
+      inset 0 -6px 12px -4px rgb(120 75 5 / 0.20),
+      0 0.75rem 1.5rem -0.25rem rgb(232 175 50 / 0.48),
+      0 0 1.125rem rgb(232 175 50 / 0.25),
+      0 4px 10px -3px rgb(0 0 0 / 0.35),
+      0 1px 2px rgb(0 0 0 / 0.30);
   }
 }
 
