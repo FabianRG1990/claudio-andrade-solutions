@@ -499,11 +499,11 @@ export type Engagement = {
   priceBreakdown?: string;
   cadence: string;
   description: string;
-  // Lista de capacidades concretas que incluye este engagement. Cada card
-  // tiene su propia lista — no hay matrix de inclusión cumulativa porque la
-  // oferta ya no es jerárquica (un landing NO incluye mantenimiento mensual,
-  // y mantenimiento NO incluye build de landing — son verticales distintas).
-  features: readonly string[];
+  // Lista completa de capacidades (las mismas 10 en los 3 cards) con flag
+  // included por item. Permite mostrar tier: items incluidos van con check
+  // cyan + texto blanco; los NO incluidos van con X gris + texto agrisado.
+  // Comunica de un vistazo qué cubre cada plan.
+  features: readonly { label: string; included: boolean }[];
   // Mensaje de escasez (solo en plan destacado) — refuerza cohorte limitada
   // que ya vive en `availability.ticketingNote`.
   scarcityNote?: string;
@@ -511,7 +511,10 @@ export type Engagement = {
   highlight?: boolean;
 };
 
-const sharedFeatures: readonly string[] = [
+// Lista canónica de 10 capacidades — se reutiliza en los 3 cards con un
+// flag included diferente por tier (Auditoría: 3, Proyecto cerrado: 8,
+// Acompañamiento: 10). Coincide con la imagen de referencia.
+const FEATURE_LABELS = [
   'Inventario de stack y procesos',
   'Hoja de ruta priorizada a 12 meses',
   'Sesión de cierre con dirección',
@@ -522,19 +525,23 @@ const sharedFeatures: readonly string[] = [
   'Garantía post-entrega de 30 días',
   'Equipo de producto fraccional',
   'CTO fraccional y soporte 24/7',
-];
+] as const;
+
+function featuresFor(includedCount: number): readonly { label: string; included: boolean }[] {
+  return FEATURE_LABELS.map((label, i) => ({ label, included: i < includedCount }));
+}
 
 export const engagements: Engagement[] = [
   {
     name: 'Auditoría',
-    icon: 'phosphorChartBarBold',
+    icon: 'phosphorMagnifyingGlassBold',
     originalPrice: '2.5K',
     price: '1.8K',
     cadence: 'trabajo de 2 a 4 semanas',
     priceBreakdown: '≈ 600 / semana',
     description:
       'Diagnóstico tecnológico completo, mapeo de stack, riesgos, oportunidades de automatización e IA, y hoja de ruta priorizada por impacto.',
-    features: sharedFeatures,
+    features: featuresFor(3),
     accent: 'foam',
   },
   {
@@ -546,21 +553,21 @@ export const engagements: Engagement[] = [
     priceBreakdown: '≈ 700 / semana',
     description:
       'Construcción integral de una solución concreta, estimación cerrada, hitos quincenales, demo viva en cada sprint y entrega documentada.',
-    features: sharedFeatures,
+    features: featuresFor(8),
     scarcityNote: '2 cupos abiertos · cohorte actual',
     accent: 'lagoon',
     highlight: true,
   },
   {
     name: 'Acompañamiento',
-    icon: 'phosphorHandshakeBold',
+    icon: 'phosphorUsersBold',
     originalPrice: '6K',
     price: '4.5K',
     cadence: 'mensual',
     priceBreakdown: '≈ 150 / día',
     description:
       'Compromiso a largo plazo: equipo de producto fraccional, sprints continuos, soporte 24/7 y prioridad en agenda. Ideal para empresas en crecimiento sostenido.',
-    features: sharedFeatures,
+    features: featuresFor(10),
     accent: 'coral',
   },
 ];

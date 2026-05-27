@@ -1,6 +1,24 @@
 .engagements {
   position: relative;
   padding-block: clamp(4rem, 5vw + 3rem, 10rem);
+  isolation: isolate;
+
+  // Ambient atmospheric glow — bloom limpio sin blur (que generaba halos
+  // borrosos artefactuales). Los radial-gradients ya son intrínsecamente
+  // suaves; el blur encima sumaba mancha, no profundidad.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(
+        ellipse 55% 50% at 50% 45%,
+        rgb(31 120 232 / 0.10) 0%,
+        transparent 70%
+      );
+    pointer-events: none;
+    z-index: -1;
+  }
 }
 
 .engagements__container {
@@ -122,70 +140,35 @@
   }
 }
 
-// SIDE CARDS (standard) — compact, less padding, minimal outer glow.
+// SIDE CARDS (standard) — fondo navy royal con borde azul eléctrico real.
 .engagement-card__inner {
   position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
-  // Padding REDUCIDO vs middle — side cards son visiblemente más chicos.
-  padding: 1.625rem 1.625rem 1.75rem;
-  border-radius: 1.125rem;
+  padding: 1.25rem 1.375rem 1.25rem;
+  border-radius: 0.875rem;
 
-  // § 1.2 Surface — saturated blue navy (sin warm tints).
-  background:
-    radial-gradient(ellipse 90% 50% at 50% -10%, rgb(180 220 255 / 0.04), transparent 65%),
-    linear-gradient(
-      180deg,
-      oklch(15% 0.07 252) 0%,
-      oklch(12% 0.06 252) 50%,
-      oklch(9% 0.05 252) 100%
-    );
+  // Surface — navy profundo según paleta hex (#071126 → #09162D).
+  background: linear-gradient(
+    180deg,
+    rgb(7 17 38) 0%,
+    rgb(9 22 45) 100%
+  );
 
-  // § 1.3 Border DEEPER BLUE — oklch 60% (no 72% celeste). Chroma 0.22 alto.
-  // Alpha 0.50 da intensidad sin saturar el card.
-  border: 1.5px solid oklch(60% 0.22 252 / 0.55);
+  // Border royal blue (#1C72E0), no cyan turquesa.
+  border: 1px solid rgb(28 114 224 / 0.55);
 
-  // § 1.4 Lighting — SIN halo difuso (per user feedback opción A).
-  // El halo upward box-shadow se removió porque la referencia muestra
-  // catchlights puntuales bien definidos, NO mist cenital difuso.
-  // Toda la luz del top vive en el ::before como sharp point.
+  // Glow exterior royal blue (#2B8FFF) bajo, sin teñir interior.
   box-shadow:
-    inset 0 1px 0 rgb(180 220 255 / 0.10),
-    inset 0 -1px 0 rgb(0 0 0 / 0.50),
-    0 0 8px -2px oklch(60% 0.22 252 / 0.15),
-    0 16px 36px -12px rgb(0 0 0 / 0.5),
-    0 4px 12px -3px rgb(0 0 0 / 0.35);
+    inset 0 1px 0 rgb(160 200 255 / 0.06),
+    inset 0 -1px 0 rgb(0 0 0 / 0.45),
+    0 0 0.75rem rgb(43 143 255 / 0.18),
+    0 0 1.75rem -0.5rem rgb(43 143 255 / 0.12),
+    0 14px 32px -14px rgb(0 0 0 / 0.55),
+    0 4px 10px -3px rgb(0 0 0 / 0.30);
 
   isolation: isolate;
-
-  // Specular catchlight ON THE BORDER LINE — fino, tenue, sobre la
-  // línea del top border (no debajo). El border del card es 1.5px;
-  // el destello vive en ese mismo grosor (height 2px, top: -0.5px
-  // para alinearse al center del border). Blur mínimo (1px) para que
-  // sea sharp como un highlight real, no un wash difuso.
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 92%;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgb(220 240 255 / 0.55) 12%,
-      rgb(250 254 255 / 1) 40%,
-      rgb(255 255 255 / 1) 50%,
-      rgb(250 254 255 / 1) 60%,
-      rgb(220 240 255 / 0.55) 88%,
-      transparent 100%
-    );
-    filter: blur(0.4px);
-    pointer-events: none;
-    z-index: 2;
-  }
 }
 
 // =============================================================================
@@ -193,51 +176,75 @@
 // =============================================================================
 .engagement-card--highlight {
   @media (min-width: 1024px) {
-    transform: translateY(-16px);
+    transform: translateY(-10px);
   }
 }
 
 .engagement-card--highlight .engagement-card__inner {
-  // Mismo padding que sides (la única diferencia visual con sides es el badge,
-  // scarcity y CTA dorados — body y border quedan en la misma familia azul).
-  padding: 1.625rem 1.625rem 1.75rem;
-  border-radius: 1.125rem;
+  padding: 1.25rem 1.375rem 1.25rem;
+  border-radius: 0.875rem;
 
-  // Surface idéntica a sides (cool navy).
-  background:
-    radial-gradient(ellipse 90% 50% at 50% -10%, rgb(180 220 255 / 0.05), transparent 65%),
-    linear-gradient(
-      180deg,
-      oklch(15% 0.07 252) 0%,
-      oklch(12% 0.06 252) 50%,
-      oklch(9% 0.05 252) 100%
-    );
+  // Surface featured — navy más rico (#081533 → #0A1A3A) sin blob interno.
+  background: linear-gradient(
+    180deg,
+    rgb(8 21 51) 0%,
+    rgb(10 26 58) 100%
+  );
 
-  // Border ligeramente más luminoso que sides (alpha 0.80 vs 0.55) pero misma familia.
-  border-color: oklch(64% 0.22 252 / 0.80);
+  // Border royal blue brillante (#1F78E8 base, accent #45A7FF en specular).
+  border-color: rgb(31 120 232 / 0.85);
 
-  // Shadows iguales a sides — sin extra glow.
+  // Premium border glow — halo royal blue exterior, sin manchar el interior.
   box-shadow:
-    inset 0 1px 0 rgb(180 220 255 / 0.12),
-    inset 0 -1px 0 rgb(0 0 0 / 0.50),
-    0 16px 36px -12px rgb(0 0 0 / 0.5),
-    0 4px 12px -3px rgb(0 0 0 / 0.35);
+    inset 0 1px 0 rgb(69 167 255 / 0.20),
+    inset 0 -1px 0 rgb(0 0 0 / 0.40),
+    0 0 0.875rem rgb(43 143 255 / 0.45),
+    0 0 2rem -0.25rem rgb(43 143 255 / 0.30),
+    0 0 3.5rem -0.75rem rgb(43 143 255 / 0.20),
+    0 14px 32px -14px rgb(0 0 0 / 0.55),
+    0 4px 10px -3px rgb(0 0 0 / 0.30);
 
-  // Catchlight superior idéntico a sides (mismo cool blue).
+  // Línea luminosa de specular en top border — royal blue accent.
   &::before {
-    width: 92%;
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 5%;
+    right: 5%;
     height: 1px;
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgb(220 240 255 / 0.55) 12%,
-      rgb(250 254 255 / 1) 40%,
-      rgb(255 255 255 / 1) 50%,
-      rgb(250 254 255 / 1) 60%,
-      rgb(220 240 255 / 0.55) 88%,
+      rgb(69 167 255 / 0.90) 50%,
       transparent 100%
     );
-    filter: blur(0.4px);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  // Energía adicional en esquinas superiores — sparkle royal blue puntual.
+  &::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background:
+      radial-gradient(
+        ellipse 16px 3px at 12% 50%,
+        rgb(180 215 255 / 0.85) 0%,
+        rgb(69 167 255 / 0.45) 40%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 16px 3px at 88% 50%,
+        rgb(180 215 255 / 0.85) 0%,
+        rgb(69 167 255 / 0.45) 40%,
+        transparent 70%
+      );
+    pointer-events: none;
+    z-index: 3;
   }
 }
 
@@ -251,7 +258,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 // Icon + title separados (no shared pill).
@@ -262,63 +269,64 @@
   min-width: 0;
 }
 
-// Icon container — pequeño cuadrado redondeado con icono dentro.
+// Icon container — caja navy royal con borde azul fino, icono claro.
 .engagement-card__icon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.5rem;
-  background:
-    linear-gradient(180deg, oklch(22% 0.06 252 / 0.95) 0%, oklch(15% 0.05 252 / 0.95) 100%);
-  border: 1px solid oklch(60% 0.22 252 / 0.55);
-  color: rgb(180 220 255);
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: 0.4375rem;
+  background: rgb(8 26 58);
+  border: 1px solid rgb(27 119 229 / 0.65);
+  color: rgb(75 176 255);
   box-shadow:
-    inset 0 1px 0 rgb(180 220 255 / 0.15),
-    0 1px 2px rgb(0 0 0 / 0.4);
+    inset 0 1px 0 rgb(180 215 255 / 0.08),
+    inset 0 0 10px rgb(43 143 255 / 0.06);
 }
 
-// Title text plano — sin background, justo al lado del icono.
+// Title text plano — peso 600, color #EDF3FF claro pero no duro.
 .engagement-card__name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
   line-height: 1;
-  color: rgb(var(--foam) / 0.92);
+  color: rgb(237 243 255);
   white-space: nowrap;
 }
 
 // Badge "El más popular" — SIMPLIFICADO. Solo border brass + texto + bg
 // muy oscuro. El user dijo "demasiado reflejo amarillo" — saco el radial
 // gradient fill brass.
+// Badge OUTLINE dorado sobre fondo dark transparente — premium, no pastilla
+// sólida. Match a la ref (re-corregido tras feedback explícito del user).
 .engagement-card__tag {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.3125rem;
   flex-shrink: 0;
-  padding: 0.375rem 0.6875rem;
+  padding: 0.25rem 0.625rem;
   border-radius: 9999px;
-  background: rgb(8 11 26 / 0.55);
-  border: 1px solid rgb(var(--brass) / 0.60);
-  color: rgb(244 220 170);
-  font-size: 0.5625rem;
+  background: rgb(240 188 61 / 0.05);
+  border: 1px solid rgb(240 188 61 / 0.55);
+  color: rgb(240 188 61);
+  font-size: 0.625rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
+  letter-spacing: 0.16em;
   white-space: nowrap;
   box-shadow:
-    inset 0 1px 0 rgb(var(--brass) / 0.08),
-    0 0 6px -2px rgb(var(--brass) / 0.20);
+    inset 0 0 6px rgb(240 188 61 / 0.05),
+    0 0 8px -3px rgb(240 188 61 / 0.15);
 }
 
 .engagement-card__tag-icon {
   display: inline-flex;
-  color: rgb(var(--brass));
+  color: rgb(240 188 61);
 }
 
 // =============================================================================
@@ -330,27 +338,28 @@
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  column-gap: 0.75rem;
-  row-gap: 0.25rem;
-  margin-bottom: 0.5rem;
+  column-gap: 0.625rem;
+  row-gap: 0.125rem;
+  margin-bottom: 0.25rem;
 }
 
 .engagement-card__price-original {
   font-family: var(--font-mono);
   font-size: 0.9375rem;
-  color: rgb(150 200 255 / 0.45);
+  color: rgb(106 115 144);
   text-decoration: line-through;
+  text-decoration-color: rgb(106 115 144 / 0.85);
   font-variant-numeric: tabular-nums;
 }
 
 .engagement-card__price {
   font-family: var(--font-display);
-  font-size: 3.5rem;
-  font-weight: 800;
+  font-size: 3.75rem;
+  font-weight: 700;
   line-height: 0.95;
   letter-spacing: -0.04em;
-  color: rgb(var(--foam));
-  text-shadow: 0 2px 6px rgb(0 0 0 / 0.4);
+  color: rgb(243 246 255);
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
 }
 
 // Middle card price: mismo tamaño que sides (ref muestra precios uniformes).
@@ -367,8 +376,8 @@
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(150 200 255);
+  letter-spacing: 0.18em;
+  color: rgb(45 141 255);
   white-space: nowrap;
 }
 
@@ -381,9 +390,10 @@
 .engagement-card__price-breakdown {
   position: relative;
   z-index: 2;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
   font-size: 0.8125rem;
-  color: rgb(var(--foam) / 0.55);
+  font-weight: 400;
+  color: rgb(106 115 144);
 }
 
 // =============================================================================
@@ -392,11 +402,13 @@
 .engagement-card__description {
   position: relative;
   z-index: 2;
-  margin: 0 0 1.5rem 0;
-  font-size: 0.9375rem;
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  font-weight: 400;
   line-height: 1.55;
-  color: rgb(var(--foam) / 0.75);
+  color: rgb(177 186 205);
   text-wrap: pretty;
+  max-width: 38ch;
 }
 
 // =============================================================================
@@ -406,21 +418,22 @@
   position: relative;
   z-index: 2;
   list-style: none;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.125rem 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.5rem;
   flex: 1 1 auto;
 }
 
 .engagement-card__feature {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.625rem;
-  font-size: 0.875rem;
+  font-size: 0.8375rem;
+  font-weight: 400;
   line-height: 1.4;
-  color: rgb(var(--foam) / 0.90);
+  color: rgb(192 201 218);
 }
 
 .engagement-card__feature-icon {
@@ -428,21 +441,31 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.125rem;
-  height: 1.125rem;
-  margin-top: 0.125rem;
+  width: 1.0625rem;
+  height: 1.0625rem;
   border-radius: 9999px;
-  background:
-    radial-gradient(circle, oklch(60% 0.22 252 / 0.55) 0%, oklch(60% 0.22 252 / 0.24) 60%, oklch(60% 0.22 252 / 0.10) 100%);
-  border: 1px solid oklch(60% 0.22 252 / 0.40);
-  color: rgb(190 225 255);
+  background: rgb(31 143 255 / 0.30);
+  border: 1px solid rgb(31 143 255 / 0.45);
+  color: rgb(108 200 255);
   box-shadow:
-    inset 0 0.5px 0 rgb(220 240 255 / 0.25),
-    0 0 4px -1px oklch(60% 0.22 252 / 0.40);
+    inset 0 0.5px 0 rgb(180 215 255 / 0.18),
+    0 0 4px -1px rgb(31 143 255 / 0.25);
 }
 
 .engagement-card__feature-label {
   flex: 1;
+}
+
+// Excluded feature — apagado pero legible, no fantasma.
+.engagement-card__feature--excluded {
+  color: rgb(90 99 126);
+
+  .engagement-card__feature-icon {
+    background: rgb(76 85 112 / 0.18);
+    border-color: rgb(76 85 112 / 0.40);
+    color: rgb(76 85 112);
+    box-shadow: none;
+  }
 }
 
 // =============================================================================
@@ -457,17 +480,29 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 1.25rem 0;
-  padding-top: 1rem;
-  // DIVIDER AZUL — no brass (corrección del user).
-  border-top: 1px solid oklch(60% 0.22 252 / 0.30);
-  font-size: 0.625rem;
-  // Weight 500 (no 600) — el user pidió tipografía menos pesada.
+  margin: 0 0 0.75rem 0;
+  padding-top: 0.625rem;
+  font-size: 0.65rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: rgb(244 220 170);
-  text-shadow: 0 0 6px rgb(var(--brass) / 0.35);
+  letter-spacing: 0.14em;
+  color: rgb(244 220 170 / 0.82);
+
+  // Divider con gradiente transparente — neutral, solo ordena.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(34 49 77) 50%,
+      transparent 100%
+    );
+  }
 }
 
 .engagement-card__scarcity-icon {
@@ -500,10 +535,10 @@
   gap: 0.5rem;
   width: 100%;
   padding: 0.875rem 1.25rem;
-  border-radius: 0.625rem;
+  border-radius: 0.5rem;
   font-family: var(--font-display);
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   letter-spacing: 0;
   text-transform: none;
@@ -512,17 +547,24 @@
   transition: background 250ms ease, border-color 250ms ease,
     box-shadow 250ms ease, transform 200ms ease;
 
-  // Standard: outlined electric. Sin outer glow — solo inset highlight + drop sutil.
-  background: oklch(60% 0.22 252 / 0.05);
-  border: 1px solid oklch(60% 0.22 252 / 0.60);
-  color: rgb(220 235 255);
+  // Standard: borde royal blue #1B84F0, fondo #06173B, glow interior #0C2557.
+  background: rgb(6 23 59);
+  border: 1px solid rgb(27 132 240 / 0.70);
+  color: rgb(233 241 255);
   box-shadow:
-    inset 0 1px 0 rgb(220 240 255 / 0.08),
-    0 1px 2px rgb(0 0 0 / 0.25);
+    inset 0 1px 0 rgb(180 215 255 / 0.06),
+    inset 0 0 0.875rem rgb(12 37 87 / 0.85),
+    0 0 0.5rem -3px rgb(27 132 240 / 0.22),
+    0 1px 2px rgb(0 0 0 / 0.30);
 
   &:hover {
-    background: oklch(60% 0.22 252 / 0.10);
-    border-color: oklch(64% 0.22 252 / 0.80);
+    background: rgb(12 37 87);
+    border-color: rgb(27 132 240 / 0.95);
+    box-shadow:
+      inset 0 1px 0 rgb(180 215 255 / 0.10),
+      inset 0 0 0.875rem rgb(27 132 240 / 0.18),
+      0 0 0.875rem -3px rgb(27 132 240 / 0.34),
+      0 1px 2px rgb(0 0 0 / 0.30);
   }
 
   &:active {
@@ -530,22 +572,39 @@
   }
 }
 
-// CTA HIGHLIGHT: solid brass plano (sin radial reflection, sin glow), mismas dims.
+// CTA HIGHLIGHT: brass dorado limpio premium (#F2C95D → #E8B642 → #D89A24).
 .engagement-card__cta--highlight {
   padding: 0.875rem 1.25rem;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0;
-  background: linear-gradient(180deg, oklch(82% 0.135 82) 0%, oklch(74% 0.13 80) 100%);
-  border-color: oklch(70% 0.13 80);
-  color: rgb(12 14 32);
+  background: linear-gradient(
+    180deg,
+    rgb(242 201 93) 0%,
+    rgb(232 182 66) 50%,
+    rgb(216 154 36) 100%
+  );
+  border: 1px solid rgb(216 154 36 / 0.75);
+  color: rgb(29 22 10);
   box-shadow:
-    inset 0 1px 0 rgb(255 248 220 / 0.45),
-    0 1px 2px rgb(0 0 0 / 0.3);
+    inset 0 1px 0 rgb(255 250 230 / 0.55),
+    inset 0 -2px 4px rgb(120 80 0 / 0.08),
+    0 0.625rem 1.25rem rgb(232 182 66 / 0.30),
+    0 2px 4px rgb(0 0 0 / 0.25);
 
   &:hover {
-    background: linear-gradient(180deg, oklch(84% 0.135 82) 0%, oklch(76% 0.13 80) 100%);
-    border-color: oklch(72% 0.13 80);
+    background: linear-gradient(
+      180deg,
+      rgb(248 210 110) 0%,
+      rgb(240 192 80) 50%,
+      rgb(226 164 50) 100%
+    );
+    border-color: rgb(226 164 50 / 0.90);
+    box-shadow:
+      inset 0 1px 0 rgb(255 250 230 / 0.60),
+      inset 0 -2px 4px rgb(120 80 0 / 0.08),
+      0 0.75rem 1.5rem rgb(232 182 66 / 0.40),
+      0 2px 4px rgb(0 0 0 / 0.25);
   }
 }
 

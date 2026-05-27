@@ -37,7 +37,7 @@
             <div class="engagement-card__head">
               <div class="engagement-card__head-left">
                 <span class="engagement-card__icon" aria-hidden="true">
-                  <ng-icon [name]="t.icon" size="14" />
+                  <ng-icon [name]="t.icon" size="18" />
                 </span>
                 <h3 class="engagement-card__name">{{ t.name }}</h3>
               </div>
@@ -72,12 +72,19 @@
             <p class="engagement-card__description">{{ t.description }}</p>
 
             <ul class="engagement-card__features">
-              @for (label of t.features; track label) {
-                <li class="engagement-card__feature">
+              @for (f of t.features; track f.label) {
+                <li
+                  class="engagement-card__feature"
+                  [class.engagement-card__feature--excluded]="!f.included"
+                >
                   <span class="engagement-card__feature-icon" aria-hidden="true">
-                    <ng-icon name="phosphorCheckBold" size="11" />
+                    @if (f.included) {
+                      <ng-icon name="phosphorCheckBold" size="11" />
+                    } @else {
+                      <ng-icon name="phosphorXBold" size="10" />
+                    }
                   </span>
-                  <span class="engagement-card__feature-label">{{ label }}</span>
+                  <span class="engagement-card__feature-label">{{ f.label }}</span>
                 </li>
               }
             </ul>
@@ -85,7 +92,7 @@
             @if (t.scarcityNote) {
               <p class="engagement-card__scarcity" role="status">
                 <span class="engagement-card__scarcity-icon" aria-hidden="true">
-                  <ng-icon name="phosphorCircleFill" size="7" />
+                  <ng-icon name="phosphorUsersBold" size="13" />
                 </span>
                 {{ t.scarcityNote }}
               </p>

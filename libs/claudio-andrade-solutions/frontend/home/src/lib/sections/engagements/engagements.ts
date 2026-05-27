@@ -4,12 +4,13 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorArrowRightBold,
   phosphorArrowUpRightBold,
-  phosphorChartBarBold,
   phosphorCheckBold,
-  phosphorHandshakeBold,
+  phosphorMagnifyingGlassBold,
   phosphorRocketBold,
+  phosphorUsersBold,
+  phosphorXBold,
 } from '@ng-icons/phosphor-icons/bold';
-import { phosphorCircleFill, phosphorStarFill } from '@ng-icons/phosphor-icons/fill';
+import { phosphorStarFill } from '@ng-icons/phosphor-icons/fill';
 
 import { engagements } from '@cas-ui-shared/data/data';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
@@ -28,11 +29,11 @@ import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.
     provideIcons({
       phosphorArrowRightBold,
       phosphorArrowUpRightBold,
-      phosphorChartBarBold,
       phosphorCheckBold,
-      phosphorHandshakeBold,
+      phosphorMagnifyingGlassBold,
       phosphorRocketBold,
-      phosphorCircleFill,
+      phosphorUsersBold,
+      phosphorXBold,
       phosphorStarFill,
     }),
   ],
