@@ -222,7 +222,8 @@
     z-index: 2;
   }
 
-  // Energía adicional en esquinas superiores — sparkle royal blue puntual.
+  // Catchlight continuo en top edge — banda con peaks suaves en corners,
+  // no dos puntos discretos. Da el "specular arc" del ref.
   &::after {
     content: '';
     position: absolute;
@@ -232,16 +233,24 @@
     height: 4px;
     background:
       radial-gradient(
-        ellipse 16px 3px at 12% 50%,
-        rgb(180 215 255 / 0.85) 0%,
-        rgb(69 167 255 / 0.45) 40%,
-        transparent 70%
+        ellipse 60px 4px at 12% 50%,
+        rgb(180 215 255 / 0.65) 0%,
+        rgb(69 167 255 / 0.30) 50%,
+        transparent 100%
       ),
       radial-gradient(
-        ellipse 16px 3px at 88% 50%,
-        rgb(180 215 255 / 0.85) 0%,
-        rgb(69 167 255 / 0.45) 40%,
-        transparent 70%
+        ellipse 60px 4px at 88% 50%,
+        rgb(180 215 255 / 0.65) 0%,
+        rgb(69 167 255 / 0.30) 50%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        rgb(69 167 255 / 0.25) 30%,
+        rgb(69 167 255 / 0.30) 50%,
+        rgb(69 167 255 / 0.25) 70%,
+        transparent 100%
       );
     pointer-events: none;
     z-index: 3;
@@ -354,7 +363,7 @@
 
 .engagement-card__price {
   font-family: var(--font-display);
-  font-size: 3.75rem;
+  font-size: 4.125rem;
   font-weight: 700;
   line-height: 0.95;
   letter-spacing: -0.04em;
@@ -408,7 +417,7 @@
   line-height: 1.55;
   color: rgb(177 186 205);
   text-wrap: pretty;
-  max-width: 38ch;
+  max-width: 46ch;
 }
 
 // =============================================================================
@@ -547,23 +556,20 @@
   transition: background 250ms ease, border-color 250ms ease,
     box-shadow 250ms ease, transform 200ms ease;
 
-  // Standard: borde royal blue #1B84F0, fondo #06173B, glow interior #0C2557.
+  // Standard: borde royal blue #1B84F0 más sobrio, sin halo interior.
   background: rgb(6 23 59);
-  border: 1px solid rgb(27 132 240 / 0.70);
+  border: 1px solid rgb(27 132 240 / 0.50);
   color: rgb(233 241 255);
   box-shadow:
-    inset 0 1px 0 rgb(180 215 255 / 0.06),
-    inset 0 0 0.875rem rgb(12 37 87 / 0.85),
-    0 0 0.5rem -3px rgb(27 132 240 / 0.22),
+    inset 0 1px 0 rgb(180 215 255 / 0.05),
     0 1px 2px rgb(0 0 0 / 0.30);
 
   &:hover {
     background: rgb(12 37 87);
-    border-color: rgb(27 132 240 / 0.95);
+    border-color: rgb(27 132 240 / 0.75);
     box-shadow:
-      inset 0 1px 0 rgb(180 215 255 / 0.10),
-      inset 0 0 0.875rem rgb(27 132 240 / 0.18),
-      0 0 0.875rem -3px rgb(27 132 240 / 0.34),
+      inset 0 1px 0 rgb(180 215 255 / 0.08),
+      0 0 0.625rem -3px rgb(27 132 240 / 0.28),
       0 1px 2px rgb(0 0 0 / 0.30);
   }
 
@@ -572,7 +578,7 @@
   }
 }
 
-// CTA HIGHLIGHT: brass dorado limpio premium (#F2C95D → #E8B642 → #D89A24).
+// CTA HIGHLIGHT: brass dorado limpio premium con bottom más amarillo (menos ámbar).
 .engagement-card__cta--highlight {
   padding: 0.875rem 1.25rem;
   font-size: 0.9375rem;
@@ -582,13 +588,13 @@
     180deg,
     rgb(242 201 93) 0%,
     rgb(232 182 66) 50%,
-    rgb(216 154 36) 100%
+    rgb(224 168 50) 100%
   );
-  border: 1px solid rgb(216 154 36 / 0.75);
+  border: 1px solid rgb(224 168 50 / 0.75);
   color: rgb(29 22 10);
   box-shadow:
     inset 0 1px 0 rgb(255 250 230 / 0.55),
-    inset 0 -2px 4px rgb(120 80 0 / 0.08),
+    inset 0 -2px 4px rgb(120 80 0 / 0.06),
     0 0.625rem 1.25rem rgb(232 182 66 / 0.30),
     0 2px 4px rgb(0 0 0 / 0.25);
 
@@ -597,12 +603,12 @@
       180deg,
       rgb(248 210 110) 0%,
       rgb(240 192 80) 50%,
-      rgb(226 164 50) 100%
+      rgb(232 180 64) 100%
     );
-    border-color: rgb(226 164 50 / 0.90);
+    border-color: rgb(232 180 64 / 0.90);
     box-shadow:
       inset 0 1px 0 rgb(255 250 230 / 0.60),
-      inset 0 -2px 4px rgb(120 80 0 / 0.08),
+      inset 0 -2px 4px rgb(120 80 0 / 0.06),
       0 0.75rem 1.5rem rgb(232 182 66 / 0.40),
       0 2px 4px rgb(0 0 0 / 0.25);
   }
