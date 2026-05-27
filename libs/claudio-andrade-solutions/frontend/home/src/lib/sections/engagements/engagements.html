@@ -33,18 +33,18 @@
           [attr.data-accent]="t.accent"
         >
           <div class="engagement-card__inner">
-            <!-- Head: icon + title + opcional badge "El más popular" -->
+            <!-- Head: icon container + plain title (separados) + badge optional -->
             <div class="engagement-card__head">
               <div class="engagement-card__head-left">
                 <span class="engagement-card__icon" aria-hidden="true">
-                  <ng-icon [name]="t.icon" size="20" />
+                  <ng-icon [name]="t.icon" size="14" />
                 </span>
                 <h3 class="engagement-card__name">{{ t.name }}</h3>
               </div>
               @if (t.highlight) {
                 <span class="engagement-card__tag">
                   <span class="engagement-card__tag-icon" aria-hidden="true">
-                    <ng-icon name="phosphorStarFill" size="11" />
+                    <ng-icon name="phosphorStarFill" size="10" />
                   </span>
                   El más popular
                 </span>
@@ -60,7 +60,10 @@
                 class="engagement-card__price"
                 [class.engagement-card__price--word]="!t.price.startsWith('$')"
               >{{ t.price }}</span>
-              <span class="engagement-card__cadence">{{ t.cadence }}</span>
+              <span
+                class="engagement-card__cadence"
+                [class.engagement-card__cadence--block]="t.cadence.length > 14"
+              >{{ t.cadence }}</span>
             </div>
             @if (t.priceBreakdown) {
               <p class="engagement-card__price-breakdown">{{ t.priceBreakdown }}</p>
@@ -82,7 +85,7 @@
             @if (t.scarcityNote) {
               <p class="engagement-card__scarcity" role="status">
                 <span class="engagement-card__scarcity-icon" aria-hidden="true">
-                  <ng-icon name="phosphorUsersBold" size="13" />
+                  <ng-icon name="phosphorCircleFill" size="7" />
                 </span>
                 {{ t.scarcityNote }}
               </p>
@@ -96,10 +99,7 @@
               >
                 <span class="engagement-card__cta-label">Elegir {{ t.name }}</span>
                 <span class="engagement-card__cta-icon" aria-hidden="true">
-                  <ng-icon
-                    name="phosphorArrowRightBold"
-                    [size]="t.highlight ? '16' : '12'"
-                  />
+                  <ng-icon name="phosphorArrowRightBold" size="14" />
                 </span>
               </a>
             </div>

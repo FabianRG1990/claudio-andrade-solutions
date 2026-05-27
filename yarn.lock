@@ -8766,10 +8766,12 @@ __metadata:
     eslint-config-prettier: "npm:^10.0.0"
     eslint-plugin-playwright: "npm:^1.6.2"
     express: "npm:^4.21.2"
+    extract-colors: "npm:^4.2.1"
     jiti: "npm:2.4.2"
     jsdom: "npm:~22.1.0"
     jsonc-eslint-parser: "npm:^2.1.0"
     nx: "patch:nx@npm%3A22.7.0#~/.yarn/patches/nx-npm-22.7.0-93822c10a7.patch"
+    pixelmatch: "npm:^7.2.0"
     png-to-ico: "npm:^3.0.1"
     pngjs: "npm:^7.0.0"
     prettier: "npm:^3.8.1"
@@ -10579,6 +10581,13 @@ __metadata:
     type-is: "npm:^2.0.1"
     vary: "npm:^1.1.2"
   checksum: 10c0/45e8c841ad188a41402ddcd1294901e861ee0819f632fb494f2ed344ef9c43315d294d443fb48d594e6586a3b779785120f43321417adaef8567316a55072949
+  languageName: node
+  linkType: hard
+
+"extract-colors@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "extract-colors@npm:4.2.1"
+  checksum: 10c0/7a0d865598d42174911e784e31b4e7c059e3eed703a0cf78c377160a783dfb8d2b167f3fa52e5258620b310f0748b130ba3dd46529fc1fca0c753fd8e0c8d811
   languageName: node
   linkType: hard
 
@@ -14714,6 +14723,17 @@ __metadata:
     "@napi-rs/nice":
       optional: true
   checksum: 10c0/5de5673bfea6ed045e4fe5b63c1bfab0f287862d689a3ebfb15848ff20b78ecff0735fe673edb209a921b113bb0b3b3455f8bb710cb3b78f66178f8785686e8f
+  languageName: node
+  linkType: hard
+
+"pixelmatch@npm:^7.2.0":
+  version: 7.2.0
+  resolution: "pixelmatch@npm:7.2.0"
+  dependencies:
+    pngjs: "npm:^7.0.0"
+  bin:
+    pixelmatch: bin/pixelmatch
+  checksum: 10c0/d8a2454ecf3a977738d6050ed087effa0a9f1b53a0da92d37381a74bb04db5c21e14cfcd41965fbdac4a5967aa5ff2525e2afe9826a77eae043b8339dafc53b6
   languageName: node
   linkType: hard
 
