@@ -262,37 +262,13 @@
   isolation: isolate;
   overflow: visible;
 
-  // PASO 2: BLOOM LUMINOSO INTERNO arriba — TONALIDADES VARIADAS de azul
-  // alrededor de la línea (NO un bloom parejo / fluorescente). Tres capas
-  // radiales superpuestas con shades distintos para realismo orgánico.
-  //
-  // Bg base: #010d2a (color exacto del user).
-  // Bloom core: #397fc3 derivado (mismo hue que la línea).
-  background:
-    // Capa 1: core estrecho color del propio línea (sutil pulse)
-    radial-gradient(
-      ellipse 30% 2% at 50% 0%,
-      rgb(57 127 195 / 0.60) 0%,
-      transparent 100%
-    ),
-    // Capa 2: medium spread con azul más profundo (diferente tonalidad)
-    radial-gradient(
-      ellipse 50% 3.5% at 50% 0%,
-      rgb(35 100 175 / 0.40) 0%,
-      transparent 100%
-    ),
-    // Capa 3: wide haze atmosférico (azul oscuro casi imperceptible)
-    radial-gradient(
-      ellipse 75% 6% at 50% 0%,
-      rgb(20 65 130 / 0.22) 0%,
-      transparent 100%
-    ),
-    // Bg base navy puro
-    linear-gradient(
-      180deg,
-      rgb(1 13 42) 0%,
-      rgb(2 16 48) 100%
-    );
+  // Surface plano: solo bg navy #010d2a. El bloom va en ::after con
+  // filter:blur para difusión REAL (no fakeada con gradient stops).
+  background: linear-gradient(
+    180deg,
+    rgb(1 13 42) 0%,
+    rgb(2 16 48) 100%
+  );
 
   border: 1px solid transparent;  // ::before provee la línea cian visible.
 
@@ -304,8 +280,8 @@
     0 4px 10px -3px rgb(0 0 0 / 0.30);
 
   // Border line — color exacto #397fc3 (rgb 57, 127, 195) como predominante.
-  // Solo un leve crest ligeramente más claro al top (specular), degradación
-  // hacia abajo para que la parte inferior no mantenga el mismo grado.
+  // Sin crest brillante exagerado: la línea es predominantemente #397fc3
+  // sostenido, con falloff hacia abajo.
   &::before {
     content: '';
     position: absolute;
@@ -314,12 +290,12 @@
     padding: 1px;
     background: linear-gradient(
       180deg,
-      rgb(110 175 220 / 0.95) 0%,       // crest top: levemente más claro que #397fc3
-      rgb(80 150 210 / 0.92) 3%,
-      rgb(57 127 195 / 0.90) 10%,       // #397fc3 — color predominante
-      rgb(52 118 185 / 0.85) 30%,
-      rgb(47 108 172 / 0.78) 60%,
-      rgb(42 98 158 / 0.72) 100%        // bottom: degrade pero visible
+      rgb(70 140 200 / 0.95) 0%,        // crest sutil (no muy marcado)
+      rgb(57 127 195 / 0.95) 4%,        // #397fc3 exacto (color predominante)
+      rgb(57 127 195 / 0.90) 20%,       // sustain #397fc3 zona alta
+      rgb(52 118 185 / 0.82) 45%,
+      rgb(47 108 172 / 0.75) 75%,
+      rgb(42 98 158 / 0.70) 100%        // bottom: degrade pero visible
     );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
@@ -330,8 +306,31 @@
     z-index: 1;
   }
 
-  // ::after queda PENDIENTE — el bloom luminoso del top vendrá en el siguiente
-  // paso, después de aprobar la línea del borde.
+  // PASO 2b: BLOOM/LUCES del top — azul INTENSO y muchísimo más DIFUMINADO.
+  // Implementado como ::after con filter:blur real (no gradient stops fake).
+  // El blur smear genera la difusión continua que se ve en la ref.
+  //
+  // z-index 0 = detrás del border line (::before z-index 1) y del contenido
+  // (z-index 2). El bloom queda enterrado en la surface, solo "se asoma"
+  // donde tiene alpha > 0.
+  &::after {
+    content: '';
+    position: absolute;
+    top: -6px;        // extiende fuera del card top para que blur no se corte
+    left: 0;
+    right: 0;
+    height: 55px;     // reducido para que bloom no invada el área del contenido
+    background: radial-gradient(
+      ellipse 45% 100% at 50% 6px,
+      rgb(5 90 220 / 0.50) 0%,
+      rgb(0 75 200 / 0.32) 30%,
+      rgb(0 60 175 / 0.16) 65%,
+      transparent 100%
+    );
+    filter: blur(7px);
+    pointer-events: none;
+    z-index: 0;
+  }
 
   > * {
     position: relative;
