@@ -272,10 +272,25 @@
 
   border: 1px solid transparent;  // ::before provee la línea cian visible.
 
-  // Shadow baseline mínimo. Nieblas externas vienen en PASO 3.
+  // Box-shadow: nieblas externas azul intenso + cast shadow.
+  // Mismo color que el bloom top (azul intenso) pero AÚN MÁS TENUE — el top
+  // tiene un protagonismo, los lados/bottom son atmospheric muy sutil.
+  // Alpha referencia: top bloom peak ~0.50 / bottom peak ~0.20 / lateral peak ~0.14.
   box-shadow:
+    // Inset top hairline sutil
     inset 0 1px 0 rgb(140 180 230 / 0.04),
-    inset 0 -1px 0 rgb(0 0 0 / 0.40),
+
+    // Niebla externa BOTTOM — halo azul que sale del borde inferior
+    0 5px 16px -3px rgb(5 90 220 / 0.20),
+    0 12px 32px -8px rgb(0 70 195 / 0.10),
+
+    // Niebla externa LATERAL — más tenue (atmospheric envolvente)
+    -4px 0 14px -3px rgb(5 90 220 / 0.14),
+    4px 0 14px -3px rgb(5 90 220 / 0.14),
+    -8px 0 22px -6px rgb(0 70 195 / 0.07),
+    8px 0 22px -6px rgb(0 70 195 / 0.07),
+
+    // Cast shadow negra (anchor anatómico)
     0 14px 32px -14px rgb(0 0 0 / 0.55),
     0 4px 10px -3px rgb(0 0 0 / 0.30);
 
