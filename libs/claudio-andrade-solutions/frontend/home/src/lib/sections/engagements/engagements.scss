@@ -156,15 +156,15 @@
     rgb(9 22 45) 100%
   );
 
-  // Border royal blue profundo oscuro (#07419A) — tono exacto pedido.
-  border: 1px solid rgb(7 65 154 / 0.80);
+  // Border royal blue PROFUNDO oscuro (#053375) — más oscuro que #07419A.
+  border: 1px solid rgb(5 51 117 / 0.95);
 
-  // Glow exterior #07419A family bajo, sin teñir interior.
+  // Glow exterior #053375 family — más oscuro, intensidad mantenida.
   box-shadow:
-    inset 0 1px 0 rgb(160 200 255 / 0.06),
+    inset 0 1px 0 rgb(140 180 230 / 0.06),
     inset 0 -1px 0 rgb(0 0 0 / 0.45),
-    0 0 0.75rem rgb(7 65 154 / 0.26),
-    0 0 1.75rem -0.5rem rgb(7 65 154 / 0.16),
+    0 0 0.875rem rgb(10 70 150 / 0.40),
+    0 0 2rem -0.5rem rgb(10 70 150 / 0.24),
     0 14px 32px -14px rgb(0 0 0 / 0.55),
     0 4px 10px -3px rgb(0 0 0 / 0.30);
 
@@ -211,12 +211,17 @@
   // El border solid se elimina; el ::before mask-composite lo provee.
   border: none;
 
-  // Inner ring tenue + UPWARD HALO (3 layers, negative Y, negative spread).
+  // NEON GLOW 360° — 4 capas concéntricas en familia #053375 (el mismo
+  // tono que los side cards). De brighter cerca del border (color caliente
+  // de neón) hacia darker en el halo exterior. Sin offsets Y, simétrico
+  // alrededor del card.
   box-shadow:
-    inset 0 0 0 1px rgb(165 210 255 / 0.06),
-    0 -2px 6px -1px rgb(165 210 255 / 0.38),
-    0 -5px 14px -3px rgb(100 180 255 / 0.22),
-    0 -12px 28px -10px rgb(43 143 255 / 0.12),
+    inset 0 0 0 1px rgb(120 175 235 / 0.10),
+    inset 0 0 1.5rem rgb(15 93 197 / 0.12),
+    0 0 0.5rem rgb(15 93 197 / 0.85),
+    0 0 1rem rgb(15 93 197 / 0.55),
+    0 0 2rem rgb(8 75 165 / 0.35),
+    0 0 3.5rem rgb(5 51 117 / 0.22),
     0 14px 32px -14px rgb(0 0 0 / 0.55),
     0 4px 10px -3px rgb(0 0 0 / 0.30);
 
@@ -256,15 +261,14 @@
         rgb(110 170 220 / 0.08) 35%,
         transparent 60%
       ),
-      // Base vertical lit ROYAL BLUE — centrado en #07419A (tono pedido).
-      // Top más claro (luz cenital), bottom más oscuro (sombra). Familia
-      // royal blue profundo oscuro, alta saturación.
+      // Base vertical lit ROYAL BLUE PROFUNDO — más oscuro, mismo hue 216°.
+      // Stops bajados en lightness; el azul queda más navy/menos brillante.
       linear-gradient(
         180deg,
-        #0f5dc5 0%,
-        #0a4fb1 28%,
-        #07419a 60%,
-        #053375 100%
+        #0e4fa0 0%,
+        #08418a 28%,
+        #053375 60%,
+        #032555 100%
       );
     background-size: 300% 100%, 100% 100%, 100% 100%;
     background-position: 0% 50%, 0% 0%, 0% 0%;
