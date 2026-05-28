@@ -214,6 +214,37 @@
 }
 
 // =============================================================================
+// SIDE CARDS — TOP CEILING-LIGHT BLOOM (muy sutil, premium)
+// Efecto premium replicado de la imagen referencia: una luminosidad muy tenue
+// difusa en el top del card, como si entrara luz cenital por una ventana
+// invisible arriba. Centrado horizontal, decae a nada por el ~55% de la altura.
+//
+// Técnica: ::after con radial ellipse cyan-blanca de baja opacidad. Ubicado
+// dentro del 1px border (inset: 1px) con corners solo arriba redondeados para
+// que el fade vertical sea limpio.
+//
+// Solo aplica a side cards (excluye highlight) — el middle ya tiene su propio
+// ::after bloom externo + internal washes vía box-shadow inset.
+// =============================================================================
+.engagement-card:not(.engagement-card--highlight) .engagement-card__inner::after {
+  content: '';
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 55%;
+  border-radius: 0.875rem 0.875rem 0 0;
+  background: radial-gradient(
+    ellipse 78% 100% at 50% 0%,
+    rgb(160 210 255 / 0.075) 0%,
+    rgb(140 195 250 / 0.048) 22%,
+    rgb(120 180 240 / 0.026) 48%,
+    rgb(100 165 225 / 0.010) 72%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+// =============================================================================
 // MIDDLE / HIGHLIGHT — bigger, more lift, INNER + OUTER border glow
 // =============================================================================
 .engagement-card--highlight {
