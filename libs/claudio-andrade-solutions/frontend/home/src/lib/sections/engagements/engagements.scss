@@ -852,102 +852,133 @@
 //     antialiased + text-shadow sutil para evitar bordes raros.
 // =============================================================================
 .engagement-card__cta--highlight {
-  // El brass usa su propio border solid dorado — quitamos el ::before del
-  // base que pinta el gradient celeste, no aplica aquí.
-  &::before { display: none; }
+  // Forma: medium radius — ni pill ni cuadrado.
+  border-radius: 0.5rem;
 
-  // Layout: padding asimétrico — texto offset del borde izquierdo (corrido
-  // hacia el centro), arrow al borde derecho. El space-between heredado del
-  // .cta base distribuye el gap entre label y arrow. NO usar justify-content:
-  // center (centra ambos JUNTOS, no es lo que el ref muestra).
-  padding: 1rem 1.5rem 1rem 2.75rem;
-  font-size: 1rem;
-  // Weight 700 (Roboto Bold real, archivo /fonts/roboto-700.woff2 cargado).
+  // Layout balanceado, dimensiones intactas.
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  // Weight 700 — texto firme premium (match ref).
   font-weight: 700;
-  letter-spacing: 0.032em;
+  letter-spacing: 0.015em;
 
-  // ENGRAVED TEXT — canonical pattern (30 seconds of code, Sitepoint):
-  // dark color + SINGLE light text-shadow offset down. Una sola sombra
-  // light simula la luz cenital reflectando del borde inferior del grabado.
-  // El dual-shadow anterior era improvisación; el canonical es ÚNICO.
-  color: rgb(40 25 0);
-  text-shadow: 0 1px 0 rgb(255 245 200 / 0.55);
+  // Texto: brown deep contra el oro (NO negro plano que se ve duro).
+  // Sutil text-shadow cream para el efecto grabado controlado.
+  color: rgb(38, 22, 2);
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.40);
 
-  // BACKGROUND — "lingote de oro" real, NO yellow plano saturado.
-  // Paleta copper/gold/bronze rica:
-  //   • highlight rim rgb(255 245 210) cream-white
-  //   • bright gold rgb(245 215 145)
-  //   • true gold rgb(210 170 90) mid
-  //   • amber bronze rgb(180 140 70)
-  //   • bronze deep rgb(150 110 45)
-  //   • dark bronze rgb(110 75 25)
-  // Layer 1: radial spotlight cream-bright en el centro (degrada a los lados).
-  // Layer 2: vertical gradient lingote — top cream-white reflection, fade
-  // por gold transition, mid true-gold, bottom bronze deep.
+  // BACKGROUND — polished metal: spotlight RADIAL HORIZONTAL (no vertical).
+  //
+  // El ref tiene el bright en el CENTRO (mid-x, mid-y) y dark en los LADOS
+  // (left/right edges). Evidencia: pixel sample del ref a mid-y mostró
+  // center rgb(251,218,132), leftMid rgb(184,150,85), rightMid rgb(211,158,74)
+  // — diferencia +70 lum centro vs lados. Verticalmente la variación es
+  // mínima (210-240 lum). Esto es la firma de un "polished metal sheen"
+  // donde la luz reflecta del centro y decae hacia los bordes laterales.
+  //
+  // Layer 1 (top, subtle): rim light top — solo banda cream en el borde
+  // superior (~22% del alto), fade out. Match al rim cenital del ref.
+  // Layer 2 (base): radial ellipse 70% width × 110% height at 50% 50% —
+  // bright center, oscuro hacia los lados. La ellipse más ancha que alta
+  // hace que el spotlight se "esparza horizontalmente".
   background:
-    radial-gradient(
-      ellipse 58% 95% at 50% 48%,
-      rgb(255 240 195 / 0.45) 0%,
-      rgb(248 218 145 / 0.22) 35%,
-      rgb(225 188 105 / 0.08) 62%,
-      transparent 82%
-    ),
     linear-gradient(
       180deg,
-      rgb(255 240 195) 0%,        // top: cream-white reflection (rim crest)
-      rgb(245 215 140) 12%,       // bright gold
-      rgb(225 185 100) 32%,       // gold transition
-      rgb(200 160 75) 60%,        // true gold (mid)
-      rgb(170 130 55) 85%,        // amber bronze
-      rgb(145 105 40) 100%        // bronze deep
+      rgba(255, 248, 215, 0.45) 0%,
+      transparent 22%
+    ),
+    radial-gradient(
+      ellipse 72% 115% at 50% 50%,
+      #ecc975 0%,        // centro: gold cálido bright
+      #d2a548 35%,
+      #b08230 65%,
+      #8a6018 92%,       // edges: bronze deep
+      #7a5215 100%
     );
 
-  // Border: gold definido (NO yellow neón) — 2px, brass real.
-  border: 2px solid rgb(245 215 140);
+  // Border luminoso (vuelve a tener presencia). 1.5px + alpha alto + tono
+  // más cream que el top stop = rim light visible.
+  border: 1.5px solid rgba(255, 220, 130, 0.92);
 
-  // CANONICAL SHADOW STACK (Josh Comeau / Tobias Ahlin pattern):
-  //   • 2 insets controlados: rim highlight top + base shadow bottom.
-  //   • Cast shadow LAYERED — misma hue (bronze-gold, color-matched al
-  //     botón, NO black puro que desatura), misma fuente de luz (offset
-  //     vertical positivo = luz cenital), blur progresivo 1→2→4→8 (Ahlin).
-  //   • Total: 6 shadows coherentes, NO 8 con hues distintas peleando.
-  //   • Shadow hue base: hsl(35deg 65% 22%) ≈ deep bronze (familia del oro).
+  // Z-index isolation para que ::before quede contenido.
+  isolation: isolate;
+
+  // SHADOW STACK:
+  //   • inset top hairline cream (rim light).
+  //   • inset bottom hairline bronze (anchor base).
+  //   • Outer GLOW azul ALREDEDOR del botón (0 0, sin offset) — integra el
+  //     botón con el ambient azul del card. El user pidió "sombra exterior
+  //     azul alrededor del botón", no cast shadow.
+  //   • Cast shadow azul navy abajo (depth premium, ancla el botón).
   box-shadow:
-    inset 0 1px 0 rgb(255 248 215 / 0.80),
-    inset 0 -1px 0 rgb(60 35 5 / 0.50),
-    0 1px 2px hsl(35deg 65% 22% / 0.40),
-    0 2px 4px hsl(35deg 65% 22% / 0.40),
-    0 4px 8px hsl(35deg 65% 22% / 0.38),
-    0 8px 16px hsl(35deg 65% 22% / 0.32);
+    inset 0 1px 0 rgba(255, 248, 220, 0.45),
+    inset 0 -1px 0 rgba(90, 55, 8, 0.35),
+    0 0 18px rgba(70, 145, 235, 0.28),
+    0 0 32px rgba(70, 145, 235, 0.18),
+    0 4px 10px rgba(0, 18, 58, 0.35),
+    0 10px 22px rgba(0, 12, 42, 0.40);
+
+  // ::before — HIGHLIGHT SHEEN superior. Override del ::before base (que
+  // pintaba el gradient celeste vía mask-composite, no aplica acá). Acá
+  // es una banda cream suave en el top 50%, fade-out a transparente, sobre
+  // todo el contenido del botón.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 1px 1px auto 1px;
+    height: 55%;
+    border-radius: 0.4375rem 0.4375rem 0 0;  // match al border-radius - 1px
+    background: linear-gradient(
+      180deg,
+      rgba(255, 245, 210, 0.55) 0%,
+      rgba(255, 235, 180, 0.22) 45%,
+      transparent 100%
+    );
+    -webkit-mask: none;
+            mask: none;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  // Contenido (label + icon) sobre el sheen.
+  > * {
+    position: relative;
+    z-index: 2;
+  }
 
   &:hover {
+    // Hover: misma estructura radial, centro un toque más bright.
     background:
-      radial-gradient(
-        ellipse 58% 95% at 50% 48%,
-        rgb(255 245 205 / 0.55) 0%,
-        rgb(252 225 155 / 0.28) 35%,
-        rgb(232 195 110 / 0.10) 62%,
-        transparent 82%
-      ),
       linear-gradient(
         180deg,
-        rgb(255 245 205) 0%,
-        rgb(250 222 148) 12%,
-        rgb(232 192 108) 32%,
-        rgb(210 170 82) 60%,
-        rgb(180 140 62) 85%,
-        rgb(155 115 48) 100%
+        rgba(255, 250, 220, 0.55) 0%,
+        transparent 22%
+      ),
+      radial-gradient(
+        ellipse 72% 115% at 50% 50%,
+        #f2d182 0%,
+        #d8ab4f 35%,
+        #b88836 65%,
+        #946a1f 92%,
+        #835818 100%
       );
-    border-color: rgb(250 222 148);
-    // Hover: misma estructura canonical, blur ligeramente mayor (elevación
-    // sube → offset y blur crecen, opacidad puede bajar levemente).
+    border-color: rgba(255, 228, 145, 0.96);
     box-shadow:
-      inset 0 1px 0 rgb(255 252 225 / 0.88),
-      inset 0 -1px 0 rgb(60 35 5 / 0.50),
-      0 2px 4px hsl(35deg 65% 22% / 0.42),
-      0 4px 8px hsl(35deg 65% 22% / 0.42),
-      0 8px 16px hsl(35deg 65% 22% / 0.38),
-      0 16px 32px hsl(35deg 65% 22% / 0.32);
+      inset 0 1px 0 rgba(255, 248, 220, 0.55),
+      inset 0 -1px 0 rgba(90, 55, 8, 0.35),
+      0 0 22px rgba(85, 160, 245, 0.38),
+      0 0 40px rgba(85, 160, 245, 0.22),
+      0 6px 14px rgba(0, 18, 58, 0.40),
+      0 14px 28px rgba(0, 12, 42, 0.42);
+
+    &::before {
+      background: linear-gradient(
+        180deg,
+        rgba(255, 248, 220, 0.65) 0%,
+        rgba(255, 240, 188, 0.28) 45%,
+        transparent 100%
+      );
+    }
   }
 }
 
