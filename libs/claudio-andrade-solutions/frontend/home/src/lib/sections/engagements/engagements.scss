@@ -83,8 +83,9 @@
   }
 
   @media (min-width: 1024px) {
-    // Width hierarchy — middle card ~8% más ancho que side cards (match ref).
-    grid-template-columns: 1fr 1.08fr 1fr;
+    // Width hierarchy — middle card 20% más ancho que side cards.
+    // Ratio del ref medido por user: 12cm middle / 10cm side = 1.20.
+    grid-template-columns: 1fr 1.2fr 1fr;
     gap: 1.75rem;
     // align-items: end — todos los CTAs alineados al mismo Y. Middle
     // naturalmente más alto (padding extra) → su top queda más arriba.
