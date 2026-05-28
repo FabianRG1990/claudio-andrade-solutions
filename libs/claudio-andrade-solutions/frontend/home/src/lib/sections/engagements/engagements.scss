@@ -467,11 +467,8 @@
 
 .engagement-card__price {
   font-family: var(--font-display);
-  // 4.375rem = 70px — match medido en ref (cap-height 50px / 0.72 ratio).
-  font-size: 4.375rem;
-  // Roboto cargado: solo 300/400/500. Uso 500 (Medium) — el más pesado
-  // disponible que NO genera faux bold (evita la distorsión que el user
-  // viene marcando desde temprano en el rendering).
+  // 3.75rem = 60px — reducido 14% del 4.375rem anterior.
+  font-size: 3.75rem;
   font-weight: 500;
   line-height: 0.95;
   letter-spacing: -0.03em;
