@@ -164,12 +164,8 @@
   padding: 1.25rem 1.375rem 1.25rem;
   border-radius: 0.875rem;
 
-  // Surface — navy profundo #010d2a (color exacto pasado por el user).
-  background: linear-gradient(
-    180deg,
-    rgb(1 13 42) 0%,
-    rgb(2 16 48) 100%
-  );
+  // Surface — color exacto #000d2a pasado por el user.
+  background: rgb(0 13 42);
 
   // Border invisible solid; el ::before mask-composite provee la línea visible.
   border: 1px solid transparent;
@@ -262,13 +258,8 @@
   isolation: isolate;
   overflow: visible;
 
-  // Surface plano: solo bg navy #010d2a. El bloom va en ::after con
-  // filter:blur para difusión REAL (no fakeada con gradient stops).
-  background: linear-gradient(
-    180deg,
-    rgb(1 13 42) 0%,
-    rgb(2 16 48) 100%
-  );
+  // Surface — color exacto #000d2a. Bloom va en ::after con filter:blur.
+  background: rgb(0 13 42);
 
   border: 1px solid transparent;  // ::before provee la línea cian visible.
 
