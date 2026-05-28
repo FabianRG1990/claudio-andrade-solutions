@@ -83,9 +83,10 @@
   }
 
   @media (min-width: 1024px) {
-    // Width hierarchy — middle card 20% más ancho que side cards.
-    // Ratio del ref medido por user: 12cm middle / 10cm side = 1.20.
-    grid-template-columns: 1fr 1.2fr 1fr;
+    // Width hierarchy — middle card ~13% más ancho. Bajamos de 1.2 porque
+    // sobraban espacios; con el price font más grande la proporción visual
+    // se acerca al ref.
+    grid-template-columns: 1fr 1.13fr 1fr;
     gap: 1.75rem;
     // align-items: end — todos los CTAs alineados al mismo Y. Middle
     // naturalmente más alto (padding extra) → su top queda más arriba.
@@ -459,10 +460,14 @@
 
 .engagement-card__price {
   font-family: var(--font-display);
-  font-size: 4.125rem;
-  font-weight: 700;
+  // 4.375rem = 70px — match medido en ref (cap-height 50px / 0.72 ratio).
+  font-size: 4.375rem;
+  // Roboto cargado: solo 300/400/500. Uso 500 (Medium) — el más pesado
+  // disponible que NO genera faux bold (evita la distorsión que el user
+  // viene marcando desde temprano en el rendering).
+  font-weight: 500;
   line-height: 0.95;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   color: rgb(243 246 255);
   text-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
 }
@@ -478,12 +483,26 @@
 
 
 .engagement-card__cadence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: rgb(45 141 255);
   white-space: nowrap;
+}
+
+// Vertical divider — SOLO en middle card (--highlight). En side cards el
+// cadence va directamente al lado del price sin línea (match ref: "4.5K MENSUAL"
+// sin divider, vs "14K | ALCANCE FIJO" del middle CON divider).
+.engagement-card--highlight .engagement-card__cadence:not(.engagement-card__cadence--block)::before {
+  content: '';
+  flex-shrink: 0;
+  width: 1px;
+  height: 1.125rem;
+  background: rgb(58 119 195 / 0.45);
 }
 
 // Cadence > 14 chars (e.g. "TRABAJO DE 2 A 4 SEMANAS") gets su propia línea.
@@ -585,14 +604,15 @@
   z-index: 2;
   display: flex;
   align-items: center;
+  justify-content: center;     // centrado horizontal (match ref)
   gap: 0.5rem;
-  margin: 0 0 0.75rem 0;
-  padding-top: 0.625rem;
-  font-size: 0.65rem;
-  font-weight: 500;
+  margin: 0 0 0.875rem 0;
+  padding-top: 0.75rem;
+  font-size: 0.8125rem;        // más grande (de 0.65 → 0.8125)
+  font-weight: 600;            // peso más definido
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgb(244 220 170 / 0.82);
+  color: rgb(232 184 92);      // dorado más profundo (deeper brass)
 
   // Divider con gradiente transparente — neutral, solo ordena.
   &::before {

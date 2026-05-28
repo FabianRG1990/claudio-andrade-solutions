@@ -58,7 +58,7 @@
               }
               <span
                 class="engagement-card__price"
-                [class.engagement-card__price--word]="!t.price.startsWith('$')"
+                [class.engagement-card__price--word]="!/[0-9]/.test(t.price)"
               >{{ t.price }}</span>
               <span
                 class="engagement-card__cadence"
