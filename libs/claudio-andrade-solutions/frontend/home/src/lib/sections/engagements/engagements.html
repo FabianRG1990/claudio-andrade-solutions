@@ -106,7 +106,7 @@
               >
                 <span class="engagement-card__cta-label">Elegir {{ t.name }}</span>
                 <span class="engagement-card__cta-icon" aria-hidden="true">
-                  <ng-icon name="phosphorArrowRightBold" size="18" />
+                  <ng-icon name="phosphorArrowRightBold" [size]="t.highlight ? '28' : '18'" />
                 </span>
               </a>
             </div>
