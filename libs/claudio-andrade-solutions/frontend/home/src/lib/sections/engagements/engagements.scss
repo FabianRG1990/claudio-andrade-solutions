@@ -855,8 +855,14 @@
   // Forma: medium radius — ni pill ni cuadrado.
   border-radius: 0.5rem;
 
-  // Layout balanceado, dimensiones intactas.
-  padding: 0.75rem 1.25rem;
+  // Dimensiones fijas pedidas: 20rem × 4rem. Override del width:100% del
+  // .cta base. margin-inline:auto centra el botón en el wrap.
+  width: 21rem;
+  height: 4rem;
+  margin-inline: auto;
+  // Padding solo horizontal — la altura es explícita, el flex centra
+  // verticalmente el contenido.
+  padding: 0 1.25rem;
   font-size: 0.95rem;
   // Weight 700 — texto firme premium (match ref).
   font-weight: 700;
