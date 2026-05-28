@@ -263,23 +263,29 @@
 
   border: 1px solid transparent;  // ::before provee la línea cian visible.
 
-  // Box-shadow: nieblas externas azul intenso + cast shadow.
-  // Mismo color que el bloom top (azul intenso) pero AÚN MÁS TENUE — el top
-  // tiene un protagonismo, los lados/bottom son atmospheric muy sutil.
-  // Alpha referencia: top bloom peak ~0.50 / bottom peak ~0.20 / lateral peak ~0.14.
+  // Box-shadow stack: INTERNAL light strips (el borde "ilumina hacia adentro")
+  // + EXTERNAL halos atmosféricos. Muy tenues, muy detallados, muy chiquititos.
   box-shadow:
     // Inset top hairline sutil
     inset 0 1px 0 rgb(140 180 230 / 0.04),
 
-    // Niebla externa BOTTOM — halo azul que sale del borde inferior
-    0 5px 16px -3px rgb(5 90 220 / 0.20),
-    0 12px 32px -8px rgb(0 70 195 / 0.10),
+    // INTERNAL strips — el borde irradia luz hacia adentro a lo largo de
+    // los lados y bottom. Negative spread mantiene la luz CERCA del borde
+    // (no invade el centro del card). Blur 24px difumina suavemente.
+    inset 10px 0 24px -12px rgb(5 90 220 / 0.40),    // strip LEFT interno
+    inset -10px 0 24px -12px rgb(5 90 220 / 0.40),   // strip RIGHT interno
+    inset 0 -10px 22px -12px rgb(5 90 220 / 0.32),   // strip BOTTOM interno
 
-    // Niebla externa LATERAL — más tenue (atmospheric envolvente)
-    -4px 0 14px -3px rgb(5 90 220 / 0.14),
-    4px 0 14px -3px rgb(5 90 220 / 0.14),
-    -8px 0 22px -6px rgb(0 70 195 / 0.07),
-    8px 0 22px -6px rgb(0 70 195 / 0.07),
+    // EXTERNAL bottom halo — sale del borde inferior + corner bleed
+    0 6px 18px -3px rgb(5 90 220 / 0.22),
+    0 14px 36px -8px rgb(0 70 195 / 0.13),
+    0 24px 56px -16px rgb(0 50 165 / 0.06),
+
+    // EXTERNAL lateral halos — atmospheric envolvente
+    -5px 0 16px -3px rgb(5 90 220 / 0.16),
+    5px 0 16px -3px rgb(5 90 220 / 0.16),
+    -10px 0 28px -8px rgb(0 70 195 / 0.08),
+    10px 0 28px -8px rgb(0 70 195 / 0.08),
 
     // Cast shadow negra (anchor anatómico)
     0 14px 32px -14px rgb(0 0 0 / 0.55),
