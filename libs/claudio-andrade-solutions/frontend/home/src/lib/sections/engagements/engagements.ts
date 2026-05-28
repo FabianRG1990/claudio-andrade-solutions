@@ -5,11 +5,14 @@ import {
   phosphorArrowRightBold,
   phosphorArrowUpRightBold,
   phosphorCheckBold,
-  phosphorMagnifyingGlassBold,
-  phosphorRocketBold,
   phosphorUsersBold,
   phosphorXBold,
 } from '@ng-icons/phosphor-icons/bold';
+import {
+  phosphorMagnifyingGlass,
+  phosphorRocket,
+  phosphorUsers,
+} from '@ng-icons/phosphor-icons/regular';
 import { phosphorStarFill } from '@ng-icons/phosphor-icons/fill';
 
 import { engagements } from '@cas-ui-shared/data/data';
@@ -30,8 +33,9 @@ import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.
       phosphorArrowRightBold,
       phosphorArrowUpRightBold,
       phosphorCheckBold,
-      phosphorMagnifyingGlassBold,
-      phosphorRocketBold,
+      phosphorMagnifyingGlass,
+      phosphorRocket,
+      phosphorUsers,
       phosphorUsersBold,
       phosphorXBold,
       phosphorStarFill,

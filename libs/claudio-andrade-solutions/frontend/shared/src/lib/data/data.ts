@@ -534,7 +534,7 @@ function featuresFor(includedCount: number): readonly { label: string; included:
 export const engagements: Engagement[] = [
   {
     name: 'Auditoría',
-    icon: 'phosphorMagnifyingGlassBold',
+    icon: 'phosphorMagnifyingGlass',
     originalPrice: '2.5K',
     price: '1.8K',
     cadence: 'trabajo de 2 a 4 semanas',
@@ -546,7 +546,7 @@ export const engagements: Engagement[] = [
   },
   {
     name: 'Proyecto cerrado',
-    icon: 'phosphorRocketBold',
+    icon: 'phosphorRocket',
     originalPrice: '18K',
     price: '14K',
     cadence: 'alcance fijo',
@@ -560,7 +560,7 @@ export const engagements: Engagement[] = [
   },
   {
     name: 'Acompañamiento',
-    icon: 'phosphorUsersBold',
+    icon: 'phosphorUsers',
     originalPrice: '6K',
     price: '4.5K',
     cadence: 'mensual',

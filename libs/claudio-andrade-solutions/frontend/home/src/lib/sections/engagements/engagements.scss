@@ -409,6 +409,16 @@
 }
 
 // Icon container — caja navy royal con borde azul fino, icono claro.
+// =============================================================================
+// ICON CONTAINER — borde con gradient top-light (luz cenital). Replica el
+// acabado premium del rocket icon de la imagen ref: el borde es más bright
+// arriba (catchlight cyan) y decae hacia abajo (azul oscuro perdido), como
+// si la luz cayera desde un punto cenital. Inset highlight arriba refuerza
+// la sensación de superficie pulida con luz reflejada.
+//
+// Técnica: dual background (padding-box + border-box) con linear-gradient
+// en border-box. border: 1px solid transparent deja que se vea el gradient.
+// =============================================================================
 .engagement-card__icon {
   flex-shrink: 0;
   display: inline-flex;
@@ -417,12 +427,29 @@
   width: 2.125rem;
   height: 2.125rem;
   border-radius: 0.4375rem;
-  background: rgb(8 26 58);
-  border: 1px solid rgb(27 119 229 / 0.65);
-  color: rgb(75 176 255);
+
+  // Dual background: fill plano en padding-box, gradient en border-box.
+  background:
+    linear-gradient(180deg,
+      rgb(11 30 64) 0%,
+      rgb(8 24 56) 100%
+    ) padding-box,
+    linear-gradient(180deg,
+      rgb(150 210 255 / 0.95) 0%,    // top crest: bright cyan-white catchlight
+      rgb(95 175 245 / 0.82) 25%,    // upper decay
+      rgb(50 130 210 / 0.62) 55%,    // mid: still visible blue
+      rgb(28 90 175 / 0.45) 85%,
+      rgb(20 70 150 / 0.38) 100%     // bottom: deep navy, casi se pierde
+    ) border-box;
+  border: 1px solid transparent;
+  color: rgb(105 195 255);
+
+  // Inset top highlight — banda crisp de 1px que simula luz cenital
+  // reflejada en el borde superior interior. Refuerza el premium.
   box-shadow:
-    inset 0 1px 0 rgb(180 215 255 / 0.08),
-    inset 0 0 10px rgb(43 143 255 / 0.06);
+    inset 0 1px 0 rgb(180 220 255 / 0.18),
+    inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    0 1px 2px rgb(0 0 0 / 0.30);
 }
 
 // Title text plano. Weight 500 (Roboto Medium real, no faux bold). Letter-spacing
