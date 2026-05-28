@@ -83,14 +83,14 @@
   }
 
   @media (min-width: 1024px) {
-    // Width hierarchy — middle card ~13% más ancho. Bajamos de 1.2 porque
-    // sobraban espacios; con el price font más grande la proporción visual
-    // se acerca al ref.
-    grid-template-columns: 1fr 1.13fr 1fr;
+    // Width explícito en rem: middle 25rem, sides 20.833rem (25 / 1.2).
+    grid-template-columns: 20.833rem 25rem 20.833rem;
+    justify-content: center;
     gap: 1.75rem;
-    // align-items: end — todos los CTAs alineados al mismo Y. Middle
-    // naturalmente más alto (padding extra) → su top queda más arriba.
-    align-items: end;
+    // align-items: center — middle se centra verticalmente y extiende
+    // tanto ARRIBA como ABAJO de los side cards (no solo arriba). Match
+    // ref: middle desborda en ambos sentidos.
+    align-items: center;
 
     > .engagement-card {
       max-width: none;
@@ -162,7 +162,9 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 1.375rem 1.25rem;
+  // Padding-y reducido para compactar (de 1.25rem a 1rem). Match ref:
+  // cards menos "bloque", más elegantes.
+  padding: 1rem 1.375rem 1rem;
   border-radius: 0.875rem;
 
   // Surface — color exacto #000d2a pasado por el user.
@@ -254,10 +256,10 @@
 // =============================================================================
 .engagement-card--highlight .engagement-card__inner {
   position: relative;
-  // Padding más generoso que side cards (~1.5rem vs 1.25rem) — esto hace
-  // el card naturalmente más alto Y más "thicker" en sensación visual,
-  // como la ref.
-  padding: 1.625rem 1.5rem 1.625rem;
+  // Middle GENUINAMENTE más alto. Padding-y generoso (1.75rem vs side 1rem)
+  // para que el card sea visiblemente más alto y se desborde TANTO ARRIBA
+  // COMO ABAJO de los side cards (con align-items: center del grid).
+  padding: 1.75rem 1.5rem 1.75rem;
   border-radius: 0.875rem;
   isolation: isolate;
   overflow: visible;
@@ -364,7 +366,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;       // reducido de 1rem → 0.75rem
 }
 
 // Icon + title separados (no shared pill).
@@ -444,7 +446,8 @@
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  column-gap: 0.625rem;
+  // column-gap mayor para que el divider tenga GAP claro de la K (no pegado).
+  column-gap: 1.25rem;
   row-gap: 0.125rem;
   margin-bottom: 0.25rem;
 }
@@ -456,6 +459,9 @@
   text-decoration: line-through;
   text-decoration-color: rgb(106 115 144 / 0.85);
   font-variant-numeric: tabular-nums;
+  // Centrar verticalmente con el "14K" (no baseline-aligned). Match ref:
+  // 18K aparece a la altura del centro de 14K, no en su baseline.
+  align-self: center;
 }
 
 .engagement-card__price {
@@ -484,8 +490,8 @@
 
 .engagement-card__cadence {
   display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
+  align-items: center;     // divider corto centrado vertical con el texto
+  gap: 1.25rem;            // gap simétrico al column-gap del row (divider↔ALCANCE FIJO = 14K↔divider)
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -494,15 +500,15 @@
   white-space: nowrap;
 }
 
-// Vertical divider — SOLO en middle card (--highlight). En side cards el
-// cadence va directamente al lado del price sin línea (match ref: "4.5K MENSUAL"
-// sin divider, vs "14K | ALCANCE FIJO" del middle CON divider).
+// Vertical divider — SOLO en middle card (--highlight). Más corto que el
+// cap-height del K (NO 3.125rem), con gap claro de K. Match feedback user:
+// "no es tan grande, no es del mismo tamaño de la K, tiene su gap".
 .engagement-card--highlight .engagement-card__cadence:not(.engagement-card__cadence--block)::before {
   content: '';
   flex-shrink: 0;
   width: 1px;
-  height: 1.125rem;
-  background: rgb(58 119 195 / 0.45);
+  height: 1.5rem;            // 24px — menor al cap-height de K (50px)
+  background: rgb(58 119 195 / 0.50);
 }
 
 // Cadence > 14 chars (e.g. "TRABAJO DE 2 A 4 SEMANAS") gets su propia línea.
@@ -517,7 +523,8 @@
   margin: 0 0 1rem 0;
   font-size: 0.8125rem;
   font-weight: 400;
-  color: rgb(106 115 144);
+  // Color celeste — match ref (era gris en mi versión anterior).
+  color: rgb(108 175 230);
 }
 
 // =============================================================================
@@ -526,10 +533,12 @@
 .engagement-card__description {
   position: relative;
   z-index: 2;
-  margin: 0 0 1rem 0;
-  font-size: 0.875rem;
+  margin: 0 0 0.75rem 0;
+  // 0.9375rem (15px) — tamaño moderado, dejamos que el text-wrap natural
+  // decida los breaks según el ancho del card.
+  font-size: 0.9375rem;
   font-weight: 400;
-  line-height: 1.55;
+  line-height: 1.5;
   color: rgb(177 186 205);
   text-wrap: pretty;
   max-width: 46ch;
@@ -542,12 +551,31 @@
   position: relative;
   z-index: 2;
   list-style: none;
-  margin: 0 0 1.125rem 0;
-  padding: 0;
+  margin: 0 0 0.875rem 0;
+  padding: 0.75rem 0 0 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  // Gap reducido entre features (0.625 → 0.4375rem) para compactar la lista.
+  gap: 0.4375rem;
   flex: 1 1 auto;
+
+  // Divider horizontal entre descripción y features (match ref).
+  // Gradient sutil que se desvanece en los extremos.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(34 56 105) 12%,
+      rgb(34 56 105) 88%,
+      transparent 100%
+    );
+  }
 }
 
 .engagement-card__feature {
