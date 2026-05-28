@@ -100,3 +100,13 @@ html {
   font-display: swap;
   src: url('/fonts/roboto-500i.woff2') format('woff2');
 }
+// 700 cargado para CTAs premium (brass CTA del engagements). Roboto Bold
+// real evita faux-bold synth del browser cuando se pide weight 700 sin el
+// archivo correspondiente. Subset latin básico (~22 KB).
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/roboto-700.woff2') format('woff2');
+}

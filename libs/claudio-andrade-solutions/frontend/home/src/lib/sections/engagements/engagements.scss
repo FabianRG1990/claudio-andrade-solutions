@@ -696,7 +696,13 @@
   font-weight: 500;            // -100 (era 600 = faux bold)
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgb(232 184 92);      // dorado más profundo (deeper brass)
+  // Yellow con PRESENCIA — el (248 205 88) anterior leía como brass dorado
+  // opaco. El ref tiene peak rgb(255,222,98) — apuntamos cerca del pico
+  // (no del avg) porque el user lee el ref como "marcado, fuerte,
+  // protagonismo". + sutil glow yellow para empujar la presencia sin
+  // cambiar el color base.
+  color: rgb(255 218 95);
+  text-shadow: 0 0 12px rgb(255 210 80 / 0.20);
 
   // Divider con gradiente transparente — neutral, solo ordena.
   &::before {
@@ -717,7 +723,9 @@
 
 .engagement-card__scarcity-icon {
   display: inline-flex;
-  color: rgb(var(--brass));
+  // Match el yellow del texto scarcity (rgb 255 218 95) — antes el icono
+  // estaba en --brass dorado y se veía desentonado del texto más vivo.
+  color: rgb(255 218 95);
 }
 
 // =============================================================================
@@ -744,44 +752,87 @@
   justify-content: space-between;
   gap: 0.5rem;
   width: 100%;
-  // Match Firebase live: padding 16px 20px = 1rem 1.25rem.
-  padding: 1rem 1.25rem;
-  // Match Firebase live: border-radius 12px = 0.75rem.
+  // Padding compacto match ref (botón menos alto). Antes 1rem vertical
+  // (= 16px) replicaba el Firebase deployado; el ref es claramente más
+  // compacto en altura, ~12px vertical.
+  padding: 0.75rem 1.25rem;
   border-radius: 0.75rem;
   font-family: var(--font-display);
   // Match Firebase live: 15px = 0.9375rem, weight 500.
   font-size: 0.9375rem;
   font-weight: 500;
   text-decoration: none;
-  letter-spacing: 0;
+  // Letter-spacing premium — texto aireado real (Apple/Stripe usan
+  // 0.02–0.04em en botones premium). 0.012em era prácticamente cero.
+  letter-spacing: 0.028em;
   text-transform: none;
   cursor: pointer;
   touch-action: manipulation;
   transition: background 250ms ease, border-color 250ms ease,
     box-shadow 250ms ease, transform 200ms ease;
 
-  // CTA standard — replicado EXACTO del Firebase deployado
-  // (https://claudio-andrade-solutions.web.app/). Computed styles extraídos
-  // del sitio en vivo: fondo casi transparente con tint celeste, borde
-  // celeste 0.6 opacity, texto celeste rgb(180,220,255), box-shadow con
-  // outer glow celeste + cast shadow.
+  // CTA standard — match ref:
+  //   • Fill casi transparente (deja ver el card behind)
+  //   • Borde con gradient celeste vertical (luz cenital): bright top → dark
+  //     bottom. Técnica mask-composite vía ::before — único modo de tener
+  //     gradient en el rim mientras el centro es transparente. La técnica
+  //     dual-background no funciona aquí porque un fill transparente deja
+  //     pasar el gradient debajo y se ve sólido.
+  //   • 3D sutil: inset top highlight + inset bottom shadow + outer glow.
   background: rgb(80 160 255 / 0.05);
-  border: 1px solid rgb(80 160 255 / 0.60);
+  border: 1px solid transparent;     // placeholder, el rim real lo pinta ::before
   color: rgb(180 220 255);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.08),
-    inset 0 -1px 0 rgb(0 0 0 / 0.30),
-    0 0 14px -3px rgb(80 160 255 / 0.25),
-    0 4px 12px -2px rgb(0 0 0 / 0.40);
+    inset 0 1px 0 rgb(200 230 255 / 0.18),
+    inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 0 14px -3px rgb(80 160 255 / 0.22),
+    0 4px 12px -2px rgb(0 0 0 / 0.45),
+    0 1px 2px rgb(0 0 0 / 0.30);
+
+  // Gradient border via mask-composite — pinta el gradient solo en el rim
+  // 1px, dejando el centro transparente. Reference: reference_css_scss_technical_canon.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgb(70 145 235 / 0.95) 0%,     // top: match crest del borde del card (mismo tono)
+      rgb(50 125 215 / 0.85) 22%,
+      rgb(40 110 200 / 0.78) 55%,
+      rgb(35 100 188 / 0.74) 85%,
+      rgb(32 92 178 / 0.72) 100%     // bottom: notorio, mismo blue family del card
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    transition: background 250ms ease;
+  }
 
   &:hover {
     background: rgb(80 160 255 / 0.10);
-    border-color: rgb(80 160 255 / 0.80);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.10),
-      inset 0 -1px 0 rgb(0 0 0 / 0.30),
-      0 0 18px -3px rgb(80 160 255 / 0.40),
-      0 4px 12px -2px rgb(0 0 0 / 0.40);
+      inset 0 1px 0 rgb(210 235 255 / 0.25),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 0 18px -3px rgb(80 160 255 / 0.38),
+      0 4px 12px -2px rgb(0 0 0 / 0.45),
+      0 1px 2px rgb(0 0 0 / 0.30);
+
+    &::before {
+      background: linear-gradient(
+        180deg,
+        rgb(95 170 245 / 1) 0%,        // hover: top más bright pero misma familia
+        rgb(70 145 230 / 0.95) 22%,
+        rgb(55 130 215 / 0.85) 55%,
+        rgb(45 115 200 / 0.80) 85%,
+        rgb(40 105 190 / 0.78) 100%
+      );
+    }
   }
 
   &:active {
@@ -801,10 +852,25 @@
 //     antialiased + text-shadow sutil para evitar bordes raros.
 // =============================================================================
 .engagement-card__cta--highlight {
-  padding: 0.875rem 1.25rem;
+  // El brass usa su propio border solid dorado — quitamos el ::before del
+  // base que pinta el gradient celeste, no aplica aquí.
+  &::before { display: none; }
+
+  // Padding-left mayor que el right — empuja el label hacia el centro sin
+  // centrarlo del todo. El ref muestra "Elegir Proyecto cerrado" offset del
+  // borde izquierdo (no pegado al padding base), arrow al borde derecho.
+  padding: 0.875rem 1.25rem 0.875rem 2.75rem;
   font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: 0.005em;
+  // Weight 500 (Roboto Medium real, NO faux bold). Roboto self-hosted solo
+  // carga 300/400/500 — pedir 600 hace que el browser sintetice (faux bold)
+  // y aparece distorsionado/manchado. La presencia premium viene del
+  // letter-spacing + text-shadow + contraste del fondo brass, NO del peso.
+  // Weight 700 (Roboto Bold real, cargado self-hosted desde
+  // /fonts/roboto-700.woff2). El ref tiene el texto con protagonismo
+  // claro — weight 500 quedaba thin contra el fondo brass sólido. Esto
+  // NO es faux bold porque el archivo correspondiente existe.
+  font-weight: 700;
+  letter-spacing: 0.032em;
   color: rgb(20 14 4);
 
   // Vertical gradient con MAYOR contraste — match ref: top bright cream,
