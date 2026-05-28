@@ -424,7 +424,7 @@
   border: 1px solid rgb(240 188 61 / 0.55);
   color: rgb(240 188 61);
   font-size: 0.625rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.16em;
   white-space: nowrap;
@@ -483,7 +483,7 @@
 
 .engagement-card__price--word {
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 1.05;
 }
@@ -494,7 +494,7 @@
   align-items: center;     // divider corto centrado vertical con el texto
   gap: 1.25rem;            // gap simétrico al column-gap del row (divider↔ALCANCE FIJO = 14K↔divider)
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: rgb(45 141 255);
@@ -638,7 +638,7 @@
   margin: 0 0 0.875rem 0;
   padding-top: 0.75rem;
   font-size: 0.8125rem;        // más grande (de 0.65 → 0.8125)
-  font-weight: 600;            // peso más definido
+  font-weight: 500;            // -100 (era 600 = faux bold)
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: rgb(232 184 92);      // dorado más profundo (deeper brass)
@@ -693,7 +693,7 @@
   border-radius: 0.5rem;
   font-family: var(--font-display);
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   letter-spacing: 0;
   text-transform: none;
@@ -758,7 +758,7 @@
 .engagement-card__cta--highlight {
   padding: 0.875rem 1.25rem;
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.005em;
   color: rgb(20 14 4);
 
