@@ -477,6 +477,12 @@
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.75rem;       // reducido de 1rem → 0.75rem
+  // flex-wrap permite que el badge "El más popular" caiga a una línea
+  // propia en mobile cuando icon + name (nowrap) + badge (nowrap) no
+  // entran en el ancho del card. En desktop hay espacio y todo se queda
+  // en una sola línea como antes.
+  flex-wrap: wrap;
+  row-gap: 0.625rem;
 }
 
 // Icon + title separados (no shared pill).
