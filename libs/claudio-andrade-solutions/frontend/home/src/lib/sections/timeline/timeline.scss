@@ -158,6 +158,11 @@
 .timeline__zone-head {
   display: flex;
   flex-direction: column;
+  // align-items: flex-start evita que app-eyebrow (inline-flex) se estire
+  // al 100% del contenedor por el default stretch del flex column. Sin esto,
+  // el companion dock (anclado al borde derecho del eyebrow) queda muy lejos
+  // del pill visible. El H3 ya tiene max-width: 16ch, así que no afecta.
+  align-items: flex-start;
   gap: 1rem;
 
   @media (min-width: 1024px) {
