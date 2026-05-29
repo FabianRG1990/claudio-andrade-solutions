@@ -440,27 +440,65 @@
     0 1px 8px rgb(6 9 26 / 0.5);
 }
 
+// =============================================================================
+// Arrow button — único punto de navegación de la card. La card en sí no
+// navega (ni desktop ni mobile); el user lo pidió explícitamente. Visible
+// en todos los viewports.
+//
+// Lenguaje visual: burbujita sobria — borde tenue 1px foam translúcido,
+// fondo translúcido bajo, backdrop-blur sutil que la separa del fondo del
+// card. Más sobria que el burger del nav (que es 3D real con catchlight);
+// acá queremos accent discreto que no compita con el contenido editorial.
+// =============================================================================
 .product-card__arrow {
-  display: none;
+  display: inline-flex;
   flex-shrink: 0;
   width: 2.5rem;
   height: 2.5rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  // Mismo lenguaje que el `.glass-button-icon` del CTA "Ver los 6 productos":
-  // vidrio líquido 3D con luz en bordes (sin disco foam macizo). El color foam
-  // del icono asegura contraste sobre el cristal translúcido.
+
+  // Surface: foam translúcido + leve top-highlight inset para "burbujita"
+  // sin caer en el 3D pleno del glass-bubble del nav.
+  background: rgb(245 241 232 / 0.06);
+  border: 1px solid rgb(245 241 232 / 0.22);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 4px 12px -4px rgb(6 9 26 / 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+
   color: rgb(var(--foam));
-  transition: transform 700ms var(--ease-fluid);
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color 280ms var(--ease-fluid),
+    border-color 280ms var(--ease-fluid),
+    transform 280ms var(--ease-fluid),
+    box-shadow 280ms var(--ease-fluid);
 
-  @media (min-width: 768px) {
-    display: flex;
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgb(245 241 232 / 0.12);
+      border-color: rgb(245 241 232 / 0.38);
+      transform: translate(2px, -2px);
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.22),
+        0 8px 20px -6px rgb(6 9 26 / 0.55);
+    }
   }
-}
 
-.product-card:hover .product-card__arrow {
-  transform: translate(2px, -2px);
+  &:focus-visible {
+    outline: 2px solid rgb(var(--lagoon));
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: translate(1px, -1px) scale(0.96);
+    transition-duration: 120ms;
+  }
 }
 
 .product-card__meta {

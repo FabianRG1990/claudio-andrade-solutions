@@ -57,17 +57,15 @@
          solo el nombre. mouseenter/focus activa. Mobile: stack vertical normal. -->
     <div class="featured-products__grid" role="list">
       @for (p of featured; track p.slug; let i = $index) {
-        <a
+        <div
           appReveal
-          href="/productos"
           class="product-card"
           [class.is-active]="i === activeIndex()"
           [attr.data-accent]="p.accent"
           [attr.aria-label]="p.name + ' — ' + p.tagline"
           role="listitem"
           (mouseenter)="onHoverActivate(i)"
-          (focus)="onHoverActivate(i)"
-          (click)="onCardClick($event, i)"
+          (click)="onCardTap(i)"
         >
           <div class="product-card__inner">
             <picture>
@@ -107,9 +105,14 @@
                   <h3 class="product-card__title">{{ p.name }}</h3>
                   <p class="product-card__description">{{ p.tagline }}</p>
                 </div>
-                <span class="product-card__arrow glass-button-icon" aria-hidden="true">
+                <a
+                  routerLink="/productos"
+                  class="product-card__arrow"
+                  [attr.aria-label]="'Ver detalle de ' + p.name"
+                  (click)="onArrowClick($event)"
+                >
                   <ng-icon name="phosphorArrowUpRightBold" size="14" />
-                </span>
+                </a>
               </div>
               <div class="product-card__meta">
                 <span>{{ p.deliverables }} entregables</span>
@@ -118,7 +121,7 @@
               </div>
             </div>
           </div>
-        </a>
+        </div>
       }
     </div>
   </div>
