@@ -193,16 +193,28 @@
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(
-      180deg,
-      rgb(70 145 235 / 0.95) 0%,      // rim top bright crest (idéntico al actual feel)
-      rgb(50 125 215 / 0.88) 2%,
-      rgb(40 110 200 / 0.82) 8%,      // crest decay leve
-      rgb(35 100 188 / 0.78) 25%,
-      rgb(32 92 178 / 0.75) 50%,      // mid: still clearly visible blue
-      rgb(30 86 170 / 0.72) 75%,
-      rgb(28 80 160 / 0.70) 100%      // bottom: degradado leve, NUNCA invisible
-    );
+    background:
+      // ÚNICO spot sutil encima del icon (~22% x) — match ref donde los
+      // side cards también tienen un small catchlight en el top border
+      // arriba del icono. Más oscuro y less vivid que los del middle card
+      // (tonalidad muted: rgb 100 170 220 vs middle's 160 230 255).
+      radial-gradient(
+        ellipse 8% 12% at 22% 0%,
+        rgb(145 215 248 / 0.98) 0%,
+        rgb(95 180 230 / 0.58) 50%,
+        transparent 100%
+      ),
+      // Base — color predominante con falloff vertical.
+      linear-gradient(
+        180deg,
+        rgb(70 145 235 / 0.95) 0%,      // rim top bright crest
+        rgb(50 125 215 / 0.88) 2%,
+        rgb(40 110 200 / 0.82) 8%,
+        rgb(35 100 188 / 0.78) 25%,
+        rgb(32 92 178 / 0.75) 50%,
+        rgb(30 86 170 / 0.72) 75%,
+        rgb(28 80 160 / 0.70) 100%
+      );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
