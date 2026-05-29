@@ -152,6 +152,49 @@
 }
 
 // =============================================================================
+// Landscape phone override — viewport con orientation:landscape Y altura ≤500px
+// matchea solo phones rotados (iPhone landscape ~852×393, Galaxy ~915×412).
+// NO matchea tablets landscape (iPad ~1180×820) ni desktop.
+//
+// El bento de @media (min-width:768px) se activa en landscape phone porque el
+// ancho (852) supera el breakpoint, pero la fila de 3 cards queda con ~270px
+// de ancho — la imagen pierde lectura y los textos no caben. El user pidió
+// "uno por uno" en horizontal: single column scrolleable con cards grandes,
+// conservando AR 4:3 (cero zoom sobre la imagen nativa 1448×1086).
+// =============================================================================
+@media (orientation: landscape) and (max-height: 500px) {
+  .featured-products__grid {
+    grid-template-columns: 1fr;
+    max-width: 32rem; // ~512px centrado — un card por viewport, no aplastado.
+    margin-inline: auto;
+    row-gap: 1.5rem;
+  }
+
+  .product-card:nth-child(1),
+  .product-card:nth-child(2),
+  .product-card:nth-child(3),
+  .product-card:nth-child(4),
+  .product-card:nth-child(5) {
+    grid-column: auto;
+  }
+
+  // Revertir el down-scale del bottom-row — ya no son 1/3 de ancho, son
+  // full-card en single column, así que vuelve la jerarquía editorial
+  // estándar de title/description.
+  .product-card:nth-child(3),
+  .product-card:nth-child(4),
+  .product-card:nth-child(5) {
+    .product-card__title {
+      font-size: clamp(1.375rem, 1.1rem + 1.1vw, 2.25rem);
+      line-height: 1.1;
+    }
+    .product-card__description {
+      font-size: clamp(0.875rem, 0.83rem + 0.2vw, 1rem);
+    }
+  }
+}
+
+// =============================================================================
 // ProductCard — mismo lenguaje visual que `.program-card` (nosotros) e
 // `.info-card` (contacto). El user pidió que TODOS los cards de imagen
 // compartan el mismo "borde y estilo de card" — 3-point lighting OKLCH +

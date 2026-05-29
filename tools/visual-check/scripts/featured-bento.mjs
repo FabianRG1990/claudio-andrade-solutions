@@ -66,5 +66,6 @@ async function shot(viewport, filename, deviceScaleFactor = 2) {
 await shot({ width: 1440, height: 900 }, 'featured-bento-desktop.png');
 await shot({ width: 1024, height: 900 }, 'featured-bento-tablet.png');
 await shot({ width: 393, height: 852 }, 'featured-bento-mobile.png');
+await shot({ width: 852, height: 393 }, 'featured-bento-mobile-landscape.png');
 
 await browser.close();
