@@ -59,14 +59,15 @@
       @for (p of featured; track p.slug; let i = $index) {
         <a
           appReveal
-          routerLink="/productos"
+          href="/productos"
           class="product-card"
           [class.is-active]="i === activeIndex()"
           [attr.data-accent]="p.accent"
           [attr.aria-label]="p.name + ' — ' + p.tagline"
           role="listitem"
-          (mouseenter)="onActivate(i)"
-          (focus)="onActivate(i)"
+          (mouseenter)="onHoverActivate(i)"
+          (focus)="onHoverActivate(i)"
+          (click)="onCardClick($event, i)"
         >
           <div class="product-card__inner">
             <picture>
