@@ -145,28 +145,48 @@
   padding: 0.5rem;
   isolation: isolate;
 
-  // Surface — 3-point lighting OKLCH (TR LED glow + BL ambient + linear
-  // navy gradient). Visible en el ring de 0.5rem alrededor del media.
+  // Surface + gradient-border via DOUBLE BACKGROUND-CLIP — fix de pixelación
+  // en esquinas con radius. Técnica anterior (mask-composite + border solid
+  // duplicado) generaba 2 curvas paralelas en la esquina (border real + ring
+  // del ::after) y el AA del browser no las podía reconciliar → escalera
+  // visible en top-left (donde el pico cyan brillante del gradient cae).
+  //
+  // Ahora: UN solo background con 4 layers:
+  //   • layers 1-3 (surface 3-point lighting) clipped a padding-box.
+  //   • layer 4 (gradient border) clipped a border-box.
+  // Los primeros 3 quedan ON TOP, cubriendo el centro del card. El cuarto
+  // SOLO se ve en el 1px de border que los superiores no cubren. Resultado:
+  // UNA línea AA-limpia siguiendo la curva del border-radius, sin stacking.
   background:
     radial-gradient(
       ellipse 70% 55% at 92% -5%,
       oklch(0.62 0.18 245 / 0.55),
       oklch(0.42 0.14 250 / 0.22) 35%,
       transparent 65%
-    ),
+    ) padding-box,
     radial-gradient(
       ellipse 45% 38% at 5% 100%,
       oklch(0.30 0.10 256 / 0.22),
       transparent 60%
-    ),
+    ) padding-box,
     linear-gradient(
       180deg,
       oklch(0.20 0.075 256) 0%,
       oklch(0.13 0.055 256) 55%,
       oklch(0.09 0.045 258) 100%
-    );
+    ) padding-box,
+    linear-gradient(
+      155deg,
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
+    ) border-box;
 
-  border: 1px solid oklch(0.62 0.14 248 / 0.55);
+  // border: 1px transparent reserva el espacio para que el layer border-box
+  // se pinte ahí. Sin esto, no hay border area donde mostrar el gradient.
+  border: 1px solid transparent;
 
   box-shadow:
     inset 0 1px 0 0 rgb(190 220 255 / 0.18),
@@ -176,30 +196,9 @@
     0 12px 24px -8px rgb(0 0 0 / 0.40),
     0 4px 8px -2px rgb(0 0 0 / 0.30);
 
-  // Gradient-border directional via mask-composite — TR lit, falloff hacia
-  // BL. Mismo recipe que program-card.
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      155deg,
-      oklch(0.92 0.06 250 / 0.65) 0%,
-      oklch(0.78 0.13 248 / 0.55) 18%,
-      oklch(0.62 0.11 252 / 0.35) 45%,
-      oklch(0.52 0.10 256 / 0.22) 75%,
-      oklch(0.45 0.09 258 / 0.18) 100%
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-            mask-composite: exclude;
-    pointer-events: none;
-    z-index: 3;
-  }
+  // ::after eliminado — el gradient border vive ahora en el layer 4 del
+  // background con border-box clip. Una sola fuente de verdad, un solo
+  // anti-alias.
 }
 
 // En tablet portrait (768–1023) el XL se promociona a fila completa
