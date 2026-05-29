@@ -381,20 +381,18 @@
     border-radius: inherit;
     padding: 1.5px;   // border-width 1.5px (match .__inner border: 1.5px)
     background:
-      // DOS spots SUTILES brillantes en el border line — el efecto del ref:
-      // el border MISMO brilla en 2 puntos específicos. Posiciones ~38% y
-      // ~62% (símil patrón gold-pill-button-card). Ellipses muy pequeñas
-      // (8% wide × 12% tall) que solo afectan la franja superior del border.
-      // Como el ::before usa mask-composite, estos spots solo se ven en el
-      // 1px del top edge — exactamente la "esencia de resplandor" del ref.
+      // DOS spots SUTILES brillantes en el border line. Posiciones movidas
+      // a izquierda: ~15% (encima del icono rocket) y 50% (centro del card)
+      // — match ref. Ellipses muy pequeñas (8% wide × 12% tall) que solo
+      // afectan la franja superior del border vía mask-composite.
       radial-gradient(
-        ellipse 8% 12% at 38% 0%,
-        rgb(245 252 255 / 0.98) 0%,    // peak más claro (casi white-cyan)
-        rgb(210 240 255 / 0.65) 50%,   // mid claro
+        ellipse 8% 12% at 15% 0%,      // encima del icon
+        rgb(245 252 255 / 0.98) 0%,
+        rgb(210 240 255 / 0.65) 50%,
         transparent 100%
       ),
       radial-gradient(
-        ellipse 8% 12% at 62% 0%,
+        ellipse 8% 12% at 50% 0%,      // centro del card
         rgb(248 253 255 / 0.98) 0%,
         rgb(210 240 255 / 0.65) 50%,
         transparent 100%
