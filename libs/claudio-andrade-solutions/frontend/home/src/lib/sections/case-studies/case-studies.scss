@@ -72,21 +72,24 @@
 // + arrow diagonal a la derecha. El frame (border brass, halo upward, dual
 // specular top edge) lo provee `.gold-pill-button--card`.
 //
-// Sizing v3: el user quiere MÁS PEQUEÑO en volumen, pero PRESERVANDO la
-// distribución espacial de la referencia (padding generoso, no apretado
-// contra el borde). La estrategia: shrink el texto (title 14px, eyebrow
-// 10px floor) y mantener padding ABSOLUTO ~14×24px que reproduce el ratio
-// padding:text de la referencia (≈ 1:1 vertical, 1.7:1 horizontal). Así
-// el botón total baja de volumen sin colapsar el aire interno.
+// Sizing v4: el user pidió EXPLÍCITAMENTE que iguale en tamaño al CTA
+// "Ver los 6 productos" (.featured-products__cta = 310×76, padding 1.25rem,
+// radius 14px, gap 1rem, icon 2.25rem). Acá replico esos tokens estructurales
+// y escalo eyebrow + title para que el contenido llene el volumen interno
+// sin colapsar el aire (content area ~36px tras 20px de padding-block).
 .case-studies__cta {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
   flex-shrink: 0;
-  border-radius: 12px;
-  padding: 0.875rem 1.5rem;
-  min-height: 3.25rem;
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem;
+  min-height: 76px;
+  // Match al ancho natural de .featured-products__cta (310px) — el user pidió
+  // explícitamente paridad de tamaño con ese botón. Sin esto el contenido
+  // queda 49px más angosto porque el body es texto stacked, no un label largo.
+  min-width: 310px;
   text-decoration: none;
 
   &:hover .case-studies__cta-icon,
@@ -104,7 +107,7 @@
 }
 
 .case-studies__cta-eyebrow {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
@@ -114,13 +117,14 @@
 
 .case-studies__cta-title {
   font-family: var(--font-display);
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   font-weight: 500;
   color: rgb(var(--foam));
   letter-spacing: var(--tracking-tight);
   line-height: 1.15;
   text-transform: none;
   text-wrap: balance;
+  white-space: nowrap;
 }
 
 .case-studies__cta-icon {
@@ -128,8 +132,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
   color: rgb(var(--brass));
   transition: transform 700ms var(--ease-fluid);
 }
