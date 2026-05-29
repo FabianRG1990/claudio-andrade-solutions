@@ -242,14 +242,15 @@
   content: '';
   position: absolute;
   inset: 1px 1px auto 1px;
-  height: 55%;
+  height: 30%;     // antes 55% — menos vertical, no baja tanto
   border-radius: 0.875rem 0.875rem 0 0;
+  // Bloom horizontal alargado, darker tones (match ref).
   background: radial-gradient(
-    ellipse 78% 100% at 50% 0%,
-    rgb(160 210 255 / 0.075) 0%,
-    rgb(140 195 250 / 0.048) 22%,
-    rgb(120 180 240 / 0.026) 48%,
-    rgb(100 165 225 / 0.010) 72%,
+    ellipse 110% 75% at 50% 0%,    // antes 78% × 100% → wider × shorter
+    rgb(50 130 200 / 0.22) 0%,     // darker peak (vs prev 80 165 235)
+    rgb(35 105 180 / 0.14) 30%,
+    rgb(25 80 155 / 0.07) 60%,
+    rgb(15 60 130 / 0.03) 82%,
     transparent 100%
   );
   pointer-events: none;
