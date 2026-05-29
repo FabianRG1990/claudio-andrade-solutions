@@ -29,8 +29,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 9999px;
@@ -70,8 +70,8 @@
 // (ej. `.hero__scroll-icon`). Sombras un poco más contenidas para que el
 // halo verde no domine la pieza visualmente en su contexto inline.
 :host(.whatsapp-hub--sm) .whatsapp-hub__trigger {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   box-shadow:
     0 4px 12px rgb(37 211 102 / 0.38),
     inset 0 1px 0 rgb(255 255 255 / 0.28),
@@ -155,15 +155,12 @@
   }
 }
 
-// En variante sm (CTA inline del hero), los pulse rings se ocultan: el
-// trigger vive al lado de "Continuá", un par editorial calmo donde un
-// halo expandiéndose a scale 1.75 rompe el equilibrio y desborda los
-// límites del card encima. Sin rings, el verde se contiene a 32px de
-// diámetro y el lockup respira con el cue de scroll. La presencia del
-// CTA la sostiene el verde saturado + halo estático, no la animación.
-:host(.whatsapp-hub--sm) .whatsapp-hub__trigger-ring {
-  display: none;
-}
+// En variante sm (pesecito-companion) replicamos los rings expansivos del
+// footer — el usuario quiere que el orbe-pez palpite con el mismo cue
+// verde que el trigger del footer. Mientras el companion está en estado
+// `.is-swimming`, el `.companion__hub` parent tiene opacity:0, así que
+// los rings desaparecen automáticamente durante el swim del pez (no hay
+// halos verdes flotando junto al fish en movimiento).
 
 // ─── Popover ────────────────────────────────────────────────────────────────
 // Abre hacia arriba, alineado al borde derecho del trigger. Cerrado por
