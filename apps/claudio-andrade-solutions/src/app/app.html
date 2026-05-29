@@ -1,5 +1,13 @@
 <app-ocean-background />
 
+<!-- Rotation veil — masking del snap del layout cuando el teléfono cambia
+     de portrait a landscape. Ver comentario en app.ts. -->
+<div
+  class="rotation-veil"
+  [class.is-active]="rotating()"
+  aria-hidden="true"
+></div>
+
 <main class="app-main">
   <router-outlet />
 </main>

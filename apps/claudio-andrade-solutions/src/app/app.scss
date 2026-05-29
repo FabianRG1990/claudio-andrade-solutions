@@ -36,3 +36,39 @@ app-footer {
     opacity: 1;
   }
 }
+
+// =============================================================================
+// Rotation veil — overlay full-viewport que enmascara el snap del layout
+// cuando el teléfono cambia de orientación. El listener en app.ts toggla
+// `.is-active` justo cuando matchMedia 'change' dispara (microtask después
+// del relayout, antes del paint). En ese paint el velo aparece OPACO de
+// inmediato (transition: none) en el mismo frame que el nuevo layout —
+// el ojo no percibe el snap, ve un fade dim. Luego quitamos la clase y
+// la opacidad transiciona de 0.55 a 0 en 320ms.
+//
+// z-index 9999 para quedar arriba de TODO (nav, companion, modales) durante
+// el momento crítico. pointer-events:none para no robar input.
+// =============================================================================
+.rotation-veil {
+  position: fixed;
+  inset: 0;
+  background: #06091a;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 320ms var(--ease-fluid);
+  // GPU layer — evita repaints del documento debajo durante el fade.
+  will-change: opacity;
+  transform: translateZ(0);
+
+  &.is-active {
+    opacity: 0.55;
+    // Transition: none → la opacidad pasa de 0 a 0.55 sin animar, en el
+    // mismo paint que el layout snap. Eso es lo que enmascara el cambio.
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
+  }
+}
