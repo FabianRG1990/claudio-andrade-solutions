@@ -434,33 +434,44 @@
     transition: background-position 1.6s var(--ease-spring);
   }
 
-  // Specular hot spot en el top-center del borde — el punto exacto donde
-  // la luz cenital golpea el filo del oro. Banda warm-white horizontal,
-  // ~28% del ancho del button, blur generoso para que se lea como un
-  // catchlight real (no como una pintura). Vive justo sobre el borde
-  // superior (top: -1px) para fusionar con el oro del ring. La banda es
-  // más brillante en el centro y se desvanece a los flancos, exactamente
-  // como una lens flare óptica. Alphas calibradas para coincidir con la
-  // referencia (subtle highlight, no destello).
+  // Specular hot spot DIAGONAL sobre el icono — replica el patrón del card
+  // central de engagements (engagements.scss líneas 397-412): el destello
+  // se posiciona ARRIBA-Y-LIGERAMENTE-A-LA-DERECHA del icono izquierdo del
+  // botón, NO centrado en el top. Esa offset posicional genera la lectura
+  // de "luz diagonal cayendo desde arriba-izquierda" — el mismo efecto
+  // que el destello sobre el rocket icon del card central.
+  //
+  // Cambios vs versión centrada:
+  //   • left: 4% (vs 50%) — el peak del catchlight cae sobre la zona del
+  //     icono diamante (emblema sentado en padding-left 20px ≈ 5-12% del
+  //     ancho del botón según viewport). El peak del gradient queda
+  //     ligeramente a la derecha del centro del icono → lectura diagonal.
+  //   • width: 22% (vs 28%) — banda más concentrada, no derrama hacia el
+  //     centro del botón. El destello es un PUNTO sobre el icono, no un
+  //     wash horizontal.
+  //   • gradient angle 110deg (vs 90deg) — el sweep del peak corre en
+  //     diagonal de arriba-izquierda a abajo-derecha dentro de la banda,
+  //     reforzando el efecto de luz cenital lateral.
+  //   • height: 7px + top: -2px — un toque más alta para que el angle
+  //     diagonal sea visible (en 5px la inclinación se pierde).
   &::after {
     content: '';
     position: absolute;
-    top: -1px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 28%;
-    height: 5px;
+    top: -2px;
+    left: 4%;
+    width: 22%;
+    height: 7px;
     background: linear-gradient(
-      90deg,
+      110deg,
       transparent 0%,
-      transparent 15%,
-      rgb(255 240 195 / 0.40) 32%,
-      rgb(255 252 235 / 0.78) 50%,
-      rgb(255 240 195 / 0.40) 68%,
-      transparent 85%,
+      transparent 12%,
+      rgb(255 240 195 / 0.42) 28%,
+      rgb(255 252 235 / 0.82) 50%,
+      rgb(255 240 195 / 0.42) 72%,
+      transparent 88%,
       transparent 100%
     );
-    filter: blur(2.2px);
+    filter: blur(2.4px);
     pointer-events: none;
     z-index: 3;
   }
