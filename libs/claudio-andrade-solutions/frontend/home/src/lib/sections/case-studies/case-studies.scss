@@ -242,7 +242,8 @@
   // y el cuadrado queda equilibrado contra la columna de texto.
   aspect-ratio: 5 / 6;
   overflow: hidden;
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  // Concéntrica con outer (-0.5rem padding -1px border = inset 9px).
+  border-radius: calc(var(--radius-squircle) - 0.5rem - 1px);
   background: rgb(var(--tide));
   isolation: isolate;
 

@@ -141,19 +141,15 @@
   border-radius: var(--radius-squircle);
   padding: 0.5rem;
   isolation: isolate;
+  // GPU compositing — Chrome usa Skia con subpixel preciso para layers GPU.
+  // Sin esto las curvas finas en bordes con gradient AA se redondean a
+  // grid integer y se ven en escalón en HiDPI.
+  will-change: transform;
+  transform: translateZ(0);
 
-  // Surface + gradient-border via DOUBLE BACKGROUND-CLIP — fix de pixelación
-  // en esquinas con radius. Técnica anterior (mask-composite + border solid
-  // duplicado) generaba 2 curvas paralelas en la esquina (border real + ring
-  // del ::after) y el AA del browser no las podía reconciliar → escalera
-  // visible en top-left (donde el pico cyan brillante del gradient cae).
-  //
-  // Ahora: UN solo background con 4 layers:
-  //   • layers 1-3 (surface 3-point lighting) clipped a padding-box.
-  //   • layer 4 (gradient border) clipped a border-box.
-  // Los primeros 3 quedan ON TOP, cubriendo el centro del card. El cuarto
-  // SOLO se ve en el 1px de border que los superiores no cubren. Resultado:
-  // UNA línea AA-limpia siguiendo la curva del border-radius, sin stacking.
+  // Surface 3-point lighting + gradient border. Peak top-left atenuado
+  // (lum 0.92 → 0.84) — antes el contraste cyan/navy en el corner hacía
+  // perceptible cualquier sub-pixel del AA.
   background:
     radial-gradient(
       ellipse 70% 55% at 92% -5%,
@@ -174,20 +170,21 @@
     ) padding-box,
     linear-gradient(
       155deg,
-      oklch(0.92 0.06 250 / 0.65) 0%,
-      oklch(0.78 0.13 248 / 0.55) 18%,
-      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.84 0.08 248 / 0.62) 0%,
+      oklch(0.74 0.12 248 / 0.55) 18%,
+      oklch(0.60 0.11 252 / 0.35) 45%,
       oklch(0.52 0.10 256 / 0.22) 75%,
       oklch(0.45 0.09 258 / 0.18) 100%
     ) border-box;
 
-  // border: 1px transparent reserva el espacio para que el layer border-box
-  // se pinte ahí. Sin esto, no hay border area donde mostrar el gradient.
   border: 1px solid transparent;
 
+  // Outer halo cyan muy sutil 0 0 0 1px — feathers el corner perceptualmente,
+  // disuelve el step residual si quedara alguno tras el geometric fix.
   box-shadow:
     inset 0 1px 0 0 rgb(190 220 255 / 0.18),
     inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 0 0 0.5px rgb(150 200 255 / 0.06),
     0 1px 0 0 rgb(0 0 0 / 0.50),
     0 24px 48px -16px rgb(0 0 0 / 0.65),
     0 12px 24px -8px rgb(0 0 0 / 0.40),
@@ -220,7 +217,12 @@
   position: relative;
   height: 100%;
   overflow: hidden;
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  // CONCÉNTRICA con el outer. Outer radius = --radius (32px), inner inset =
+  // border 1px + padding 0.5rem (8px) = 9px → inner radius = 32 - 9 = 23px.
+  // El previo (- 0.5rem = -8px) dejaba la curva interna 1px más abierta que
+  // la externa → en el corner el ring cyan se "estrechaba" a lo largo del
+  // arco y el ojo lo lee como escalón.
+  border-radius: calc(var(--radius-squircle) - 0.5rem - 1px);
 }
 
 .product-card__image {
@@ -294,7 +296,10 @@
 .product-card__hairline {
   position: absolute;
   inset: 0;
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  // Match __inner radius (concéntrica con outer). La hairline pinta una
+  // banda inset 1px dentro de su radio — debe ser idéntica a __inner para
+  // no introducir un segundo curve mismatch.
+  border-radius: calc(var(--radius-squircle) - 0.5rem - 1px);
 }
 
 .product-card__top {

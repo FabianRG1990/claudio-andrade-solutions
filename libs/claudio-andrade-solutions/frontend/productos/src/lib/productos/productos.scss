@@ -112,12 +112,12 @@
 
 .product-row__media-inner {
   position: relative;
-  // 4:3 alineado al aspecto nativo de las imágenes (1448×1086).
-  // Screenshots de dashboards/UIs son inherentemente landscape — forzar
-  // portrait recortaba el encuadre central del producto.
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  border-radius: calc(var(--radius-squircle) - 0.5rem);
+  // Concéntrica con outer. padding 0.5rem (8px) + border 1px = inset 9px.
+  // inner radius debe restar 9px, no 8px — si no, el anillo del border en
+  // el corner cambia de grosor a lo largo del arco y se lee como escalón.
+  border-radius: calc(var(--radius-squircle) - 0.5rem - 1px);
 }
 
 .product-row__image {
