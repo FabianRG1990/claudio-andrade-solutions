@@ -61,10 +61,12 @@
   align-items: center;
   gap: 1rem;
   border-radius: 14px;
-  padding: 0.625rem 1.25rem;
+  // Padding-block aumentado: el ancho queda igual, solo crece en alto.
+  // Match al spec visual mandado por el user — pill más generoso, no chato.
+  padding: 1.25rem 1.25rem;
   flex-shrink: 0;
   // Touch target AAA — el pill completo ≥44px alto.
-  min-height: 56px;
+  min-height: 76px;
 
   &:hover .featured-products__cta-icon,
   &:active .featured-products__cta-icon {
@@ -77,8 +79,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 .featured-products__cta-label {
@@ -90,8 +92,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
   transition: transform 700ms var(--ease-fluid);
 }
 
