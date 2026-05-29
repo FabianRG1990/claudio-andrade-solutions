@@ -64,6 +64,34 @@
   --emblem-flip: -1;
 }
 
+// Wrapper que convierte el emblema en link al home. Sin chrome visible —
+// el emblema sigue siendo el elemento perceptible. Solo aporta cursor,
+// touch target y focus ring para accesibilidad.
+.footer__brand-link {
+  display: inline-flex;
+  border-radius: 9999px;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 280ms var(--ease-fluid);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  &:active {
+    transform: scale(0.97);
+    transition-duration: 120ms;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--lagoon));
+    outline-offset: 4px;
+  }
+}
+
 .footer__brand-meta {
   max-width: 28rem;
   display: flex;
