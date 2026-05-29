@@ -502,27 +502,28 @@
   height: 2.125rem;
   border-radius: 0.4375rem;
 
-  // Dual background: fill plano en padding-box, gradient en border-box.
+  // Dual background: fill plano en padding-box, gradient controlado en border-box.
+  // Antes el border decaía de alpha 0.95 → 0.38 → bottom invisible. Match a la
+  // referencia: top con leve catchlight, pero bottom todavía legible (alpha 0.6+).
   background:
     linear-gradient(180deg,
       rgb(11 30 64) 0%,
       rgb(8 24 56) 100%
     ) padding-box,
     linear-gradient(180deg,
-      rgb(150 210 255 / 0.95) 0%,    // top crest: bright cyan-white catchlight
-      rgb(95 175 245 / 0.82) 25%,    // upper decay
-      rgb(50 130 210 / 0.62) 55%,    // mid: still visible blue
-      rgb(28 90 175 / 0.45) 85%,
-      rgb(20 70 150 / 0.38) 100%     // bottom: deep navy, casi se pierde
+      rgb(135 195 245 / 0.78) 0%,
+      rgb(100 170 230 / 0.68) 35%,
+      rgb(80 150 215 / 0.60) 70%,
+      rgb(80 145 215 / 0.58) 100%
     ) border-box;
   border: 1px solid transparent;
   color: rgb(105 195 255);
 
-  // Inset top highlight — banda crisp de 1px que simula luz cenital
-  // reflejada en el borde superior interior. Refuerza el premium.
+  // Inset highlights atenuados — el dark -1px previo (0.25) reforzaba la
+  // sensación de borde inferior "muerto". Ahora ambos lados respiran igual.
   box-shadow:
-    inset 0 1px 0 rgb(180 220 255 / 0.18),
-    inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    inset 0 1px 0 rgb(180 220 255 / 0.12),
+    inset 0 -1px 0 rgb(0 0 0 / 0.14),
     0 1px 2px rgb(0 0 0 / 0.30);
 }
 

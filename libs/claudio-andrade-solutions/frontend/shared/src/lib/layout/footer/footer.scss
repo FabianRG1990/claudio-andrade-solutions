@@ -7,16 +7,10 @@
 
 .footer {
   position: relative;
-  // Antes 5rem (mt-20) — demasiado aire para un cierre compacto. 2rem
-  // separa lo suficiente del último contenido sin abrir un vacío.
   margin-top: 2rem;
-  // SIN border-top: un hairline `rgb(var(--foam) / 0.1)` se lee como una
-  // línea horizontal de corte entre la sección anterior y el footer —
-  // exactamente lo que el usuario quiere evitar. El cierre visual lo da
-  // únicamente el cambio de color del background al `--abyss` puro;
-  // cualquier sección que viva encima debe terminar también en `#06091A`
-  // opaco para que la transición sea invisible.
-  background: rgb(var(--abyss));
+  // Footer transparente — el OceanBackground (fixed) sigue visible debajo,
+  // los peces nadan también detrás del footer y no se corta el continuum.
+  background: transparent;
   color: rgb(var(--foam));
 }
 
