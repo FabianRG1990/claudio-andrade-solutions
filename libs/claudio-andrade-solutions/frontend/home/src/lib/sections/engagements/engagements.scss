@@ -598,14 +598,16 @@
 }
 
 .engagement-card__price-original {
-  font-family: var(--font-mono);
-  font-size: 0.9375rem;
-  color: rgb(106 115 144);
+  // Mismo display family que .engagement-card__price para que el ancla y
+  // el precio actual lean como una sola pieza tipográfica (antes el ancla
+  // estaba en mono y se sentía como un sello administrativo sobre el display).
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: rgb(120 130 158);
   text-decoration: line-through;
-  text-decoration-color: rgb(106 115 144 / 0.85);
+  text-decoration-color: rgb(120 130 158 / 0.7);
   font-variant-numeric: tabular-nums;
-  // Centrar verticalmente con el "14K" (no baseline-aligned). Match ref:
-  // 18K aparece a la altura del centro de 14K, no en su baseline.
   align-self: center;
 }
 
@@ -623,10 +625,14 @@
 // Middle card price: mismo tamaño que sides (ref muestra precios uniformes).
 
 .engagement-card__price--word {
-  font-size: 2rem;
+  // 3rem (48px) — antes 2rem (32px). "A medida" necesitaba presencia para
+  // leerse como precio, no como nota al pie. Sigue siendo menor que el
+  // numérico (3.75rem) porque "A medida" tiene 8 caracteres vs "$250" (4)
+  // y a paridad de px ocuparía demasiado ancho, descompensando la row.
+  font-size: 3rem;
   font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.05;
+  letter-spacing: -0.02em;
+  line-height: 1.0;
 }
 
 
@@ -653,10 +659,12 @@
   background: rgb(58 119 195 / 0.50);
 }
 
-// Cadence > 14 chars (e.g. "TRABAJO DE 2 A 4 SEMANAS") gets su propia línea.
+// Cadence > 14 chars (e.g. "ENTREGA CERRADA", "SEGÚN ALCANCE") wrappea a
+// su propia línea. Margin-top positivo da el aire que necesita debajo del
+// precio — el -0.125rem anterior la dejaba pegada al baseline del número.
 .engagement-card__cadence--block {
   flex-basis: 100%;
-  margin-top: -0.125rem;
+  margin-top: 0.5rem;
 }
 
 .engagement-card__price-breakdown {

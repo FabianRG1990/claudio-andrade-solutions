@@ -511,63 +511,81 @@ export type Engagement = {
   highlight?: boolean;
 };
 
-// Lista canónica de 10 capacidades — se reutiliza en los 3 cards con un
-// flag included diferente por tier (Auditoría: 3, Proyecto cerrado: 8,
-// Acompañamiento: 10). Coincide con la imagen de referencia.
+// Lista canónica de 10 capacidades — se reutiliza en los 3 cards. Cada card
+// define explícitamente qué incluye (no es una escalera acumulativa):
+//
+//   • Items 1-5 son universales — los TRES cards los tienen como check.
+//     Mantenimiento, monitoreo+backups, cambios menores, soporte y garantía
+//     post-launch. Dar garantía a todo lo que cobramos no es opcional.
+//   • Items 6-8 son entregables de build (Landing + Personalizado).
+//   • Items 9-10 son capacidades premium (solo Personalizado).
+//
+// Distribución resultante: Membresía 5/5, Landing 8/2, Personalizado 10/0.
+// El centro es el más lleno porque es la oferta showcase que queremos
+// que la gente consuma.
+//
+// LARGO MÁXIMO POR LABEL: ≤32 caracteres. Cualquier label que wrappee a
+// segundo renglón rompe la simetría de alturas entre los tres cards (el
+// flag included cambia el icono pero NO el texto — el texto y su wrap son
+// idénticos en los 3 cards).
 const FEATURE_LABELS = [
-  'Inventario de stack y procesos',
-  'Hoja de ruta priorizada a 12 meses',
-  'Sesión de cierre con dirección',
-  'Build con alcance y precio cerrados',
-  'Sprints quincenales con demo viva',
-  'Stack premium (Angular · Firebase · IA)',
-  'Documentación técnica completa',
-  'Garantía post-entrega de 30 días',
-  'Equipo de producto fraccional',
-  'CTO fraccional y soporte 24/7',
+  'Mantenimiento técnico mensual',
+  'Monitoreo y backups básicos',
+  'Cambios menores de contenido',
+  'Soporte WhatsApp y reuniones',
+  'Garantía post-launch (30 días)',
+  'Diseño UI/UX premium responsive',
+  'Build de páginas desde cero',
+  'SEO técnico y Core Web Vitals',
+  'Stack Angular + Firebase + IA',
+  'Equipo dedicado y CTO fraccional',
 ] as const;
 
-function featuresFor(includedCount: number): readonly { label: string; included: boolean }[] {
-  return FEATURE_LABELS.map((label, i) => ({ label, included: i < includedCount }));
+const T = true;
+const F = false;
+
+function featuresWith(
+  flags: readonly boolean[],
+): readonly { label: string; included: boolean }[] {
+  return FEATURE_LABELS.map((label, i) => ({ label, included: flags[i] ?? false }));
 }
 
 export const engagements: Engagement[] = [
   {
-    name: 'Auditoría',
-    icon: 'phosphorMagnifyingGlass',
-    originalPrice: '2.5K',
-    price: '1.8K',
-    cadence: 'trabajo de 2 a 4 semanas',
-    priceBreakdown: '≈ 600 / semana',
+    name: 'Membresía',
+    icon: 'phosphorUsers',
+    originalPrice: '$350',
+    price: '$250',
+    cadence: 'mensual',
+    priceBreakdown: 'Sin permanencia mínima',
     description:
-      'Diagnóstico tecnológico completo, mapeo de stack, riesgos, oportunidades de automatización e IA, y hoja de ruta priorizada por impacto.',
-    features: featuresFor(3),
+      'Acompañamiento mensual de continuidad: actualizaciones, monitoreo, backups y cambios menores para que tu sitio evolucione sin sobresaltos ni proyectos abiertos cada vez que algo necesita movimiento.',
+    features: featuresWith([T, T, T, T, T, F, F, F, F, F]),
     accent: 'foam',
   },
   {
-    name: 'Proyecto cerrado',
-    icon: 'phosphorRocket',
-    originalPrice: '18K',
-    price: '14K',
-    cadence: 'alcance fijo',
-    priceBreakdown: '≈ 700 / semana',
+    name: 'Personalizado',
+    icon: 'phosphorMagnifyingGlass',
+    price: 'A medida',
+    cadence: 'según alcance',
+    priceBreakdown: 'Cotización en 48 horas',
     description:
-      'Construcción integral de una solución concreta, estimación cerrada, hitos quincenales, demo viva en cada sprint y entrega documentada.',
-    features: featuresFor(8),
-    scarcityNote: '2 cupos abiertos · cohorte actual',
+      'Para proyectos que no entran en las dos casillas: rediseños complejos, sistemas internos, integraciones a medida y stack moderno con IA. Cotización tras una sesión de descubrimiento.',
+    features: featuresWith([T, T, T, T, T, T, T, T, T, T]),
+    scarcityNote: 'Atendemos 1 proyecto a la vez',
     accent: 'lagoon',
     highlight: true,
   },
   {
-    name: 'Acompañamiento',
-    icon: 'phosphorUsers',
-    originalPrice: '6K',
-    price: '4.5K',
-    cadence: 'mensual',
-    priceBreakdown: '≈ 150 / día',
+    name: 'Landing page',
+    icon: 'phosphorRocket',
+    originalPrice: '$750',
+    price: '$550',
+    cadence: 'puntual',
+    priceBreakdown: 'Listo en 2 a 3 semanas',
     description:
-      'Compromiso a largo plazo: equipo de producto fraccional, sprints continuos, soporte 24/7 y prioridad en agenda. Ideal para empresas en crecimiento sostenido.',
-    features: featuresFor(10),
+      'Landing ágil para lanzar producto, captar leads o validar idea. Diseño premium, build optimizado y SEO técnico — listo para producir en 2-3 semanas con garantía de revisiones incluida.',
+    features: featuresWith([T, T, T, T, T, T, T, T, F, F]),
     accent: 'coral',
   },
 ];
