@@ -86,6 +86,11 @@
   }
 }
 
+// En sm bajamos el glyph proporcionalmente (36px → ~20px = 56%).
+:host(.whatsapp-hub--sm) .whatsapp-hub__trigger-icon {
+  --ng-icon__size: 1.25rem;
+}
+
 .whatsapp-hub__trigger-icon {
   position: relative;
   z-index: 2;
@@ -93,6 +98,11 @@
   align-items: center;
   justify-content: center;
   line-height: 0;
+  // Glyph WhatsApp ~55% del trigger (variante footer, 44px → 24px). Mantiene
+  // el ratio óptico de la app oficial de WhatsApp. El icono hereda esta
+  // variable por cascade — el `<ng-icon>` NO lleva attribute `size` para no
+  // pisarla con inline style.
+  --ng-icon__size: 1.5rem;
   // Transición independiente del trigger background para el "emerge desde
   // adentro" durante el morph fish → hub. El background trigger fadea
   // primero (matching el orbe-pez verde), 120ms más tarde el glyph
@@ -161,6 +171,40 @@
 // `.is-swimming`, el `.companion__hub` parent tiene opacity:0, así que
 // los rings desaparecen automáticamente durante el swim del pez (no hay
 // halos verdes flotando junto al fish en movimiento).
+
+// ─── Trigger label "WhatsApp" ───────────────────────────────────────────────
+// Caption editorial debajo del trigger circular. La pill anterior sumaba
+// masa visual y rompía el balance (pill ~85px ancho vs trigger 44px). Esta
+// versión es texto puro con tracking amplio + glow verde sutil — la label
+// se lee como continuación del trigger, no como un bloque separado pegado
+// debajo. Color foam con alpha 0.82 para que no compita en jerarquía con
+// el verde del botón.
+.whatsapp-hub__trigger-label {
+  position: absolute;
+  top: calc(100% + 0.625rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgb(var(--foam) / 0.82);
+  text-shadow:
+    0 1px 2px rgb(6 9 26 / 0.75),
+    0 0 10px rgb(37 211 102 / 0.30);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 4;
+}
+
+// La label solo vive en la variante footer (lg). En el companion sm
+// (pesecito flotante) la label viajaría con el icono mientras nada y
+// rompería la lectura editorial — además choca contra el footer dock o
+// el border inferior del viewport en mobile.
+:host(.whatsapp-hub--sm) .whatsapp-hub__trigger-label {
+  display: none;
+}
 
 // ─── Popover ────────────────────────────────────────────────────────────────
 // Abre hacia arriba, alineado al borde derecho del trigger. Cerrado por
