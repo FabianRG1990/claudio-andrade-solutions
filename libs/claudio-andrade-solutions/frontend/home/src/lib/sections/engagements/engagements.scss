@@ -789,11 +789,22 @@
   text-transform: uppercase;
   letter-spacing: 0.14em;
   // Yellow con PRESENCIA — el (248 205 88) anterior leía como brass dorado
-  // opaco. El ref tiene peak rgb(255,222,98) — apuntamos cerca del pico
-  // (no del avg) porque el user lee el ref como "marcado, fuerte,
-  // protagonismo". + sutil glow yellow para empujar la presencia sin
-  // cambiar el color base.
-  color: rgb(255 218 95);
+  // opaco. El ref tiene peak rgb(255,222,98) — apuntamos cerca del pico.
+  //
+  // Gradient sutil vertical (top crest cream → mid gold → bottom warm-amber).
+  // Range deliberadamente estrecho (~22 lum entre stops) para que las letras
+  // de abajo no se "apaguen" — el efecto es polished metal sheen sobre el
+  // texto, no un fade. background-clip:text + transparent fill.
+  background: linear-gradient(
+    180deg,
+    rgb(255 235 140) 0%,
+    rgb(255 218 95) 48%,
+    rgb(240 200 80) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   text-shadow: 0 0 12px rgb(255 210 80 / 0.20);
 
   // Divider con gradiente transparente — neutral, solo ordena.
@@ -994,9 +1005,9 @@
       #7a5215 100%
     );
 
-  // Border luminoso (vuelve a tener presencia). 1.5px + alpha alto + tono
-  // más cream que el top stop = rim light visible.
-  border: 1.5px solid rgba(255, 220, 130, 0.92);
+  // Border 1px (match ref) + alpha alto + tono más cream que el top stop
+  // = rim light visible sin grosor de "frame".
+  border: 1px solid rgba(255, 220, 130, 0.92);
 
   // Z-index isolation para que ::before quede contenido.
   isolation: isolate;
