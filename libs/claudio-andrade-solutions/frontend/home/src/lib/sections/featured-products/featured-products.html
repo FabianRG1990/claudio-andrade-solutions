@@ -52,22 +52,24 @@
       </a>
     </div>
 
-    <!-- Bento asimétrico: 1 XL (col 7, row 2) + 2 MD (col 5) + 1 LG (col 7) + 1 MD (col 5) -->
-    <div class="featured-products__grid">
+    <!-- Accordion horizontal expandible (tablet+). Card activa toma el espacio
+         vía flex-grow:10000, las inactivas quedan en strip vertical mostrando
+         solo el nombre. mouseenter/focus activa. Mobile: stack vertical normal. -->
+    <div class="featured-products__grid" role="list">
       @for (p of featured; track p.slug; let i = $index) {
         <a
           appReveal
           routerLink="/productos"
           class="product-card"
-          [class.product-card--xl]="i === 0"
-          [class.product-card--lg]="i === 3"
-          [class.product-card--md]="i === 1 || i === 2 || i === 4"
+          [class.is-active]="i === activeIndex()"
           [attr.data-accent]="p.accent"
+          [attr.aria-label]="p.name + ' — ' + p.tagline"
+          role="listitem"
+          (mouseenter)="onActivate(i)"
+          (focus)="onActivate(i)"
         >
           <div class="product-card__inner">
             <picture>
-              <!-- AVIF + WebP fallback. PNG removido del chain (1-2 MB vs
-                   50-100 KB webp). 2026: browsers con Angular 21 soportan webp. -->
               <source [srcset]="p.image.replace('.png', '.avif')" type="image/avif" />
               <img
                 appImgFade
@@ -80,6 +82,12 @@
             </picture>
             <div class="product-card__gradient"></div>
             <div class="product-card__hairline hairline"></div>
+
+            <!-- Compact label: visible solo cuando la card está colapsada
+                 (tablet+). Nombre escrito vertical bottom→top sobre la imagen. -->
+            <div class="product-card__compact" aria-hidden="true">
+              <span class="product-card__compact-name">{{ p.name }}</span>
+            </div>
 
             <div class="product-card__top">
               <span

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { phosphorArrowRightBold, phosphorArrowUpRightBold } from '@ng-icons/phosphor-icons/bold';
@@ -8,10 +8,6 @@ import { ImgFadeDirective } from '@cas-ui-shared/directives/img-fade/img-fade.di
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 import { SectionHeading } from '@cas-ui-shared/components/section-heading/section-heading';
 
-/**
- * FeaturedProducts — primer capítulo del manifiesto. SectionHeading + CTA al
- * lado, y bento asimétrico de 5 cards (1 XL + 4 medianas) con los productos.
- */
 @Component({
   selector: 'app-featured-products',
   imports: [RouterLink, NgIcon, ImgFadeDirective, RevealDirective, SectionHeading],
@@ -22,4 +18,9 @@ import { SectionHeading } from '@cas-ui-shared/components/section-heading/sectio
 })
 export class FeaturedProducts {
   protected readonly featured: ReadonlyArray<Product> = products.slice(0, 5);
+  protected readonly activeIndex = signal(0);
+
+  protected onActivate(i: number): void {
+    this.activeIndex.set(i);
+  }
 }
