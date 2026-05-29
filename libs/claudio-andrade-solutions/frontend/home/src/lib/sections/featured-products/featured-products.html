@@ -52,20 +52,20 @@
       </a>
     </div>
 
-    <!-- Accordion horizontal expandible (tablet+). Card activa toma el espacio
-         vía flex-grow:10000, las inactivas quedan en strip vertical mostrando
-         solo el nombre. mouseenter/focus activa. Mobile: stack vertical normal. -->
+    <!-- Bento fijo (5 cards expandidos siempre, sin accordion). Top row: 2
+         cards grandes (foundational services). Bottom row: 3 cards medianos
+         (specialized products). Cada card aspect-ratio 4:3 — matchea la AR
+         nativa de las imágenes (1448×1086) → object-fit:cover llena el card
+         sin zoom ni crop perceptible. Mobile: stack vertical full-width. -->
     <div class="featured-products__grid" role="list">
       @for (p of featured; track p.slug; let i = $index) {
         <div
           appReveal
+          [delay]="0.05 * i"
           class="product-card"
-          [class.is-active]="i === activeIndex()"
           [attr.data-accent]="p.accent"
           [attr.aria-label]="p.name + ' — ' + p.tagline"
           role="listitem"
-          (mouseenter)="onHoverActivate(i)"
-          (click)="onCardTap(i)"
         >
           <div class="product-card__inner">
             <picture>
@@ -81,12 +81,6 @@
             </picture>
             <div class="product-card__gradient"></div>
             <div class="product-card__hairline hairline"></div>
-
-            <!-- Compact label: visible solo cuando la card está colapsada
-                 (tablet+). Nombre escrito vertical bottom→top sobre la imagen. -->
-            <div class="product-card__compact" aria-hidden="true">
-              <span class="product-card__compact-name">{{ p.name }}</span>
-            </div>
 
             <div class="product-card__top">
               <span
@@ -109,7 +103,6 @@
                   routerLink="/productos"
                   class="product-card__arrow"
                   [attr.aria-label]="'Ver detalle de ' + p.name"
-                  (click)="onArrowClick($event)"
                 >
                   <ng-icon name="phosphorArrowUpRightBold" size="14" />
                 </a>

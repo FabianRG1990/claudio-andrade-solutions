@@ -98,15 +98,20 @@
 }
 
 // =============================================================================
-// Horizontal accordion expandible (tablet+) — pattern del Uiverse adaptado.
+// Bento grid fijo — 5 cards SIEMPRE expandidos (sin accordion). El user pidió
+// volver a "cards fijos como antes" porque el accordion escondía información,
+// pero conservando el principio visual ganado: imágenes que llenan el card
+// sin zoom ni crop perceptible (aspect-ratio del card = AR nativa de la imagen).
 //
-// 5 cards en flex-row. La card activa toma todo el espacio sobrante vía
-// `flex-grow: 10000`; las inactivas quedan en strip vertical de ~96px que
-// muestra solo el nombre (writing-mode vertical). Transición simultánea de
-// flex-grow + opacity de contenido = sensación de "abre/cierra" suave.
+// Layout (tablet+):
+//   Row 1: [card1 span-3] [card2 span-3]     ← cards grandes (hero del capítulo)
+//   Row 2: [card3 span-2] [card4 span-2] [card5 span-2]   ← cards medianos
 //
-// Mobile (<768): stack vertical normal. La metáfora horizontal solo aplica
-// con espacio suficiente; en phones cada card es full-width.
+// 6-column track porque MCD(2,3) = 6. Da 50/50 en row 1 y 33/33/33 en row 2,
+// con todas las cards manteniendo AR 4/3 — la diferencia de tamaño viene
+// solo del span, NO de aspect-ratios distintos (eso causaría zoom).
+//
+// Mobile (<768): stack vertical full-width single-column.
 // =============================================================================
 
 .featured-products__grid {
@@ -116,12 +121,33 @@
   grid-template-columns: 1fr;
 
   @media (min-width: 768px) {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 0.85rem;
-    height: clamp(28rem, 18vw + 18rem, 36rem);
+    grid-template-columns: repeat(6, 1fr);
+    row-gap: 1.5rem;
+    column-gap: 1.25rem;
     margin-top: clamp(2.5rem, 3vw + 1rem, 4rem);
+  }
+}
+
+@media (min-width: 768px) {
+  // Top row — 2 cards grandes, 50/50.
+  .product-card:nth-child(1),
+  .product-card:nth-child(2) {
+    grid-column: span 3;
+  }
+  // Bottom row — 3 cards medianos, 33/33/33. Title más chico porque el card
+  // mide 1/3 de ancho y el title estándar (28-36px) se encimaría al badge.
+  .product-card:nth-child(3),
+  .product-card:nth-child(4),
+  .product-card:nth-child(5) {
+    grid-column: span 2;
+
+    .product-card__title {
+      font-size: clamp(1.0625rem, 0.7rem + 0.6vw, 1.5rem);
+      line-height: 1.15;
+    }
+    .product-card__description {
+      font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+    }
   }
 }
 
@@ -192,24 +218,14 @@
 
   min-height: 22rem;
 
-  // Tablet+: comportamiento accordion. flex-basis estrecho por default,
-  // crece a 10000 cuando .is-active. La curva cubic-bezier es la del
-  // Uiverse original — anticipa lento y resuelve rápido. min-width 96px
-  // deja respirar al gradient-border (padding 0.5rem) sin colapsar.
+  // Tablet+: aspect-ratio locked a 4/3 (la AR nativa de las imágenes 1448×1086).
+  // Con object-fit:cover en .product-card__image, la imagen rellena el card
+  // SIN zoom ni crop perceptible. El crop residual por el padding del border
+  // (1.6%) es invisible al ojo.
   @media (min-width: 768px) {
-    flex: 1 1 96px;
-    min-width: 96px;
+    aspect-ratio: 4 / 3;
     min-height: 0;
-    height: 100%;
-    transition:
-      flex-grow 0.6s cubic-bezier(0.05, 0.61, 0.41, 0.95),
-      flex-basis 0.6s cubic-bezier(0.05, 0.61, 0.41, 0.95);
-  }
-
-  &.is-active {
-    @media (min-width: 768px) {
-      flex-grow: 10000;
-    }
+    height: auto;
   }
 }
 
@@ -230,67 +246,26 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  // object-fit:cover + aspect-ratio del card matching AR nativa de la imagen
+  // (4:3) = imagen rellena el card sin zoom ni crop perceptible.
   object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.05, 0.61, 0.41, 0.95);
 }
 
-// Inactive zoom — la card colapsada hace zoom leve a la imagen para que
-// el strip vertical no parezca un pixel-art recortado.
-@media (min-width: 768px) {
-  .product-card:not(.is-active) .product-card__image {
-    transform: scale(1.18);
-  }
-}
-
-// Compact label — solo visible en tablet+ y solo cuando la card está
-// colapsada. Nombre vertical centrado (writing-mode + rotate para que
-// la lectura sea bottom→top, lo natural en spines de libro en español).
-.product-card__compact {
-  display: none;
-
-  @media (min-width: 768px) {
-    display: flex;
-    position: absolute;
-    inset: 0;
-    align-items: center;
-    justify-content: center;
-    padding-block: 1.5rem;
-    opacity: 1;
-    transition: opacity 0.35s ease;
-    pointer-events: none;
-    z-index: 2;
-  }
-}
-
-.product-card__compact-name {
-  font-family: var(--font-display);
-  font-size: clamp(0.95rem, 0.4vw + 0.7rem, 1.15rem);
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: rgb(var(--foam));
-  white-space: nowrap;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  text-shadow:
-    0 1px 2px rgb(6 9 26 / 0.9),
-    0 2px 14px rgb(6 9 26 / 0.6);
-}
-
-@media (min-width: 768px) {
-  .product-card.is-active .product-card__compact {
-    opacity: 0;
-  }
-}
-
+// Scrim de legibilidad concentrado en el bottom — antes era opaco hasta el
+// fondo y obscurecía 80% de la imagen. Ahora el top 55% del card queda
+// totalmente limpio para que se vea la imagen, y solo la zona del texto
+// (bottom 25-30%) recibe el abyss-fade que necesita el title/description
+// para leer sobre cualquier fondo. Patrón Apple/Pinterest para image+caption.
 .product-card__gradient {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to top,
-    rgb(var(--abyss)),
-    rgb(var(--abyss) / 0.3),
-    rgb(var(--abyss) / 0.1)
+    rgb(var(--abyss) / 0.88) 0%,
+    rgb(var(--abyss) / 0.55) 22%,
+    rgb(var(--abyss) / 0.0) 55%
   );
+  pointer-events: none;
 }
 
 .product-card__hairline {
@@ -310,21 +285,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  @media (min-width: 768px) {
-    opacity: 0;
-    transform: translateY(-8px);
-    transition:
-      opacity 0.45s cubic-bezier(0.05, 0.61, 0.41, 0.95) 0.1s,
-      transform 0.45s cubic-bezier(0.05, 0.61, 0.41, 0.95) 0.1s;
-  }
-}
-
-@media (min-width: 768px) {
-  .product-card.is-active .product-card__top {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  z-index: 2;
 }
 
 .product-card__badge {
@@ -384,21 +345,7 @@
   bottom: 1.25rem;
   left: 1.25rem;
   right: 1.25rem;
-
-  @media (min-width: 768px) {
-    opacity: 0;
-    transform: translateY(8px);
-    transition:
-      opacity 0.45s cubic-bezier(0.05, 0.61, 0.41, 0.95) 0.1s,
-      transform 0.45s cubic-bezier(0.05, 0.61, 0.41, 0.95) 0.1s;
-  }
-}
-
-@media (min-width: 768px) {
-  .product-card.is-active .product-card__bottom {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  z-index: 2;
 }
 
 .product-card__row {
@@ -525,11 +472,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .product-card,
-  .product-card__image,
-  .product-card__compact,
-  .product-card__top,
-  .product-card__bottom {
+  .product-card__arrow {
     transition-duration: 0.001ms !important;
   }
 }
