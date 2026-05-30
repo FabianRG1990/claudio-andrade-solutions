@@ -1032,32 +1032,12 @@
     0 4px 10px rgba(0, 18, 58, 0.35),
     0 10px 22px rgba(0, 12, 42, 0.40);
 
-  // ::before — HIGHLIGHT SHEEN superior. Override del ::before base (que
-  // pintaba el gradient celeste vía mask-composite, no aplica acá). Acá
-  // es una banda cream suave en el top 50%, fade-out a transparente, sobre
-  // todo el contenido del botón.
+  // ::before — DESHABILITADO. El base .engagement-card__cta::before pinta
+  // un rim celeste vía mask-composite que NO aplica al CTA dorado, y la
+  // banda cream que tenía acá creaba un "segundo background" visible al
+  // 55% de altura. Single background limpio = solo el linear-gradient.
   &::before {
-    content: '';
-    position: absolute;
-    inset: 1px 1px auto 1px;
-    height: 55%;
-    border-radius: 0.4375rem 0.4375rem 0 0;  // match al border-radius - 1px
-    background: linear-gradient(
-      180deg,
-      rgba(255, 245, 210, 0.55) 0%,
-      rgba(255, 235, 180, 0.22) 45%,
-      transparent 100%
-    );
-    -webkit-mask: none;
-            mask: none;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  // Contenido (label + icon) sobre el sheen.
-  > * {
-    position: relative;
-    z-index: 2;
+    content: none;
   }
 
   &:hover {
@@ -1079,15 +1059,6 @@
       0 0 40px rgba(85, 160, 245, 0.22),
       0 6px 14px rgba(0, 18, 58, 0.40),
       0 14px 28px rgba(0, 12, 42, 0.42);
-
-    &::before {
-      background: linear-gradient(
-        180deg,
-        rgba(255, 248, 220, 0.65) 0%,
-        rgba(255, 240, 188, 0.28) 45%,
-        transparent 100%
-      );
-    }
   }
 }
 
