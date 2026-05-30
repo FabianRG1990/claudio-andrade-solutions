@@ -255,12 +255,15 @@
     visibility 0s linear 240ms;
   z-index: 50;
 
-  // Caret diamante apuntando al trigger.
+  // Caret diamante apuntando al trigger. La posición horizontal se ajusta
+  // dinámicamente desde el TS cuando el popover colisiona con un borde del
+  // viewport: el popover se desplaza para mantenerse fully visible y la
+  // caret se desplaza la misma cantidad para seguir anclada al trigger.
   &::after {
     content: '';
     position: absolute;
     top: 100%;
-    right: 14px;
+    right: var(--caret-right, 14px);
     width: 10px;
     height: 10px;
     margin-top: -6px;
@@ -282,6 +285,30 @@
     opacity 220ms var(--ease-fluid),
     transform 320ms var(--ease-spring),
     visibility 0s linear 0s;
+}
+
+// Flip vertical — popover abre hacia ABAJO cuando arriba del trigger no hay
+// espacio suficiente (ej. trigger cerca del top del viewport). El TS añade
+// la clase `.whatsapp-hub--flipped` al div root del hub. La caret cambia de
+// borde inferior a borde superior del popover.
+.whatsapp-hub.whatsapp-hub--flipped .whatsapp-hub__menu {
+  bottom: auto;
+  top: calc(100% + 0.75rem);
+  transform-origin: top right;
+
+  &::after {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: -6px;
+    // Bordes en el lado opuesto: ahora el "highlight" debe quedar en el
+    // borde superior derecho del diamante (apuntando hacia el trigger
+    // abajo). Como el diamante está rotado 45°, los bordes top+right
+    // del box original sirven para esa lectura.
+    border-right: 1px solid rgb(255 255 255 / 0.06);
+    border-top: 1px solid rgb(255 255 255 / 0.06);
+    border-bottom: 0;
+  }
 }
 
 // ─── Eyebrow del menu ───────────────────────────────────────────────────────
