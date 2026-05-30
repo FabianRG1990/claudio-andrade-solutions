@@ -35,8 +35,8 @@ import { filter } from 'rxjs/operators';
 
 type Vec = { x: number; y: number };
 
-// Tintas brass / oro. Match al italic de los títulos (--brass = rgb 255 210
-// 74 = #FFD24A). 4 variantes dentro de la familia cream-brass-bronze.
+// Tintas brass / oro. Match al italic de los títulos (--brass = rgb 242 198
+// 91 = #F2C65B). 4 variantes dentro de la familia cream-brass-bronze.
 //
 // Los colores van OPACOS (sin alpha en la rgb) porque ahora la alpha se
 // controla via globalAlpha en render(), y el blend es ADITIVO

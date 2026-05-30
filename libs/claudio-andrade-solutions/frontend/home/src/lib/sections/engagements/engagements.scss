@@ -871,8 +871,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: 3.5rem;
   width: 100%;
   // Padding compacto match ref (botón menos alto). Antes 1rem vertical
   // (= 16px) replicaba el Firebase deployado; el ref es claramente más
