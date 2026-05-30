@@ -998,38 +998,21 @@
   color: rgb(38, 22, 2);
   text-shadow: 0 1px 0 rgba(255, 240, 195, 0.40);
 
-  // BACKGROUND — polished metal: spotlight RADIAL HORIZONTAL (no vertical).
-  //
-  // El ref tiene el bright en el CENTRO (mid-x, mid-y) y dark en los LADOS
-  // (left/right edges). Evidencia: pixel sample del ref a mid-y mostró
-  // center rgb(251,218,132), leftMid rgb(184,150,85), rightMid rgb(211,158,74)
-  // — diferencia +70 lum centro vs lados. Verticalmente la variación es
-  // mínima (210-240 lum). Esto es la firma de un "polished metal sheen"
-  // donde la luz reflecta del centro y decae hacia los bordes laterales.
-  //
-  // Layer 1 (top, subtle): rim light top — solo banda cream en el borde
-  // superior (~22% del alto), fade out. Match al rim cenital del ref.
-  // Layer 2 (base): radial ellipse 70% width × 110% height at 50% 50% —
-  // bright center, oscuro hacia los lados. La ellipse más ancha que alta
-  // hace que el spotlight se "esparza horizontalmente".
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 248, 215, 0.45) 0%,
-      transparent 22%
-    ),
-    radial-gradient(
-      ellipse 72% 115% at 50% 50%,
-      #ecc975 0%,        // centro: gold cálido bright
-      #d2a548 35%,
-      #b08230 65%,
-      #8a6018 92%,       // edges: bronze deep
-      #7a5215 100%
-    );
+  // BACKGROUND — gradiente horizontal 5-stop especificado por el user:
+  // dark-warm edges (#d39a43 / #cf963f) → mid-warm (#e7b456 / #e1aa4d) →
+  // peak bright center (#f8d57c). Lectura visual: polished gold con
+  // spotlight horizontal centrado.
+  background: linear-gradient(
+    90deg,
+    #d39a43 0%,
+    #e7b456 25%,
+    #f8d57c 50%,
+    #e1aa4d 75%,
+    #cf963f 100%
+  );
 
-  // Border 1px (match ref) + alpha alto + tono más cream que el top stop
-  // = rim light visible sin grosor de "frame".
-  border: 1px solid rgba(255, 220, 130, 0.92);
+  // Border cream-gold definido (#F7E394) — rim light visible.
+  border: 1px solid #F7E394;
 
   // Z-index isolation para que ::before quede contenido.
   isolation: isolate;
@@ -1078,22 +1061,17 @@
   }
 
   &:hover {
-    // Hover: misma estructura radial, centro un toque más bright.
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 250, 220, 0.55) 0%,
-        transparent 22%
-      ),
-      radial-gradient(
-        ellipse 72% 115% at 50% 50%,
-        #f2d182 0%,
-        #d8ab4f 35%,
-        #b88836 65%,
-        #946a1f 92%,
-        #835818 100%
-      );
-    border-color: rgba(255, 228, 145, 0.96);
+    // Hover: mismo gradiente horizontal, stops un toque más bright para
+    // feedback claro sin saltar a otra estética.
+    background: linear-gradient(
+      90deg,
+      #dca64d 0%,
+      #efbe60 25%,
+      #ffdd88 50%,
+      #ebb557 75%,
+      #d9a049 100%
+    );
+    border-color: #FBEAA8;
     box-shadow:
       inset 0 1px 0 rgba(255, 248, 220, 0.55),
       inset 0 -1px 0 rgba(90, 55, 8, 0.35),
