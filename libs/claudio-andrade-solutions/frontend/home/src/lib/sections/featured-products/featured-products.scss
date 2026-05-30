@@ -287,12 +287,12 @@
 
   min-height: 22rem;
 
-  // Tablet+: aspect-ratio locked a 4/3 (la AR nativa de las imágenes 1448×1086).
-  // Con object-fit:cover en .product-card__image, la imagen rellena el card
-  // SIN zoom ni crop perceptible. El crop residual por el padding del border
-  // (1.6%) es invisible al ojo.
+  // Tablet+: aspect-ratio locked a la AR nativa exacta de las imágenes
+  // (1491×1055 = 1.413). Con object-fit:cover, la imagen rellena el card
+  // SIN zoom ni crop (AR del card === AR nativa). Per request del user:
+  // "no zoom, no acercamiento, tamaño original".
   @media (min-width: 768px) {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1491 / 1055;
     min-height: 0;
     height: auto;
   }
@@ -316,7 +316,7 @@
   width: 100%;
   height: 100%;
   // object-fit:cover + aspect-ratio del card matching AR nativa de la imagen
-  // (4:3) = imagen rellena el card sin zoom ni crop perceptible.
+  // (1491×1055) = imagen rellena el card sin zoom ni crop.
   object-fit: cover;
 }
 
