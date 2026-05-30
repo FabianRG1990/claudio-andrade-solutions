@@ -55,12 +55,20 @@
               </div>
             </dl>
             <div class="product-row__cta-wrap">
-              <a routerLink="/contacto" class="product-row__cta gold-pill-button">
-                <span class="product-row__cta-label">Pedir propuesta</span>
-                <span class="product-row__cta-icon glass-button-icon">
-                  <ng-icon name="phosphorArrowUpRightBold" size="12" />
-                </span>
-              </a>
+              <app-whatsapp-hub triggerless #wsHub>
+                <button
+                  type="button"
+                  class="product-row__cta gold-pill-button"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="wsHub.isOpen()"
+                  (click)="wsHub.toggleMenu($event)"
+                >
+                  <span class="product-row__cta-label">Pedir propuesta</span>
+                  <span class="product-row__cta-icon glass-button-icon">
+                    <ng-icon name="phosphorArrowUpRightBold" size="12" />
+                  </span>
+                </button>
+              </app-whatsapp-hub>
             </div>
           </div>
         </article>

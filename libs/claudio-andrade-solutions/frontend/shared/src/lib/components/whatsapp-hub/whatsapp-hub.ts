@@ -52,12 +52,26 @@ export class WhatsappHub {
   // con el trigger, vive en su propia capa.
   readonly size = input<'lg' | 'sm'>('lg');
 
+  // Cuando true, el componente NO pinta el trigger circular verde. El caller
+  // proyecta su propio trigger via <ng-content> y dispara `toggleMenu()` con
+  // un template ref. Uso: pill buttons existentes (ej. "Pedir propuesta" en
+  // /productos) que abren el mismo popover sin romper su lenguaje visual.
+  readonly triggerless = input(false, { transform: (v: boolean | '') => v === '' || v === true });
+
   @HostBinding('class.whatsapp-hub--sm')
   protected get isSmall(): boolean {
     return this.size() === 'sm';
   }
 
+  @HostBinding('class.whatsapp-hub--triggerless')
+  protected get isTriggerless(): boolean {
+    return this.triggerless();
+  }
+
   protected readonly open = signal(false);
+  // Read-only view del state — expuesta para que un trigger proyectado
+  // (modo triggerless) pueda bindear aria-expanded desde el template ref.
+  readonly isOpen = this.open.asReadonly();
   private readonly hub = viewChild<ElementRef<HTMLElement>>('hub');
 
   protected toggle(event: Event): void {
@@ -65,8 +79,13 @@ export class WhatsappHub {
     this.open.update((v) => !v);
   }
 
-  // Público — el companion lo llama al iniciar swim para que el popover
-  // no quede flotando mientras el trigger viaja por la pantalla.
+  // Público — llamado desde un trigger proyectado (modo triggerless) o desde
+  // el companion al iniciar swim para asegurar el estado del popover.
+  toggleMenu(event?: Event): void {
+    event?.stopPropagation();
+    this.open.update((v) => !v);
+  }
+
   close(): void {
     if (this.open()) this.open.set(false);
   }
