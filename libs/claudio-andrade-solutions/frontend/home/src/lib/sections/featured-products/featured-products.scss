@@ -208,7 +208,7 @@
   height: 100%;
   overflow: hidden;
   border-radius: var(--radius-squircle);
-  padding: 0.5rem;
+  padding: 0.25rem;
   isolation: isolate;
   // GPU compositing — Chrome usa Skia con subpixel preciso para layers GPU.
   // Sin esto las curvas finas en bordes con gradient AA se redondean a
@@ -281,7 +281,7 @@
   // El previo (- 0.5rem = -8px) dejaba la curva interna 1px más abierta que
   // la externa → en el corner el ring cyan se "estrechaba" a lo largo del
   // arco y el ojo lo lee como escalón.
-  border-radius: calc(var(--radius-squircle) - 0.5rem - 1px);
+  border-radius: calc(var(--radius-squircle) - 0.25rem - 1px);
 }
 
 .product-card__image {
@@ -317,7 +317,7 @@
   // Match __inner radius (concéntrica con outer). La hairline pinta una
   // banda inset 1px dentro de su radio — debe ser idéntica a __inner para
   // no introducir un segundo curve mismatch.
-  border-radius: calc(var(--radius-squircle) - 0.5rem - 1px);
+  border-radius: calc(var(--radius-squircle) - 0.25rem - 1px);
 }
 
 .product-card__top {

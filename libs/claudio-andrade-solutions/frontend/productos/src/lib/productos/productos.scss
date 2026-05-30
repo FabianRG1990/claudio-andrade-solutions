@@ -54,7 +54,7 @@
 .product-row__media {
   position: relative;
   border-radius: var(--radius-squircle);
-  padding: 0.5rem;
+  padding: 0.25rem;
   isolation: isolate;
 
   background:
@@ -114,10 +114,10 @@
   position: relative;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  // Concéntrica con outer. padding 0.5rem (8px) + border 1px = inset 9px.
-  // inner radius debe restar 9px, no 8px — si no, el anillo del border en
-  // el corner cambia de grosor a lo largo del arco y se lee como escalón.
-  border-radius: calc(var(--radius-squircle) - 0.5rem - 1px);
+  // Concéntrica con outer. padding 0.25rem (4px) + border 1px = inset 5px.
+  // inner radius debe restar 5px — si no, el anillo del border en el corner
+  // cambia de grosor a lo largo del arco y se lee como escalón.
+  border-radius: calc(var(--radius-squircle) - 0.25rem - 1px);
 }
 
 .product-row__image {
