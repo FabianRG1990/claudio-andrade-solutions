@@ -94,22 +94,27 @@
           </div>
         </a>
 
-        <a
-          href="tel:+50688881992"
-          class="info-card"
-          data-accent="bioluminescent"
-        >
-          <div class="info-card__inner">
-            <span class="info-card__glow" aria-hidden="true"></span>
-            <span class="info-card__icon">
-              <ng-icon name="phosphorPhoneDuotone" size="22" />
-            </span>
-            <div class="info-card__copy">
-              <span class="info-card__label">Teléfono</span>
-              <span class="info-card__value">+506 8888 1992</span>
+        <app-whatsapp-hub triggerless #wsHub>
+          <button
+            type="button"
+            class="info-card"
+            data-accent="whatsapp"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="wsHub.isOpen()"
+            (click)="wsHub.toggleMenu($event)"
+          >
+            <div class="info-card__inner">
+              <span class="info-card__glow" aria-hidden="true"></span>
+              <span class="info-card__icon">
+                <ng-icon name="phosphorWhatsappLogoBold" size="22" />
+              </span>
+              <div class="info-card__copy">
+                <span class="info-card__label">WhatsApp</span>
+                <span class="info-card__value">Hablemos por chat — respuesta el mismo día</span>
+              </div>
             </div>
-          </div>
-        </a>
+          </button>
+        </app-whatsapp-hub>
 
         <div class="info-card" data-accent="kelp">
           <div class="info-card__inner">

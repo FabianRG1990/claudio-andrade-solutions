@@ -514,6 +514,110 @@
   --accent-rgb: var(--kelp);
 }
 
+// El card WhatsApp ocupa el slot que antes era Teléfono. Surface, border,
+// padding, tipografía y dimensiones — IDÉNTICOS a los otros info-cards
+// (no override de __inner, no halo verde sobre el cristal). La única marca
+// de identidad WhatsApp vive en el icon-pill (gradiente verde oficial).
+//
+// En triggerless el host del hub es layout-transparent (block + 100% en
+// ambos ejes, definido en el componente). Para participar del column-stack
+// como un info-card más, solo necesita el mismo `flex:1` que reciben los
+// otros direct children del aside en ≥1024.
+.contacto__info app-whatsapp-hub {
+  @media (min-width: 1024px) {
+    flex: 1;
+  }
+}
+
+// El card pasó de <a> a <button> (para abrir el popover en vez de navegar).
+// Sin reset el browser pinta border/bg/font defaults que rompen el surface
+// del info-card. Replicamos también el lift hover que la regla original
+// (`.info-card:is(a):hover`) sólo aplica a anchors.
+button.info-card {
+  width: 100%;
+  // Llena la altura del wrapper para matchear las alturas de email/dirección
+  // (que reciben flex:1 directamente desde .contacto__info en ≥1024).
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.info-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+button.info-card:focus-visible {
+  outline: 2px solid #25d366;
+  outline-offset: 3px;
+}
+
+// ─── WhatsApp accent — efecto verde completo (matchea imagen ref) ─────────
+// Tres capas de verde, no una:
+//   (1) Surface — halo verde TR sobre el navy base (suplanta el blue glow
+//       de las otras info-cards). Lee como "el card tiene luz verde adentro".
+//   (2) Border — ring de gradient verde (oscurece BL → brillante TL).
+//   (3) Icon — pill verde oficial + drop-shadow verde sutil que sangra al
+//       surface, conectando icon con halo.
+// La altura y dimensiones del card NO cambian — todo el efecto vive en
+// colores y sombras, no en geometría.
+
+.info-card[data-accent='whatsapp'] .info-card__inner {
+  // (1) Surface — halo verde TR + base navy preservada.
+  background:
+    radial-gradient(
+      ellipse 75% 60% at 90% -8%,
+      rgb(80 240 145 / 0.42),
+      rgb(37 211 102 / 0.22) 35%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      rgb(18 140 126 / 0.20),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
+
+  // (2) Border solid + ring de gradient (::before) en verde brillante.
+  border-color: rgb(37 211 102 / 0.60);
+
+  &::before {
+    background: linear-gradient(
+      155deg,
+      rgb(120 250 175 / 0.90) 0%,
+      rgb(80 240 145 / 0.75) 22%,
+      rgb(37 211 102 / 0.55) 50%,
+      rgb(18 140 126 / 0.35) 78%,
+      rgb(18 140 126 / 0.22) 100%
+    );
+  }
+}
+
+// (3) Icon-pill verde WhatsApp oficial + drop-shadow verde que conecta
+// con el halo del surface.
+.info-card[data-accent='whatsapp'] .info-card__icon {
+  color: #ffffff;
+  background: linear-gradient(155deg, #25d366 0%, #128c7e 100%);
+  border-color: rgb(255 255 255 / 0.22);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.32),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.30),
+    0 4px 12px -2px rgb(37 211 102 / 0.45),
+    0 2px 4px -1px rgb(0 0 0 / 0.30);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .info-card:is(a):hover .info-card__glow {
     opacity: 0.85;

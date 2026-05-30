@@ -21,6 +21,24 @@
   display: inline-block;
 }
 
+// En modo triggerless el host envuelve un trigger proyectado (ej. el card
+// de WhatsApp en /contacto que tiene que medir igual que email/dirección).
+// Inline-block colapsaba la altura del button y rompía el flex:1 del column
+// stack del aside. En triggerless, host + wrapper interno son layout-
+// transparent (block + 100% en ambos ejes) para que el contenido proyectado
+// herede el slot completo del parent.
+:host(.whatsapp-hub--triggerless) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+:host(.whatsapp-hub--triggerless) .whatsapp-hub {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 // ─── Trigger circular ───────────────────────────────────────────────────────
 // 40×40 default (footer), 32×32 en variante sm (hero). Gradiente WhatsApp
 // con relieve double-shadow + glow exterior verde.
