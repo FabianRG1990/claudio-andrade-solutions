@@ -133,6 +133,20 @@
           <span class="hero__badge-prefix">Capacidad activa · </span>
           <span class="hero__badge-key">Soluciones con IA</span>
           <span class="hero__badge-suffix"> a medida</span>
+          <!-- Dock mobile/tablet del companion. En desktop (≥1100×720) este
+               anchor queda display:none y manda el de `.hero__scroll-hint`;
+               abajo de ese breakpoint el scroll-hint NO se renderiza, así
+               que el companion engancha aquí — al lado derecho del badge.
+               Order 0 coincide con el dock hero desktop para mantener la
+               misma posición lógica en la secuencia (badge → cap-02 → ...). -->
+          <span
+            appCompanionDock="hero-badge"
+            [order]="0"
+            [offsetX]="28"
+            label="Hero Badge"
+            class="hero__badge-anchor"
+            aria-hidden="true"
+          ></span>
         </span>
 
         <h1 class="hero__title">
