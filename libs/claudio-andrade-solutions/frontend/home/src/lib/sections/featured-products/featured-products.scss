@@ -116,8 +116,10 @@
 // =============================================================================
 
 .featured-products__grid {
-  margin-top: clamp(2rem, 3vw + 1rem, 4rem);
   display: grid;
+  // padding-top absorbe el viejo margin-top para que el background #06091b
+  // pinte también la franja que antes era margin (out of box-model).
+  padding-top: clamp(2rem, 3vw + 1rem, 4rem);
   gap: 1.25rem;
   grid-template-columns: 1fr;
   background: #06091b;

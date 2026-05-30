@@ -70,9 +70,11 @@
 }
 
 .engagements__grid {
-  margin-top: clamp(2rem, 3vw + 1rem, 4rem);
   display: grid;
-  padding-block: 1.5rem;
+  // padding-top absorbe el viejo margin-top + el viejo padding-top de
+  // padding-block (1.5rem) para que el background #06091b pinte también
+  // la franja que antes era margin (out of box-model).
+  padding-block: calc(clamp(2rem, 3vw + 1rem, 4rem) + 1.5rem) 1.5rem;
   gap: 1.5rem;
   background: #06091b;
 
