@@ -3,6 +3,7 @@
 <a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
 
 ✨ A repository showcasing key [Nx](https://nx.dev) features for Angular monorepos ✨
+
 ## Finish your Nx platform setup
 
 🚀 [Finish setting up your workspace](https://cloud.nx.app/connect/0RjiijXiYe) to get faster builds with remote caching, distributed task execution, and self-healing CI. [Learn more about Nx Cloud](https://nx.dev/ci/intro/why-nx-cloud).
@@ -12,12 +13,10 @@
 This repository demonstrates a production-ready Angular monorepo with:
 
 - **2 Applications**
-
   - `shop` - Angular e-commerce application with product listings and detail views
   - `api` - Backend API with Docker support serving product data
 
 - **6 Libraries**
-
   - `@org/feature-products` - Product listing feature (Angular)
   - `@org/feature-product-detail` - Product detail feature (Angular)
   - `@org/data` - Data access layer for shop features
@@ -282,5 +281,7 @@ Join the Nx community:
 - [LinkedIn](https://www.linkedin.com/company/nrwl)
 - [YouTube](https://www.youtube.com/@nxdevtools)
 - [Blog](https://nx.dev/blog)
+
 # landing-pages-ws
+
 # claudio-andrade-solutions
