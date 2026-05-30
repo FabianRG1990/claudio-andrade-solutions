@@ -36,6 +36,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 2.5rem;
+  background: #06091b;
 
   @media (min-width: 1024px) {
     flex-direction: row;
@@ -73,6 +74,7 @@
   display: grid;
   padding-block: 1.5rem;
   gap: 1.5rem;
+  background: #06091b;
 
   @media (min-width: 640px) {
     > .engagement-card {

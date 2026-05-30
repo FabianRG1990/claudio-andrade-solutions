@@ -46,6 +46,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 2.5rem;
+  background: #06091b;
 
   @media (min-width: 1024px) {
     flex-direction: row;
@@ -119,6 +120,7 @@
   display: grid;
   gap: 1.25rem;
   grid-template-columns: 1fr;
+  background: #06091b;
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(6, 1fr);
