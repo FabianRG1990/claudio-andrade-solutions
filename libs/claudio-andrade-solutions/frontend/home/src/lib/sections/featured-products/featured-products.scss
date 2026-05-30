@@ -33,11 +33,33 @@
 }
 
 .featured-products__container {
+  position: relative;
+  isolation: isolate;
   margin-inline: auto;
   max-width: 80rem;
   padding-inline:
     max(var(--container-px), env(safe-area-inset-left))
     max(var(--container-px), env(safe-area-inset-right));
+
+  // Fish vanishing zone — un solo background continuo que cubre __head +
+  // __grid y todo lo intermedio. Mask-composite: intersect fadea los 4
+  // bordes simultáneamente sin esquinas duras.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #06091b;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+            mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-composite: intersect;
+    pointer-events: none;
+  }
 }
 
 .featured-products__head {
@@ -46,7 +68,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 2.5rem;
-  background: #06091b;
+  // background lo provee .featured-products__container::before (zona
+  // continua head + grid con fade en los 4 bordes).
 
   @media (min-width: 1024px) {
     flex-direction: row;
@@ -117,12 +140,11 @@
 
 .featured-products__grid {
   display: grid;
-  // padding-top absorbe el viejo margin-top para que el background #06091b
-  // pinte también la franja que antes era margin (out of box-model).
+  // padding-top preserva el espaciado original ahora que el background
+  // continuo lo provee .featured-products__container::before.
   padding-top: clamp(2rem, 3vw + 1rem, 4rem);
   gap: 1.25rem;
   grid-template-columns: 1fr;
-  background: #06091b;
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(6, 1fr);

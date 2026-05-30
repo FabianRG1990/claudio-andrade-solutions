@@ -23,11 +23,33 @@
 
 .engagements__container {
   position: relative;
+  isolation: isolate;
   margin-inline: auto;
   max-width: 80rem;
   padding-inline:
     max(var(--container-px), env(safe-area-inset-left))
     max(var(--container-px), env(safe-area-inset-right));
+
+  // Fish vanishing zone — un solo background continuo que cubre __head +
+  // __grid y todo lo intermedio (evita que un wrapper interno deje hueco
+  // visible). Mask-composite: intersect fadea los 4 bordes simultáneamente
+  // (top, bottom, left, right) sin esquinas duras.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #06091b;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+            mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-composite: intersect;
+    pointer-events: none;
+  }
 }
 
 .engagements__head {
@@ -36,7 +58,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 2.5rem;
-  background: #06091b;
+  // background lo provee .engagements__container::before (zona continua
+  // head + grid con fade en los 4 bordes).
 
   @media (min-width: 1024px) {
     flex-direction: row;
@@ -72,11 +95,10 @@
 .engagements__grid {
   display: grid;
   // padding-top absorbe el viejo margin-top + el viejo padding-top de
-  // padding-block (1.5rem) para que el background #06091b pinte también
-  // la franja que antes era margin (out of box-model).
+  // padding-block (1.5rem) — preserva el espaciado original ahora que
+  // .engagements__container::before pinta el background continuo.
   padding-block: calc(clamp(2rem, 3vw + 1rem, 4rem) + 1.5rem) 1.5rem;
   gap: 1.5rem;
-  background: #06091b;
 
   @media (min-width: 640px) {
     > .engagement-card {
