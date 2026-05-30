@@ -130,6 +130,27 @@
       }
     }
   }
+
+  // Cuando el popover de contactos del WhatsappHub está abierto (companion
+  // o footer) Y estamos en mobile (<880px), el rail desaparece para no
+  // taparlo. Solo aplica en teléfonos por pedido del user: en desktop el
+  // pill horizontal y el burger viven centrados/al margen sin pisar el
+  // popover, no hace falta esconderlos. En phones, en cambio, el burger
+  // del corner derecho y la lista del popover compiten por la misma franja
+  // de viewport. El estado lo dispara `WhatsappHubState.anyOpen()`; cuando
+  // el popover cierra (click fuera, escape, contacto), el rail vuelve con
+  // la misma transición.
+  @media (max-width: 879.98px) {
+    &.is-whatsapp-open {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms var(--ease-fluid);
+
+      > * {
+        pointer-events: none;
+      }
+    }
+  }
 }
 
 // ─── Brand: emblema + wordmark ───────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   HostBinding,
   HostListener,
@@ -17,6 +18,8 @@ import {
   phosphorArrowUpRightBold,
   phosphorWhatsappLogoBold,
 } from '@ng-icons/phosphor-icons/bold';
+
+import { WhatsappHubState } from './whatsapp-hub-state';
 
 interface WhatsappContact {
   readonly id: string;
@@ -79,6 +82,11 @@ export class WhatsappHub {
   private readonly hub = viewChild<ElementRef<HTMLElement>>('hub');
   private readonly menu = viewChild<ElementRef<HTMLElement>>('menu');
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly hubState = inject(WhatsappHubState);
+  private readonly destroyRef = inject(DestroyRef);
+  // Última fase reportada al estado global. Sin esto, el effect que sigue
+  // a `open()` notificaría open en el primer run (cuando todavía es false).
+  private notifiedOpen = false;
 
   constructor() {
     // Cada vez que el popover se abre, reposicionarlo viewport-aware:
@@ -90,6 +98,24 @@ export class WhatsappHub {
       if (!isPlatformBrowser(this.platformId)) return;
       // rAF: dejar que Angular pinte la clase .is-open y el layout estabilice.
       requestAnimationFrame(() => this.adjustPopoverPosition());
+    });
+
+    // Notificar al estado global cada vez que el popover abre/cierra. El
+    // FloatingNav consume `WhatsappHubState.anyOpen()` para ocultar el rail
+    // (pill + burger) y evitar que el chrome del navbar tape el popover.
+    effect(() => {
+      const isOpen = this.open();
+      if (isOpen === this.notifiedOpen) return;
+      this.notifiedOpen = isOpen;
+      if (isOpen) this.hubState.notifyOpen();
+      else this.hubState.notifyClose();
+    });
+
+    // Si el hub se destruye con el popover abierto (route change, scroll
+    // que esconde el dock, etc.), decrementar el contador para no dejar el
+    // navbar oculto permanentemente.
+    this.destroyRef.onDestroy(() => {
+      if (this.notifiedOpen) this.hubState.notifyClose();
     });
   }
 

@@ -23,6 +23,8 @@ import {
 } from '@ng-icons/phosphor-icons/regular';
 import { filter, map, startWith } from 'rxjs/operators';
 
+import { WhatsappHubState } from '../../components/whatsapp-hub/whatsapp-hub-state';
+
 interface NavLink {
   readonly href: string;
   /** Label "completo" usado en desktop ≥880px. */
@@ -85,6 +87,10 @@ export class FloatingNav {
   /** True cuando el scrollY supera `SCROLL_COLLAPSE_THRESHOLD`. Dispara
    *  la transición pill → burger en el rail. */
   protected readonly scrolled = signal(false);
+  /** True mientras algún `WhatsappHub` tiene el popover de contactos
+   *  abierto. El rail (pill + burger) se desvanece para no tapar la lista
+   *  de contactos que despliega el companion sobre el viewport. */
+  protected readonly whatsappOpen = inject(WhatsappHubState).anyOpen;
 
   private readonly navRef =
     viewChild<ElementRef<HTMLElement>>('navRef');
