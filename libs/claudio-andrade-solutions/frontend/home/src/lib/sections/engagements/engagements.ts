@@ -1,46 +1,21 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  phosphorArrowRightBold,
-  phosphorArrowUpRightBold,
-  phosphorCheckBold,
-  phosphorUsersBold,
-  phosphorXBold,
-} from '@ng-icons/phosphor-icons/bold';
-import {
-  phosphorMagnifyingGlass,
-  phosphorRocket,
-  phosphorUsers,
-} from '@ng-icons/phosphor-icons/regular';
-import { phosphorStarFill } from '@ng-icons/phosphor-icons/fill';
 
 import { engagements } from '@cas-ui-shared/data/data';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.directive';
 
+import { EngagementCard } from './engagement-card/engagement-card';
+
 /**
- * Engagements — capítulo 03 del manifiesto. Tres modelos de contratación en
- * grid; el central (highlight=true) se eleva, escala y pinta con tintes
- * lagoon.
+ * Engagements — capítulo 03 del manifiesto. Shell delgado: eyebrow + título +
+ * lead + grid. Cada tarjeta es el componente presentacional `EngagementCard`
+ * (extraído acá; el SCSS de la tarjeta — ~900 líneas — vive con él). El central
+ * (highlight=true) se eleva por el ancho de columna del grid y tintes lagoon.
  */
 @Component({
   selector: 'app-engagements',
-  imports: [RouterLink, NgIcon, Eyebrow, RevealDirective, CompanionDockDirective],
-  providers: [
-    provideIcons({
-      phosphorArrowRightBold,
-      phosphorArrowUpRightBold,
-      phosphorCheckBold,
-      phosphorMagnifyingGlass,
-      phosphorRocket,
-      phosphorUsers,
-      phosphorUsersBold,
-      phosphorXBold,
-      phosphorStarFill,
-    }),
-  ],
+  imports: [Eyebrow, RevealDirective, CompanionDockDirective, EngagementCard],
   templateUrl: './engagements.html',
   styleUrl: './engagements.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

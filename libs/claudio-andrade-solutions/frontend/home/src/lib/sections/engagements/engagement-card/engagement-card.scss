@@ -1,0 +1,1004 @@
+// =============================================================================
+// EngagementCard — componente presentacional extraído de Engagements.
+// El :host usa `display: contents` para NO introducir un box extra: el
+// <article.engagement-card> interno queda como grid-item directo de
+// .engagements__grid (igual que antes de extraer). Las reglas de tamaño
+// per-item que vivían en el grid (`> .engagement-card`) se movieron acá.
+// =============================================================================
+
+:host {
+  display: contents;
+}
+
+// Reglas de tamaño desde la perspectiva del grid (antes `.engagements__grid
+// > .engagement-card`). Con :host display:contents el <article> es el
+// grid-item, así que estas medidas se aplican directo sobre él.
+@media (min-width: 640px) {
+  .engagement-card {
+    max-width: 32rem;
+    width: 100%;
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .engagement-card {
+    max-width: none;
+    margin-inline: 0;
+  }
+}
+
+// =============================================================================
+// PRICING CARD — v6. Aplicando canon § 6 iterative refinement loop.
+// Fixes específicos del feedback del user:
+//
+//   1. Side cards más chicos (padding-y reducido). Middle keeps generous
+//      padding + lift → asymmetric size match a la referencia.
+//
+//   2. Specular top-edge clonado EXACTAMENTE del recipe de .gold-pill-button
+//      (5-stop gradient con peak warm-bright, blur 2.2px) pero swap
+//      warm→cool (rgb 220 240 255 en lugar de rgb 255 245 215).
+//
+//   3. Border illumination — el outer glow es CHICO en sides y GRANDE en
+//      middle. Middle agrega `box-shadow inset` con electric blur para que
+//      la luz del border bleed INWARD hacia el contenido (el efecto
+//      "interior bañado en luz neón" que la referencia muestra).
+//
+//   4. Color border — DEEPER blue (oklch 60% chroma 0.22) en lugar del
+//      celeste 72%. El azul de la imagen es más rico, menos pastel.
+//
+//   5. Badge brass simplificado — solo border + texto + bg dark, sin
+//      radial fill amarillo (que el user llamó "demasiado reflejo").
+//
+//   6. Brass CTA highlight redesigned — justify-content: space-between
+//      (label izquierda, arrow derecha), text bigger + tracked, arrow
+//      grande (16 vía HTML conditional binding).
+//
+//   7. Scarcity weight 500 (no 600). Divider sobre scarcity en azul
+//      electric (no brass como había antes).
+// =============================================================================
+
+.engagement-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  // min-width: 0 evita que el grid item se expanda al min-content de su
+  // contenido (white-space:nowrap del name/tag/cadence). Sin esto el grid
+  // `1fr` en mobile crecía hasta el min-content del card y forzaba scroll
+  // horizontal de la página entera.
+  min-width: 0;
+
+  @media (hover: none) {
+    transition: transform 200ms ease;
+    &:active {
+      transform: scale(0.99);
+    }
+  }
+}
+
+// =============================================================================
+// SIDE CARDS — técnica direccional cenital. Reescrito desde la ref por
+// muestreo de pixels: borde sutil top-bright que decae rápido a navy
+// invisible en sides y bottom. Sin halo exagerado.
+//
+// Datos del sampleo (ref engagements-reference.png, middle card top edge):
+//   • Border top center: lum 229 (rgb 200,240,255 ≈ cyan-blanco)
+//   • Border sides: lum 17-20 (perdidos contra bg lum 13-16)
+//   • Border bottom: lum 26-39 (apenas visible)
+//   • Glow lateral exterior: máx 30 lum @ ~35px from border (casi nada)
+//   • Falloff vertical above border: 8px → lum 37 → 4px → background
+//
+// Implementación: border 1px solid color muy oscuro + ::before mask-composite
+// con vertical gradient direccional. NO box-shadow halo extendido — el
+// realismo viene de la PRECISIÓN del border y catchlight, no del halo.
+// =============================================================================
+.engagement-card__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  // Padding-y reducido para compactar (de 1.25rem a 1rem). Match ref:
+  // cards menos "bloque", más elegantes.
+  padding: 1rem 1.375rem 1rem;
+  border-radius: 0.875rem;
+
+  // Surface — color exacto #000d2a pasado por el user.
+  background: rgb(0 13 42);
+
+  // Border invisible solid; el ::before mask-composite provee la línea visible.
+  border: 1px solid transparent;
+
+  // Cast shadow — side cards quieren halo MÍNIMO (NO competir con middle).
+  // Ref muestra side cards con borde sutil pero sin glow exterior llamativo.
+  box-shadow:
+    inset 0 1px 0 rgb(140 180 230 / 0.04),
+    inset 0 -1px 0 rgb(0 0 0 / 0.40),
+    0 -1px 4px rgb(31 132 240 / 0.08),
+    0 14px 32px -14px rgb(0 0 0 / 0.55),
+    0 4px 10px -3px rgb(0 0 0 / 0.30);
+
+  isolation: isolate;
+
+  // Border via mask-composite — top spectacular crest se conserva, luego
+  // degradación LEVE manteniendo azul visible todo el recorrido (sides + bottom).
+  // Match ref: el borde nunca desaparece, solo se atenúa un poco abajo.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background:
+      // ÚNICO spot sutil encima del icon (~22% x) — match ref donde los
+      // side cards también tienen un small catchlight en el top border
+      // arriba del icono. Más oscuro y less vivid que los del middle card
+      // (tonalidad muted: rgb 100 170 220 vs middle's 160 230 255).
+      radial-gradient(
+        ellipse 8% 12% at 22% 0%,
+        rgb(145 215 248 / 0.98) 0%,
+        rgb(95 180 230 / 0.58) 50%,
+        transparent 100%
+      ),
+      // Base — color predominante con falloff vertical.
+      linear-gradient(
+        180deg,
+        rgb(70 145 235 / 0.95) 0%,      // rim top bright crest
+        rgb(50 125 215 / 0.88) 2%,
+        rgb(40 110 200 / 0.82) 8%,
+        rgb(35 100 188 / 0.78) 25%,
+        rgb(32 92 178 / 0.75) 50%,
+        rgb(30 86 170 / 0.72) 75%,
+        rgb(28 80 160 / 0.70) 100%
+      );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+// =============================================================================
+// SIDE CARDS — TOP CEILING-LIGHT BLOOM (muy sutil, premium)
+// Efecto premium replicado de la imagen referencia: una luminosidad muy tenue
+// difusa en el top del card, como si entrara luz cenital por una ventana
+// invisible arriba. Centrado horizontal, decae a nada por el ~55% de la altura.
+//
+// Técnica: ::after con radial ellipse cyan-blanca de baja opacidad. Ubicado
+// dentro del 1px border (inset: 1px) con corners solo arriba redondeados para
+// que el fade vertical sea limpio.
+//
+// Solo aplica a side cards (excluye highlight) — el middle ya tiene su propio
+// ::after bloom externo + internal washes vía box-shadow inset.
+// =============================================================================
+.engagement-card:not(.engagement-card--highlight) .engagement-card__inner::after {
+  content: '';
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 30%;     // antes 55% — menos vertical, no baja tanto
+  border-radius: 0.875rem 0.875rem 0 0;
+  // Bloom horizontal alargado, darker tones (match ref).
+  background: radial-gradient(
+    ellipse 110% 75% at 50% 0%,    // antes 78% × 100% → wider × shorter
+    rgb(50 130 200 / 0.22) 0%,     // darker peak (vs prev 80 165 235)
+    rgb(35 105 180 / 0.14) 30%,
+    rgb(25 80 155 / 0.07) 60%,
+    rgb(15 60 130 / 0.03) 82%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+// =============================================================================
+// MIDDLE / HIGHLIGHT — bigger, more lift, INNER + OUTER border glow
+// =============================================================================
+.engagement-card--highlight {
+  // El middle card es naturalmente más alto por padding extra + scarcity note.
+  // Con align-items: end del grid, los bottoms quedan alineados y el top del
+  // middle queda más arriba (elevación natural).
+
+  // =============================================================================
+  // SPECULAR DUAL HOT-SPOTS — top edge.
+  //
+  // Réplica del patrón usado en `.gold-pill-button--card` (definido en
+  // shared/styles/mixins/_glass.scss líneas 516-544): dos catchlights
+  // cream-warm separados a posiciones 23% y 60% del ancho del top edge.
+  // Aquí lo adaptamos a CYAN (no warm-white) — el card es azul royal, no
+  // dorado, así que la luz cenital reflectando del filo top del border
+  // genera destellos cyan-blanco.
+  //
+  // Técnica: pseudo ::after en el article (sibling del .__inner), banda
+  // muy delgada (6px) con linear-gradient(90deg) de 12 stops construyendo
+  // dos peaks bright (alpha 0.92-0.95) flanqueados por shoulders softer
+  // (0.40-0.45) y separados por transparente. Sutil blur(1.5px) suaviza
+  // el filo sin perder la concentración del peak (vs el bloom difuso del
+  // `.__inner::after` que sí está blurreado fuerte para el wash ambient).
+  //
+  // z-index 3: encima del border line (.__inner::before z-index 1) y
+  // encima del contenido (.__inner > * z-index 2). Como es solo top 6px,
+  // no invade área de contenido (que vive en padding-y 1.75rem).
+  //
+  // Reference visual: pixel sample del ref reveló bright cyan band
+  // centrada en el top border con peak luminance en mid-x; user lee dos
+  // destellos discretos análogos a los del botón "Ver casos completos".
+  // =============================================================================
+  // NO ::after. El efecto del ref es el BORDER MISMO brillando en 2
+  // puntos sutiles — sin bloom, sin halo, sin elementos pegados. La
+  // brillantez vive integrada en el border line vía .__inner::before.
+}
+
+// =============================================================================
+// MIDDLE CARD — recipe premium clonado de `.gold-pill-button --card`
+// (definido en _glass.scss). Adaptado de oro a royal blue. Tres capas:
+//
+//   1. UPWARD HALO en box-shadow — 3 capas con offset Y negativo + spread
+//      negativo. Luz cenital cayendo, contenida lateralmente.
+//   2. ::before gradient border vía mask-composite — sheen warm-cyan + top
+//      specular vertical + base lit blue (top bright → bottom shadowed).
+//      Anima en hover sliding 1.6s con ease-spring.
+//   3. ::after dual specular hot-spots warm-pale-cyan con blur(2.2px). La
+//      firma del filo del metal pulido bajo luz cenital.
+//
+// Border 1px solid se elimina — el ::before mask-composite ES el border.
+// =============================================================================
+// =============================================================================
+// MIDDLE / HIGHLIGHT CARD — reescrito con técnica direccional cenital.
+//
+// Datos del sampleo de referencia (engagements-reference.png):
+//   • Peak catchlight: x=722 y=265, lum 229 ≈ rgb(200, 240, 255) cyan-blanco
+//   • Catchlight ancho útil: ~30-40px wide (NO un strip across)
+//   • Falloff vertical arriba del catchlight: 8px → lum 37 (background)
+//   • Border lateral (x=540 y=325..400): lum 17-23 (CASI INVISIBLE)
+//   • Border bottom (y=1010): lum 26-39 (apenas más claro que bg)
+//   • Glow lateral exterior @ 35px del border: lum 30 (12 puntos sobre bg)
+//
+// Técnica:
+//   1. Border via mask-composite: vertical gradient SHARP top→dark, con
+//      capa horizontal radial que concentra el catchlight central.
+//   2. ::after = UN solo catchlight ELLIPSE radial concentrado, no strip.
+//   3. Box-shadow ASIMÉTRICO: top glow sutil + cast shadow abajo.
+//      Eliminado el halo simétrico (era el efecto "Bootstrap card de lujo").
+// =============================================================================
+.engagement-card--highlight .engagement-card__inner {
+  position: relative;
+  // Middle GENUINAMENTE más alto. Padding-y generoso (1.75rem vs side 1rem)
+  // para que el card sea visiblemente más alto y se desborde TANTO ARRIBA
+  // COMO ABAJO de los side cards (con align-items: center del grid).
+  padding: 1.75rem 1.5rem 1.75rem;
+  border-radius: 1.25rem;     // antes 0.875rem — más redondeado (match ref)
+  isolation: isolate;
+  overflow: visible;
+
+  // Surface — color exacto #000d2a. Bloom va en ::after con filter:blur.
+  background: rgb(0 13 42);
+
+  border: 1.5px solid transparent;  // ::before provee la línea cian visible.
+
+  // Box-shadow stack: INTERNAL light strips (el borde "ilumina hacia adentro")
+  // + EXTERNAL halos atmosféricos. Muy tenues, muy detallados, muy chiquititos.
+  box-shadow:
+    // Inset top hairline sutil
+    inset 0 1px 0 rgb(140 180 230 / 0.04),
+
+    // INTERNAL strips — el borde irradia luz hacia adentro a lo largo de
+    // los 4 lados. Negative spread mantiene la luz CERCA del borde (no
+    // invade el centro). Blur 24px difumina suavemente. TOP strip evita
+    // la transición abrupta cyan→navy que se leía como "segunda línea
+    // oscura" al lado del border.
+    inset 0 10px 22px -12px rgb(5 90 220 / 0.32),    // strip TOP interno
+    inset 10px 0 24px -12px rgb(5 90 220 / 0.40),    // strip LEFT interno
+    inset -10px 0 24px -12px rgb(5 90 220 / 0.40),   // strip RIGHT interno
+    inset 0 -10px 22px -12px rgb(5 90 220 / 0.32),   // strip BOTTOM interno
+
+    // EXTERNAL TOP SOFT BLEED — mirror symmetric de los lateral halos.
+    // Offset Y mayor (5/10 match a lateral 5/10), blur 16/28, spread
+    // -3/-8 — esto cierra el gap que tenía entre shadow y border (con
+    // offset -3 quedaba un space sin cobertura entre y=48-51 que se
+    // leía como "dark line").
+    0 -5px 16px -3px rgb(5 90 220 / 0.18),
+    0 -10px 28px -8px rgb(0 70 195 / 0.10),
+
+    // EXTERNAL bottom halo — sale del borde inferior + corner bleed
+    0 6px 18px -3px rgb(5 90 220 / 0.22),
+    0 14px 36px -8px rgb(0 70 195 / 0.13),
+    0 24px 56px -16px rgb(0 50 165 / 0.06),
+
+    // EXTERNAL lateral halos — atmospheric envolvente
+    -5px 0 16px -3px rgb(5 90 220 / 0.16),
+    5px 0 16px -3px rgb(5 90 220 / 0.16),
+    -10px 0 28px -8px rgb(0 70 195 / 0.08),
+    10px 0 28px -8px rgb(0 70 195 / 0.08),
+
+    // Cast shadow negra (anchor anatómico). Offset Y aumentado a 18px
+    // (vs 14) + spread reducido a -18 (vs -14) para que la blur del
+    // shadow NO se extienda arriba del card (era el otro contributor
+    // a la dark line outside the border).
+    0 18px 32px -18px rgb(0 0 0 / 0.55),
+    0 6px 10px -5px rgb(0 0 0 / 0.30);
+
+  // Border line — color exacto #397fc3 (rgb 57, 127, 195) como predominante.
+  // Sin crest brillante exagerado: la línea es predominantemente #397fc3
+  // sostenido, con falloff hacia abajo.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;   // border-width 1.5px (match .__inner border: 1.5px)
+    background:
+      // DOS spots SUTILES brillantes en el border line. Posiciones movidas
+      // a izquierda: ~15% (encima del icono rocket) y 50% (centro del card)
+      // — match ref. Ellipses muy pequeñas (8% wide × 12% tall) que solo
+      // afectan la franja superior del border vía mask-composite.
+      radial-gradient(
+        ellipse 8% 12% at 15% 0%,      // encima del icon
+        rgb(160 230 255 / 1) 0%,       // cyan más saturado (no white)
+        rgb(110 200 250 / 0.70) 50%,
+        transparent 100%
+      ),
+      radial-gradient(
+        ellipse 8% 12% at 50% 0%,      // centro del card
+        rgb(165 232 255 / 1) 0%,
+        rgb(110 200 250 / 0.70) 50%,
+        transparent 100%
+      ),
+      // Base — color predominante #397fc3 con falloff
+      linear-gradient(
+        180deg,
+        rgb(70 140 200 / 0.95) 0%,
+        rgb(57 127 195 / 0.95) 4%,
+        rgb(57 127 195 / 0.90) 20%,
+        rgb(52 118 185 / 0.82) 45%,
+        rgb(47 108 172 / 0.75) 75%,
+        rgb(42 98 158 / 0.70) 100%
+      );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  // PASO 2b: BLOOM/LUCES del top — azul INTENSO y muchísimo más DIFUMINADO.
+  // Implementado como ::after con filter:blur real (no gradient stops fake).
+  // El blur smear genera la difusión continua que se ve en la ref.
+  //
+  // z-index 0 = detrás del border line (::before z-index 1) y del contenido
+  // (z-index 2). El bloom queda enterrado en la surface, solo "se asoma"
+  // donde tiene alpha > 0.
+  &::after {
+    content: '';
+    position: absolute;
+    top: -6px;        // extiende fuera del card top para que blur no se corte
+    left: 0;
+    right: 0;
+    height: 55px;     // reducido para que bloom no invada el área del contenido
+    background: radial-gradient(
+      ellipse 45% 100% at 50% 6px,
+      rgb(5 90 220 / 0.50) 0%,
+      rgb(0 75 200 / 0.32) 30%,
+      rgb(0 60 175 / 0.16) 65%,
+      transparent 100%
+    );
+    filter: blur(7px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 2;
+  }
+}
+
+// =============================================================================
+// HEAD — icon container (inset darker) + title + badge (highlight only)
+// =============================================================================
+.engagement-card__head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;       // reducido de 1rem → 0.75rem
+  // flex-wrap permite que el badge "El más popular" caiga a una línea
+  // propia en mobile cuando icon + name (nowrap) + badge (nowrap) no
+  // entran en el ancho del card. En desktop hay espacio y todo se queda
+  // en una sola línea como antes.
+  flex-wrap: wrap;
+  row-gap: 0.625rem;
+}
+
+// Icon + title separados (no shared pill).
+.engagement-card__head-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+// Icon container — caja navy royal con borde azul fino, icono claro.
+// =============================================================================
+// ICON CONTAINER — borde con gradient top-light (luz cenital). Replica el
+// acabado premium del rocket icon de la imagen ref: el borde es más bright
+// arriba (catchlight cyan) y decae hacia abajo (azul oscuro perdido), como
+// si la luz cayera desde un punto cenital. Inset highlight arriba refuerza
+// la sensación de superficie pulida con luz reflejada.
+//
+// Técnica: dual background (padding-box + border-box) con linear-gradient
+// en border-box. border: 1px solid transparent deja que se vea el gradient.
+// =============================================================================
+.engagement-card__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: 0.4375rem;
+
+  // Dual background: fill plano en padding-box, gradient controlado en border-box.
+  // Antes el border decaía de alpha 0.95 → 0.38 → bottom invisible. Match a la
+  // referencia: top con leve catchlight, pero bottom todavía legible (alpha 0.6+).
+  background:
+    linear-gradient(180deg,
+      rgb(11 30 64) 0%,
+      rgb(8 24 56) 100%
+    ) padding-box,
+    linear-gradient(180deg,
+      rgb(135 195 245 / 0.78) 0%,
+      rgb(100 170 230 / 0.68) 35%,
+      rgb(80 150 215 / 0.60) 70%,
+      rgb(80 145 215 / 0.58) 100%
+    ) border-box;
+  border: 1px solid transparent;
+  color: rgb(105 195 255);
+
+  // Inset highlights atenuados — el dark -1px previo (0.25) reforzaba la
+  // sensación de borde inferior "muerto". Ahora ambos lados respiran igual.
+  box-shadow:
+    inset 0 1px 0 rgb(180 220 255 / 0.12),
+    inset 0 -1px 0 rgb(0 0 0 / 0.14),
+    0 1px 2px rgb(0 0 0 / 0.30);
+}
+
+// Title text plano. Weight 500 (Roboto Medium real, no faux bold). Letter-spacing
+// más amplio para aire elegante entre letras.
+.engagement-card__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+  line-height: 1;
+  color: rgb(237 243 255);
+  white-space: nowrap;
+}
+
+// Badge "El más popular" — SIMPLIFICADO. Solo border brass + texto + bg
+// muy oscuro. El user dijo "demasiado reflejo amarillo" — saco el radial
+// gradient fill brass.
+// Badge OUTLINE dorado sobre fondo dark transparente — premium, no pastilla
+// sólida. Match a la ref (re-corregido tras feedback explícito del user).
+.engagement-card__tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  flex-shrink: 0;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  background: rgb(240 188 61 / 0.05);
+  border: 1px solid rgb(240 188 61 / 0.55);
+  color: rgb(240 188 61);
+  font-size: 0.625rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 0 6px rgb(240 188 61 / 0.05),
+    0 0 8px -3px rgb(240 188 61 / 0.15);
+}
+
+.engagement-card__tag-icon {
+  display: inline-flex;
+  color: rgb(240 188 61);
+}
+
+// =============================================================================
+// PRICE BLOCK — heavy display, no warm shadow
+// =============================================================================
+.engagement-card__price-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  // column-gap mayor para que el divider tenga GAP claro de la K (no pegado).
+  column-gap: 1.25rem;
+  row-gap: 0.125rem;
+  margin-bottom: 0.25rem;
+}
+
+.engagement-card__price-original {
+  // Mismo display family que .engagement-card__price para que el ancla y
+  // el precio actual lean como una sola pieza tipográfica (antes el ancla
+  // estaba en mono y se sentía como un sello administrativo sobre el display).
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: rgb(120 130 158);
+  text-decoration: line-through;
+  text-decoration-color: rgb(120 130 158 / 0.7);
+  font-variant-numeric: tabular-nums;
+  align-self: center;
+}
+
+.engagement-card__price {
+  font-family: var(--font-display);
+  // 3.75rem = 60px — reducido 14% del 4.375rem anterior.
+  font-size: 3.75rem;
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: rgb(243 246 255);
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+}
+
+// Middle card price: mismo tamaño que sides (ref muestra precios uniformes).
+
+.engagement-card__price--word {
+  // 3rem (48px) — antes 2rem (32px). "A medida" necesitaba presencia para
+  // leerse como precio, no como nota al pie. Sigue siendo menor que el
+  // numérico (3.75rem) porque "A medida" tiene 8 caracteres vs "$250" (4)
+  // y a paridad de px ocuparía demasiado ancho, descompensando la row.
+  font-size: 3rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.0;
+}
+
+
+.engagement-card__cadence {
+  display: inline-flex;
+  align-items: center;     // divider corto centrado vertical con el texto
+  gap: 1.25rem;            // gap simétrico al column-gap del row (divider↔ALCANCE FIJO = 14K↔divider)
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgb(45 141 255);
+  white-space: nowrap;
+}
+
+// Vertical divider — SOLO en middle card (--highlight). Casi del alto del K
+// (no idéntico). K cap-height ~43px con price 3.75rem. Divider 2.5rem = 40px
+// = ~93% del K.
+.engagement-card--highlight .engagement-card__cadence:not(.engagement-card__cadence--block)::before {
+  content: '';
+  flex-shrink: 0;
+  width: 1px;
+  height: 2.5rem;            // 40px — casi cap-height del K (43px)
+  background: rgb(58 119 195 / 0.50);
+}
+
+// Cadence > 14 chars (e.g. "ENTREGA CERRADA", "SEGÚN ALCANCE") wrappea a
+// su propia línea. Margin-top positivo da el aire que necesita debajo del
+// precio — el -0.125rem anterior la dejaba pegada al baseline del número.
+.engagement-card__cadence--block {
+  flex-basis: 100%;
+  margin-top: 0.5rem;
+}
+
+.engagement-card__price-breakdown {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 1rem 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  // Color celeste — match ref (era gris en mi versión anterior).
+  color: rgb(108 175 230);
+}
+
+// =============================================================================
+// DESCRIPTION
+// =============================================================================
+.engagement-card__description {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 0.75rem 0;
+  // 0.9375rem (15px) — tamaño moderado, dejamos que el text-wrap natural
+  // decida los breaks según el ancho del card.
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: rgb(177 186 205);
+  text-wrap: pretty;
+  max-width: 46ch;
+}
+
+// =============================================================================
+// FEATURES LIST
+// =============================================================================
+.engagement-card__features {
+  position: relative;
+  z-index: 2;
+  list-style: none;
+  margin: 0 0 0.875rem 0;
+  padding: 0.75rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  // Gap reducido entre features (0.625 → 0.4375rem) para compactar la lista.
+  gap: 0.4375rem;
+  flex: 1 1 auto;
+
+  // Divider horizontal entre descripción y features (match ref).
+  // Gradient sutil que se desvanece en los extremos.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(34 56 105) 12%,
+      rgb(34 56 105) 88%,
+      transparent 100%
+    );
+  }
+}
+
+.engagement-card__feature {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.8375rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgb(192 201 218);
+}
+
+.engagement-card__feature-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.0625rem;
+  height: 1.0625rem;
+  border-radius: 9999px;
+  // Radial concave depth: centro deep navy + borde micrometricamente lighter.
+  // El ojo lee profundidad (botón hundido suavemente) — premium signature.
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgb(8 30 78) 0%,
+    rgb(10 36 90) 55%,
+    rgb(18 56 130) 100%
+  );
+  border: 1px solid rgb(55 130 220 / 0.50);
+  color: rgb(108 200 255);
+  // Top hairline cool-cream + bottom hairline navy + outer micro-glow.
+  box-shadow:
+    inset 0 0.5px 0 rgb(180 220 255 / 0.22),
+    inset 0 -0.5px 0 rgb(0 6 24 / 0.45),
+    0 0 4px -1px rgb(31 143 255 / 0.20);
+}
+
+.engagement-card__feature-label {
+  flex: 1;
+}
+
+// Excluded feature — apagado pero legible, no fantasma. Match ref:
+// tono navy oscuro tintado (no gris neutro), todavía con tinte azul.
+.engagement-card__feature--excluded {
+  color: rgb(108 122 156);
+
+  .engagement-card__feature-icon {
+    // Misma técnica concava pero desaturada (grey-navy en lugar de royal blue).
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgb(35 45 68) 0%,
+      rgb(40 52 78) 55%,
+      rgb(58 72 100) 100%
+    );
+    border-color: rgb(95 115 155 / 0.45);
+    color: rgb(100 120 158);
+    box-shadow:
+      inset 0 0.5px 0 rgb(180 200 230 / 0.10),
+      inset 0 -0.5px 0 rgb(0 0 0 / 0.30);
+  }
+}
+
+// =============================================================================
+// SCARCITY (highlight only)
+// El user dijo:
+//   • La línea divisora arriba era brass — DEBE ser azul (electric).
+//   • "Tipografía muy gruesa, muy pesada" — weight 600 → 500.
+// =============================================================================
+.engagement-card__scarcity {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;     // centrado horizontal (match ref)
+  gap: 0.5rem;
+  margin: 0 0 0.875rem 0;
+  padding-top: 0.75rem;
+  font-size: 0.8125rem;        // más grande (de 0.65 → 0.8125)
+  font-weight: 500;            // -100 (era 600 = faux bold)
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  // Yellow con PRESENCIA — el (248 205 88) anterior leía como brass dorado
+  // opaco. El ref tiene peak rgb(255,222,98) — apuntamos cerca del pico.
+  //
+  // Gradient sutil vertical (top crest cream → mid gold → bottom warm-amber).
+  // Range deliberadamente estrecho (~22 lum entre stops) para que las letras
+  // de abajo no se "apaguen" — el efecto es polished metal sheen sobre el
+  // texto, no un fade. background-clip:text + transparent fill.
+  background: linear-gradient(
+    180deg,
+    rgb(255 235 140) 0%,
+    rgb(255 218 95) 48%,
+    rgb(240 200 80) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 12px rgb(255 210 80 / 0.20);
+
+  // Divider con gradiente transparente — neutral, solo ordena.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(34 49 77) 50%,
+      transparent 100%
+    );
+  }
+}
+
+.engagement-card__scarcity-icon {
+  display: inline-flex;
+  // Match el yellow del texto scarcity (rgb 255 218 95) — antes el icono
+  // estaba en --brass dorado y se veía desentonado del texto más vivo.
+  color: rgb(255 218 95);
+}
+
+// =============================================================================
+// CTA — outlined electric (standard) / filled brass metallic (highlight)
+//
+// Highlight CTA redesigned per feedback:
+//   • justify-content: space-between → label izquierda, arrow derecha
+//     (no centered juntos como antes).
+//   • Padding más generoso (1.125rem 1.5rem).
+//   • Font-size más grande (1rem) + letter-spacing 0.015em (más separado).
+//   • Arrow grande (16 vía conditional binding en HTML).
+//   • Light reflection en center vía radial gradient top-center.
+// =============================================================================
+.engagement-card__cta-wrap {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+}
+
+.engagement-card__cta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3.5rem;
+  width: 100%;
+  // Padding compacto match ref (botón menos alto). Antes 1rem vertical
+  // (= 16px) replicaba el Firebase deployado; el ref es claramente más
+  // compacto en altura, ~12px vertical.
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  font-family: var(--font-display);
+  // Match Firebase live: 15px = 0.9375rem, weight 500.
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  // Letter-spacing premium — texto aireado real (Apple/Stripe usan
+  // 0.02–0.04em en botones premium). 0.012em era prácticamente cero.
+  letter-spacing: 0.028em;
+  text-transform: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 250ms ease, border-color 250ms ease,
+    box-shadow 250ms ease, transform 200ms ease;
+
+  // CTA standard — match ref:
+  //   • Fill casi transparente (deja ver el card behind)
+  //   • Borde con gradient celeste vertical (luz cenital): bright top → dark
+  //     bottom. Técnica mask-composite vía ::before — único modo de tener
+  //     gradient en el rim mientras el centro es transparente. La técnica
+  //     dual-background no funciona aquí porque un fill transparente deja
+  //     pasar el gradient debajo y se ve sólido.
+  //   • 3D sutil: inset top highlight + inset bottom shadow + outer glow.
+  background: rgb(var(--electric) / 0.05);
+  border: 1.5px solid transparent;   // placeholder, el rim real lo pinta ::before (1.5px match middle card border)
+  color: rgb(180 220 255);
+  box-shadow:
+    inset 0 1px 0 rgb(200 230 255 / 0.18),
+    inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 0 14px -3px rgb(var(--electric) / 0.22),
+    0 4px 12px -2px rgb(0 0 0 / 0.45),
+    0 1px 2px rgb(0 0 0 / 0.30);
+
+  // Gradient border via mask-composite — pinta el gradient solo en el rim
+  // 1px, dejando el centro transparente. Reference: reference_css_scss_technical_canon.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;                  // 1.5px — match al border del card middle
+    background: linear-gradient(
+      180deg,
+      rgb(70 145 235 / 0.95) 0%,     // top: match crest del borde del card (mismo tono)
+      rgb(50 125 215 / 0.85) 22%,
+      rgb(40 110 200 / 0.78) 55%,
+      rgb(35 100 188 / 0.74) 85%,
+      rgb(32 92 178 / 0.72) 100%     // bottom: notorio, mismo blue family del card
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    transition: background 250ms ease;
+  }
+
+  &:hover {
+    background: rgb(var(--electric) / 0.10);
+    box-shadow:
+      inset 0 1px 0 rgb(210 235 255 / 0.25),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 0 18px -3px rgb(var(--electric) / 0.38),
+      0 4px 12px -2px rgb(0 0 0 / 0.45),
+      0 1px 2px rgb(0 0 0 / 0.30);
+
+    &::before {
+      background: linear-gradient(
+        180deg,
+        rgb(95 170 245 / 1) 0%,        // hover: top más bright pero misma familia
+        rgb(70 145 230 / 0.95) 22%,
+        rgb(55 130 215 / 0.85) 55%,
+        rgb(45 115 200 / 0.80) 85%,
+        rgb(40 105 190 / 0.78) 100%
+      );
+    }
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+// =============================================================================
+// CTA BRASS HIGHLIGHT — rediseñado premium. La versión anterior era un
+// "rectángulo dorado plano". Match ref:
+//   • Borde dorado MÁS CLARO definido (1.5px) — rim light visible.
+//   • Inset highlight arriba — banda de luz dentro del botón.
+//   • Vertical gradient top-bright bottom-dark con CONTRASTE alto.
+//   • Bottom inset shadow — depth.
+//   • Outer halo brass sutil.
+//   • Text rendering: weight 700 + letter-spacing positivo + font-smoothing
+//     antialiased + text-shadow sutil para evitar bordes raros.
+// =============================================================================
+.engagement-card__cta--highlight {
+  // Forma: medium radius — ni pill ni cuadrado.
+  border-radius: 0.5rem;
+
+  // Dimensiones pedidas: 21rem × 4rem en desktop. En mobile shrinks al ancho
+  // disponible para no forzar overflow horizontal del card (a 393px viewport
+  // un width:21rem fijo empujaba el card 336px+ → grid 1fr crecía a min-content
+  // → toda la sección desbordaba). max-width: 21rem mantiene el cap en desktop.
+  max-width: 21rem;
+  width: 100%;
+  height: 4rem;
+  margin-inline: auto;
+  // Padding solo horizontal — la altura es explícita, el flex centra
+  // verticalmente el contenido.
+  padding: 0 1.25rem;
+  font-size: 1.2rem;
+  // Weight 700 — texto firme premium (match ref).
+  font-weight: 700;
+  letter-spacing: 0.015em;
+
+  // Texto: brown deep contra el oro (NO negro plano que se ve duro).
+  // Sutil text-shadow cream para el efecto grabado controlado.
+  color: rgb(38, 22, 2);
+  text-shadow: 0 1px 0 rgba(255, 240, 195, 0.40);
+
+  // BACKGROUND — gradiente horizontal 5-stop especificado por el user:
+  // dark-warm edges (#d39a43 / #cf963f) → mid-warm (#e7b456 / #e1aa4d) →
+  // peak bright center (#f8d57c). Lectura visual: polished gold con
+  // spotlight horizontal centrado.
+  background: linear-gradient(
+    90deg,
+    #d39a43 0%,
+    #e7b456 25%,
+    #f8d57c 50%,
+    #e1aa4d 75%,
+    #cf963f 100%
+  );
+
+  // Border cream-gold definido (#F7E394) — rim light visible.
+  border: 1px solid #F7E394;
+
+  // Z-index isolation para que ::before quede contenido.
+  isolation: isolate;
+
+  // SHADOW STACK:
+  //   • inset top hairline cream (rim light).
+  //   • inset bottom hairline bronze (anchor base).
+  //   • Outer GLOW azul ALREDEDOR del botón (0 0, sin offset) — integra el
+  //     botón con el ambient azul del card. El user pidió "sombra exterior
+  //     azul alrededor del botón", no cast shadow.
+  //   • Cast shadow azul navy abajo (depth premium, ancla el botón).
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 220, 0.45),
+    inset 0 -1px 0 rgba(90, 55, 8, 0.35),
+    0 0 18px rgba(70, 145, 235, 0.28),
+    0 0 32px rgba(70, 145, 235, 0.18),
+    0 4px 10px rgba(0, 18, 58, 0.35),
+    0 10px 22px rgba(0, 12, 42, 0.40);
+
+  // ::before — DESHABILITADO. El base .engagement-card__cta::before pinta
+  // un rim celeste vía mask-composite que NO aplica al CTA dorado, y la
+  // banda cream que tenía acá creaba un "segundo background" visible al
+  // 55% de altura. Single background limpio = solo el linear-gradient.
+  &::before {
+    content: none;
+  }
+
+  &:hover {
+    // Hover: mismo gradiente horizontal, stops un toque más bright para
+    // feedback claro sin saltar a otra estética.
+    background: linear-gradient(
+      90deg,
+      #dca64d 0%,
+      #efbe60 25%,
+      #ffdd88 50%,
+      #ebb557 75%,
+      #d9a049 100%
+    );
+    border-color: #FBEAA8;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 248, 220, 0.55),
+      inset 0 -1px 0 rgba(90, 55, 8, 0.35),
+      0 0 22px rgba(85, 160, 245, 0.38),
+      0 0 40px rgba(85, 160, 245, 0.22),
+      0 6px 14px rgba(0, 18, 58, 0.40),
+      0 14px 28px rgba(0, 12, 42, 0.42);
+  }
+}
+
+.engagement-card__cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 400ms var(--ease-fluid);
+}
+
+.engagement-card__cta:hover .engagement-card__cta-icon {
+  transform: translateX(3px);
+}
