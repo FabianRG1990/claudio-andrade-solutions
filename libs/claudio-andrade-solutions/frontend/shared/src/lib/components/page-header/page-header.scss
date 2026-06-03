@@ -74,6 +74,50 @@
   );
 }
 
+// Emerge inferior — gemelo del `.page-header__fade` pero del lado del CONTENIDO.
+// El header es opaco (bg-mesh-deep), así que tapa por completo los peces dorados
+// del OceanBackground (canvas fixed en z:0, debajo de .app-main que es z:10).
+// Al cruzar el borde inferior del header los peces aparecían a brillo pleno de
+// golpe = corte seco (el `.page-header__fade` no los toca: viven detrás del
+// header sólido). Este velo continúa la costura HACIA ABAJO: arranca en
+// `#06091A` opaco (mismo color con el que cierra el fade del header → empalme sin
+// banda) y se desvanece a transparente sobre ~12rem dentro del contenido, así
+// los peces emergen gradualmente ("se esconden, no se cortan").
+//
+// Mecánica de capas: el div mide 0 de alto y se asienta exacto en la costura.
+// Su ::before se posiciona absoluto extendiéndose hacia abajo con `z-index:-1`.
+// `.page-header__emerge` NO crea stacking context (position:relative sin
+// z-index), así que ese -1 es relativo a `.app-main` (z:10): queda DETRÁS del
+// contenido en flujo (cards, texto) pero POR ENCIMA del canvas de peces (z:0,
+// fuera de .app-main). Resultado: el contenido se pinta encima intacto, los
+// peces se difuminan en la franja.
+.page-header__emerge {
+  position: relative;
+  height: 0;
+  pointer-events: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    z-index: -1;
+    // Alto fluido — cubre el cuerpo + halo del pez dorado más grande (~160px en
+    // desktop) con margen; en mobile los peces son menores y el velo más corto
+    // basta. La franja es deliberadamente generosa para que el desvanecido se
+    // lea como "niebla del header" y no como un degradado corto y visible.
+    height: clamp(8rem, 6rem + 6vw, 13rem);
+    background: linear-gradient(
+      180deg,
+      #06091a 0%,
+      rgb(6 9 26 / 0.92) 14%,
+      rgb(6 9 26 / 0.62) 40%,
+      rgb(6 9 26 / 0.28) 66%,
+      transparent 100%
+    );
+  }
+}
+
 .page-header__container {
   position: relative;
   z-index: 10;

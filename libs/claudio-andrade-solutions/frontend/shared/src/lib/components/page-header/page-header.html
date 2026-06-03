@@ -37,3 +37,13 @@
     </div>
   </div>
 </header>
+
+<!-- Emerge inferior — disuelve los peces dorados del OceanBackground (canvas
+     fijo, detrás de .app-main) que asoman justo debajo del header. Sin esto, el
+     header opaco (bg-mesh-deep #06091A) los tapa por completo y al pasar su
+     borde inferior los peces APARECEN a brillo pleno de golpe → corte seco. Este
+     velo arranca opaco en la costura y se desvanece ~12rem dentro del contenido,
+     así los peces "emergen" en vez de cortarse. Vive fuera del `overflow:hidden`
+     del header; su ::before va a z-index:-1 (detrás del contenido de .app-main,
+     pero por encima del canvas de peces que está en una capa inferior). -->
+<div class="page-header__emerge" aria-hidden="true"></div>
