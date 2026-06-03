@@ -39,7 +39,8 @@ const PEOPLE: ReadonlyArray<Person> = [
     role: 'Fundador · Tech Lead',
     bio: 'Define la arquitectura y marca el estándar técnico del equipo. Convierte retos de negocio complejos en sistemas probados que escalan.',
     image: '/equipo/claudio',
-    accent: 'coral',
+    // Azul como el resto del equipo (antes coral/rojo).
+    accent: 'lagoon',
   },
   {
     name: 'Fabián Rodríguez',
@@ -105,16 +106,28 @@ export class WhatWeDo {
 
       const trackEl = this.track().nativeElement;
 
+      // Reset a "ningún slide activo": en SSR/init es 0 (progressive enhancement
+      // sin JS), pero al hidratar lo apagamos para que el slide 0 dispare su
+      // animación de ingreso cuando el usuario entra a la sección — igual que
+      // los demás, en vez de aparecer ya formado.
+      this.activeIndex.set(-1);
+
       const measure = () => {
         this.trackScrollable = Math.max(1, trackEl.offsetHeight - window.innerHeight);
         update();
       };
 
       const update = () => {
-        // `-rect.top` = cuánto del track quedó por encima del borde superior del
+        const rectTop = trackEl.getBoundingClientRect().top;
+        // Hasta que la sección no entra ~media pantalla, ningún slide activo;
+        // así el slide 0 entra animado (nombre → foto) al cruzar el umbral.
+        if (rectTop > window.innerHeight * 0.5) {
+          if (this.activeIndex() !== -1) this.activeIndex.set(-1);
+          return;
+        }
+        // `-rectTop` = cuánto del track quedó por encima del borde superior del
         // viewport. Lectura en vivo → inmune a layout shifts del header.
-        const scrolled = -trackEl.getBoundingClientRect().top;
-        const p = Math.min(1, Math.max(0, scrolled / this.trackScrollable));
+        const p = Math.min(1, Math.max(0, -rectTop / this.trackScrollable));
         const idx = Math.min(this.people.length - 1, Math.floor(p * this.people.length));
         if (idx !== this.activeIndex()) this.activeIndex.set(idx);
       };

@@ -284,42 +284,67 @@
   }
 }
 
-// ─── Responsive: < 768px reflowea a columna centrada ─────────────────────────
+// ─── Responsive: < 768px → columna en FLUJO (foto arriba, texto abajo) ───────
+// El layout absoluto de desktop encimaba el texto sobre la foto con las bios
+// largas. En mobile cada slide es una columna centrada en flujo: foto y texto
+// se apilan con separación real; el nombre de fondo queda como capa detrás.
 @media (max-width: 767px) {
   .whatwedo__eyebrow {
-    top: 12%;
+    top: 6.5%;
     left: 50%;
     transform: translateX(-50%);
   }
 
+  .whatwedo__slide {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1.5rem, 6vw, 2.25rem);
+    padding: 17% var(--container-px) 21%;
+    text-align: center;
+  }
+
+  // Nombre de fondo: capa detrás de la foto (centrada).
   .whatwedo__ghost {
     top: 40%;
-    left: 50%; // re-centra en mobile (desktop lo alinea a 44%)
-    font-size: clamp(3.5rem, 28vw, 7rem);
-  }
-
-  .whatwedo__frame {
-    width: clamp(11rem, 52vw, 16rem);
-    top: 44%;
-    left: 50%; // re-centra en mobile (desktop lo desplaza a 44%)
-  }
-
-  .whatwedo__panel {
     left: 50%;
-    right: auto;
-    bottom: 19%;
-    max-width: min(22rem, 84vw);
-    transform: translate(-50%, 14px);
-    text-align: center;
+    transform: translate(-50%, -50%);
+    font-size: clamp(3.25rem, 22vw, 6rem);
+    z-index: 0;
+  }
+
+  // Foto en flujo (sin translate de centrado): conserva el giro y la animación
+  // de ingreso, pero ya no se posiciona en absoluto sobre el texto.
+  .whatwedo__frame {
+    position: static;
+    top: auto;
+    left: auto;
+    width: clamp(8rem, 38vw, 10.5rem);
+    margin-block: 0.5rem;
+    transform: rotate(46deg) scale(0.82);
+  }
+  .is-active .whatwedo__frame {
+    transform: rotate(22deg) scale(1);
+  }
+
+  // Panel de texto en flujo, debajo de la foto.
+  .whatwedo__panel {
+    position: static;
+    top: auto;
+    left: auto;
+    bottom: auto;
+    max-width: min(24rem, 88vw);
+    transform: translateY(12px);
 
     .is-active & {
-      transform: translate(-50%, 0);
+      transform: translateY(0);
     }
   }
 
   .whatwedo__cta {
     left: 50%;
-    bottom: 9%;
+    bottom: 5.5%;
     transform: translateX(-50%);
   }
 
