@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/claudio-andrade-solutions/src",
-  "tags": ["scope:claudio-andrade-solutions"],
+  "tags": ["scope:claudio-andrade-solutions", "type:app"],
   "targets": {
     "build": {
       "executor": "@angular/build:application",

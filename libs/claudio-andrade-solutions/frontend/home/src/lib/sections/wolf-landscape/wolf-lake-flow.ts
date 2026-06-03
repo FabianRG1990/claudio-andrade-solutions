@@ -8,7 +8,10 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { shouldSkipHeavyWebGL } from '@cas-ui-shared/utils/device-capability';
+import {
+  shouldSkipHeavyWebGL,
+  prefersReducedMotion,
+} from '@cas-ui-shared/utils/device-capability';
 
 import { getActiveHeroVariant, onHeroVariantChange } from './hero-variants';
 
@@ -165,7 +168,7 @@ export class WolfLakeFlow {
   }
 
   private async start(): Promise<(() => void) | void> {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
 
     // Política mobile: NO bailout total — el user pidió mantener la animación
     // del agua siempre. Pero sí reducimos aggressivamente:

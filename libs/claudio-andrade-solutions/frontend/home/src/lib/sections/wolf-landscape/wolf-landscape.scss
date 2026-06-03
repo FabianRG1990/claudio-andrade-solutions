@@ -147,7 +147,7 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgb(6 9 26 / 0.55) 45%,
+    rgb(var(--abyss) / 0.55) 45%,
     #06091A 100%
   );
 }
@@ -208,8 +208,8 @@
   letter-spacing: var(--tracking-eyebrow);
   color: rgb(var(--foam) / 0.65);
   text-shadow:
-    0 2px 8px rgb(6 9 26 / 0.7),
-    0 1px 2px rgb(6 9 26 / 0.65);
+    0 2px 8px rgb(var(--abyss) / 0.7),
+    0 1px 2px rgb(var(--abyss) / 0.65);
 }
 
 .hero__telemetry-col--right {
@@ -394,10 +394,10 @@
   letter-spacing: var(--tracking-tight);
   color: rgb(var(--foam));
   text-shadow:
-    0 4px 24px rgb(6 9 26 / 0.75),
-    0 2px 8px rgb(6 9 26 / 0.65),
-    0 1px 2px rgb(6 9 26 / 0.7),
-    0 -1px 0 rgb(245 241 232 / 0.22);
+    0 4px 24px rgb(var(--abyss) / 0.75),
+    0 2px 8px rgb(var(--abyss) / 0.65),
+    0 1px 2px rgb(var(--abyss) / 0.7),
+    0 -1px 0 rgb(var(--foam) / 0.22);
 
   // Entrada — el momento focal del hero. Combinación rise + blur-out 4px →
   // hace que el headline "se enfoque" en lugar de aparecer plano. Pattern de
@@ -440,8 +440,8 @@
   line-height: 1.625;
   font-size: var(--type-body-lg);
   text-shadow:
-    0 2px 14px rgb(6 9 26 / 0.7),
-    0 1px 4px rgb(6 9 26 / 0.65);
+    0 2px 14px rgb(var(--abyss) / 0.7),
+    0 1px 4px rgb(var(--abyss) / 0.65);
 
   // Entrada — sigue al título con 200ms de delay adicional. Sin blur (el
   // párrafo no necesita ese tratamiento focal; ya pertenece a la jerarquía
@@ -495,13 +495,13 @@
   border-radius: var(--radius-squircle);
   padding: 0.5rem;
   background:
-    radial-gradient(ellipse 130% 70% at 50% -10%, rgb(245 241 232 / 0.025) 0%, transparent 70%),
-    linear-gradient(180deg, rgb(245 241 232 / 0.04) 0%, rgb(245 241 232 / 0.012) 100%);
+    radial-gradient(ellipse 130% 70% at 50% -10%, rgb(var(--foam) / 0.025) 0%, transparent 70%),
+    linear-gradient(180deg, rgb(var(--foam) / 0.04) 0%, rgb(var(--foam) / 0.012) 100%);
   box-shadow:
-    0 36px 72px -28px rgb(6 9 26 / 0.55),
-    0 0 0 1px rgb(245 241 232 / 0.06),
-    inset 0 1px 0 rgb(245 241 232 / 0.14),
-    inset 0 -1px 0 rgb(6 9 26 / 0.30);
+    0 36px 72px -28px rgb(var(--abyss) / 0.55),
+    0 0 0 1px rgb(var(--foam) / 0.06),
+    inset 0 1px 0 rgb(var(--foam) / 0.14),
+    inset 0 -1px 0 rgb(var(--abyss) / 0.30);
 
   // Entrada en paralelo con el copy (1100ms delay) — el ojo del usuario
   // recorre izquierda (título → copy) y la card asienta a la derecha al
@@ -527,8 +527,8 @@
   border-radius: calc(var(--radius-squircle) - 0.5rem);
   padding: 1.5rem;
   background:
-    radial-gradient(ellipse 120% 70% at 50% -10%, rgb(245 241 232 / 0.025) 0%, transparent 65%),
-    linear-gradient(180deg, rgb(10 13 38 / 0.30) 0%, rgb(6 9 26 / 0.45) 100%);
+    radial-gradient(ellipse 120% 70% at 50% -10%, rgb(var(--foam) / 0.025) 0%, transparent 65%),
+    linear-gradient(180deg, rgb(10 13 38 / 0.30) 0%, rgb(var(--abyss) / 0.45) 100%);
 }
 
 .hero__wave-head {
@@ -607,8 +607,8 @@
   justify-content: space-between;
   color: rgb(var(--foam) / 0.6);
   text-shadow:
-    0 2px 8px rgb(6 9 26 / 0.7),
-    0 1px 2px rgb(6 9 26 / 0.6);
+    0 2px 8px rgb(var(--abyss) / 0.7),
+    0 1px 2px rgb(var(--abyss) / 0.6);
 
   // Última pieza de la cadena (1450ms delay). El scroll cue cierra la
   // composición del hero — aparece cuando el resto ya está asentado, así el

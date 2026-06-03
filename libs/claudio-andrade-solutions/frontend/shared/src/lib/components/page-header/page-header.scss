@@ -67,9 +67,9 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgb(6 9 26 / 0.35) 25%,
-    rgb(6 9 26 / 0.7) 55%,
-    rgb(6 9 26 / 0.92) 80%,
+    rgb(var(--abyss) / 0.35) 25%,
+    rgb(var(--abyss) / 0.7) 55%,
+    rgb(var(--abyss) / 0.92) 80%,
     #06091A 100%
   );
 }
@@ -110,9 +110,9 @@
     background: linear-gradient(
       180deg,
       #06091a 0%,
-      rgb(6 9 26 / 0.92) 14%,
-      rgb(6 9 26 / 0.62) 40%,
-      rgb(6 9 26 / 0.28) 66%,
+      rgb(var(--abyss) / 0.92) 14%,
+      rgb(var(--abyss) / 0.62) 40%,
+      rgb(var(--abyss) / 0.28) 66%,
       transparent 100%
     );
   }

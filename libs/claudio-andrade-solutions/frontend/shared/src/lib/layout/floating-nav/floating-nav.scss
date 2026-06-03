@@ -195,11 +195,11 @@
   //   e) highlight superior (-1px, foam 0.20) — luz cenital esculpida,
   //      mismo idioma que el título grande.
   text-shadow:
-    0 2px 16px rgb(6 9 26 / 0.85),
-    0 1px 5px rgb(6 9 26 / 0.75),
-    0 1px 1px rgb(6 9 26 / 0.85),
-    0 0 1px rgb(6 9 26 / 0.7),
-    0 -1px 0 rgb(245 241 232 / 0.20);
+    0 2px 16px rgb(var(--abyss) / 0.85),
+    0 1px 5px rgb(var(--abyss) / 0.75),
+    0 1px 1px rgb(var(--abyss) / 0.85),
+    0 0 1px rgb(var(--abyss) / 0.7),
+    0 -1px 0 rgb(var(--foam) / 0.20);
 
   // En phones <480px ocultamos el wordmark — el ancho no alcanza para
   // emblema + nombre cómodamente. El emblema ya identifica la app a esa
@@ -277,8 +277,8 @@
   // su propio contraste contra cualquier zona del bg (cielo, lago, lobo).
   // Mismo lenguaje que el resto del copy del hero.
   text-shadow:
-    0 2px 10px rgb(6 9 26 / 0.7),
-    0 1px 3px rgb(6 9 26 / 0.6);
+    0 2px 10px rgb(var(--abyss) / 0.7),
+    0 1px 3px rgb(var(--abyss) / 0.6);
 
   &:hover {
     color: rgb(var(--foam));
@@ -327,15 +327,15 @@
     opacity 420ms var(--ease-fluid),
     transform 480ms var(--ease-fluid);
   background:
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgb(245 241 232 / 0.10) 0%, transparent 70%),
-    linear-gradient(180deg, rgb(245 241 232 / 0.08) 0%, rgb(245 241 232 / 0.015) 100%);
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgb(var(--foam) / 0.10) 0%, transparent 70%),
+    linear-gradient(180deg, rgb(var(--foam) / 0.08) 0%, rgb(var(--foam) / 0.015) 100%);
   -webkit-backdrop-filter: blur(10px) saturate(125%);
   backdrop-filter: blur(10px) saturate(125%);
   box-shadow:
-    inset 0 0 0 1px rgb(245 241 232 / 0.12),
-    inset 0 1px 0 rgb(245 241 232 / 0.18),
-    inset 0 -1px 0 rgb(6 9 26 / 0.25),
-    0 8px 18px -10px rgb(6 9 26 / 0.55);
+    inset 0 0 0 1px rgb(var(--foam) / 0.12),
+    inset 0 1px 0 rgb(var(--foam) / 0.18),
+    inset 0 -1px 0 rgb(var(--abyss) / 0.25),
+    0 8px 18px -10px rgb(var(--abyss) / 0.55);
 
   .floating-nav__link:hover & {
     opacity: 1;
@@ -530,8 +530,8 @@
   backdrop-filter: blur(18px);
   // Sombra suave para que el panel se sienta levantado del fondo.
   box-shadow:
-    0 24px 56px -16px rgb(6 9 26 / 0.6),
-    inset 0 1px 0 rgb(245 241 232 / 0.06);
+    0 24px 56px -16px rgb(var(--abyss) / 0.6),
+    inset 0 1px 0 rgb(var(--foam) / 0.06);
   overflow: hidden;
   // Transición de entrada — moofyvip usa `transition: all 500ms ease-in-out`
   // sobre `mat-sidenav`. Replicamos esa curva exacta para el slide horizontal.
@@ -559,7 +559,7 @@
   border-radius: 1rem;
   border: 1px solid rgb(var(--foam) / 0.08);
   background: rgb(var(--foam) / 0.03);
-  box-shadow: 0 4px 12px -4px rgb(6 9 26 / 0.4);
+  box-shadow: 0 4px 12px -4px rgb(var(--abyss) / 0.4);
   font-family: var(--font-display);
   font-size: 0.9375rem;
   font-weight: 500;
@@ -687,8 +687,8 @@
     rgb(var(--foam) / 0.02) 72%
   );
   box-shadow:
-    inset 0 1px 0 rgb(245 241 232 / 0.06),
-    0 12px 24px -8px rgb(6 9 26 / 0.5);
+    inset 0 1px 0 rgb(var(--foam) / 0.06),
+    0 12px 24px -8px rgb(var(--abyss) / 0.5);
 
   &::after {
     background: linear-gradient(

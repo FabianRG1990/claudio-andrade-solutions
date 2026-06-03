@@ -16,6 +16,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { phosphorArrowUpRightBold } from '@ng-icons/phosphor-icons/bold';
 
 import { caseStudies } from '@cas-ui-shared/data/data';
+import { prefersReducedMotion } from '@cas-ui-shared/utils/device-capability';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 import { SectionHeading } from '@cas-ui-shared/components/section-heading/section-heading';
 
@@ -73,9 +74,7 @@ export class CaseStudies {
   constructor() {
     afterNextRender(() => {
       if (!this.isBrowser) return;
-      this.prefersReducedMotion = window.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-      ).matches;
+      this.prefersReducedMotion = prefersReducedMotion();
 
       // 1) IntersectionObserver — start/stop según viewport. threshold 0.1
       //    porque la sección es alta; con 0.5 tardaría mucho en disparar.

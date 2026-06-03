@@ -10,6 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { prefersReducedMotion } from '../../utils/device-capability';
 
 /**
  * OceanBackground
@@ -510,10 +511,7 @@ export class OceanBackground {
 
     // prefers-reduced-motion → un solo frame estático y fuera. Sin RAF, sin
     // listeners. Ahorro total para usuarios sensibles a movimiento.
-    const reducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
-    if (reducedMotion) return;
+    if (prefersReducedMotion()) return;
 
     let w = window.innerWidth;
     let h = window.innerHeight;

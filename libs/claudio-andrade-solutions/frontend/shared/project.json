@@ -4,7 +4,7 @@
   "sourceRoot": "libs/claudio-andrade-solutions/frontend/shared/src",
   "prefix": "app",
   "projectType": "library",
-  "tags": ["scope:shared"],
+  "tags": ["scope:shared", "type:shared"],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"

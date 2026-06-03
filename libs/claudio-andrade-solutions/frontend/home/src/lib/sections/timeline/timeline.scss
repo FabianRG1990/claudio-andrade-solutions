@@ -415,8 +415,8 @@
   // (Claude · IA, INTELIGENCIA) y de su posición en el grid, no del hue.
   background: radial-gradient(
     circle,
-    rgb(80 160 255 / 0.38) 0%,
-    rgb(80 160 255 / 0.10) 38%,
+    rgb(var(--electric) / 0.38) 0%,
+    rgb(var(--electric) / 0.10) 38%,
     transparent 72%
   );
 }
@@ -475,8 +475,8 @@
 }
 .tech-card[data-accent='coral'] .tech-card__category::before {
   // dot coral → blue, mismo motivo que el glow de arriba.
-  background: rgb(80 160 255);
-  box-shadow: 0 0 6px rgb(80 160 255 / 0.6);
+  background: rgb(var(--electric));
+  box-shadow: 0 0 6px rgb(var(--electric) / 0.6);
 }
 .tech-card[data-accent='bioluminescent'] .tech-card__category::before {
   background: rgb(var(--bioluminescent));

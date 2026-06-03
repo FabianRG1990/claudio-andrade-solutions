@@ -9,6 +9,7 @@ import {
   inject,
   input,
 } from '@angular/core';
+import { prefersReducedMotion } from '../../utils/device-capability';
 
 /**
  * appReveal — directiva equivalente al `<Reveal>` con framer-motion del
@@ -56,7 +57,7 @@ export class RevealDirective {
 
       // Si el usuario prefiere movimiento reducido, marca como visible
       // de inmediato (la regla CSS ya neutraliza la transición).
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (prefersReducedMotion()) {
         el.classList.add('is-visible');
         return;
       }

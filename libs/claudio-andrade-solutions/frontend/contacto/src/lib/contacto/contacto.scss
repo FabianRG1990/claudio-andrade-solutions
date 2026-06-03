@@ -56,8 +56,8 @@
     background: linear-gradient(
       180deg,
       transparent 0%,
-      rgb(6 9 26 / 0.45) 40%,
-      rgb(6 9 26 / 0.85) 75%,
+      rgb(var(--abyss) / 0.45) 40%,
+      rgb(var(--abyss) / 0.85) 75%,
       #06091A 100%
     );
   }

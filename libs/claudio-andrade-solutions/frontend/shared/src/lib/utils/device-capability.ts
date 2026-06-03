@@ -72,3 +72,17 @@ export function isMobilePhone(): boolean {
 export function shouldSkipHeavyWebGL(): boolean {
   return isMobilePhone();
 }
+
+/**
+ * `true` si el usuario pidió reducir movimiento (`prefers-reduced-motion:
+ * reduce`). Centraliza el chequeo que vivía duplicado inline en múltiples
+ * componentes/animaciones.
+ *
+ * SSR safe: en server (sin `window`/`matchMedia`) retorna `false` → no reduce
+ * (= correr animación full); el server no anima de todos modos.
+ */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}

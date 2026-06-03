@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { prefersReducedMotion } from '@cas-ui-shared/utils/device-capability';
 import { ImgFadeDirective } from '@cas-ui-shared/directives/img-fade/img-fade.directive';
 import { PillButton } from '@cas-ui-shared/components/pill-button/pill-button';
 
@@ -102,7 +103,7 @@ export class WhatWeDo {
 
       // En reduced-motion la plantilla/CSS ya cubren el fallback apilado: no
       // hace falta listener de scroll.
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (prefersReducedMotion()) return;
 
       const trackEl = this.track().nativeElement;
 

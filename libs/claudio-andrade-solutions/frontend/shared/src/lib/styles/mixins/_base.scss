@@ -11,7 +11,7 @@
 * {
   margin: 0;
   padding: 0;
-  border: 0 solid rgb(245 241 232 / 0.06); // border-color por defecto
+  border: 0 solid rgb(var(--foam) / 0.06); // border-color por defecto
 }
 
 html {

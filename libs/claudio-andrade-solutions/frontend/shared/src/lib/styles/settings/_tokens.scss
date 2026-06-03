@@ -86,10 +86,10 @@
   --radius-squircle-sm: 1.25rem;
 
   // ---- Sombras ------------------------------------------------------------
-  --shadow-diffusion: 0 30px 80px -30px rgb(6 9 26 / 0.45),
-    0 8px 24px -12px rgb(6 9 26 / 0.25);
-  --shadow-inner-light: inset 0 1px 0 rgb(245 241 232 / 0.08);
-  --shadow-ring: inset 0 0 0 1px rgb(245 241 232 / 0.07);
+  --shadow-diffusion: 0 30px 80px -30px rgb(var(--abyss) / 0.45),
+    0 8px 24px -12px rgb(var(--abyss) / 0.25);
+  --shadow-inner-light: inset 0 1px 0 rgb(var(--foam) / 0.08);
+  --shadow-ring: inset 0 0 0 1px rgb(var(--foam) / 0.07);
 
   // ---- Easings (transition-timing-function) -------------------------------
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);

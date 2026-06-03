@@ -28,6 +28,7 @@ import {
 import { phosphorClock } from '@ng-icons/phosphor-icons/regular';
 
 import { Service, ServiceStatus, services } from '@cas-ui-shared/data/data';
+import { prefersReducedMotion } from '@cas-ui-shared/utils/device-capability';
 import { Eyebrow } from '@cas-ui-shared/components/eyebrow/eyebrow';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 import { CompanionDockDirective } from '@cas-ui-shared/companion/companion-dock.directive';
@@ -235,9 +236,7 @@ export class ServicesMarquee {
     afterNextRender(() => {
       if (!this.isBrowser) return;
 
-      this.prefersReducedMotion = window.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-      ).matches;
+      this.prefersReducedMotion = prefersReducedMotion();
 
       this.measureSet();
       // Arranca en el set del medio. Si por cualquier razón setWidth=0

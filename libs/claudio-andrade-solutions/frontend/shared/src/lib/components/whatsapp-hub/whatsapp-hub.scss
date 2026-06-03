@@ -209,7 +209,7 @@
   letter-spacing: 0.18em;
   color: rgb(var(--foam) / 0.82);
   text-shadow:
-    0 1px 2px rgb(6 9 26 / 0.75),
+    0 1px 2px rgb(var(--abyss) / 0.75),
     0 0 10px rgb(37 211 102 / 0.30);
   white-space: nowrap;
   pointer-events: none;

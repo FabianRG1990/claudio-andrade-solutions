@@ -927,13 +927,13 @@
   //     dual-background no funciona aquí porque un fill transparente deja
   //     pasar el gradient debajo y se ve sólido.
   //   • 3D sutil: inset top highlight + inset bottom shadow + outer glow.
-  background: rgb(80 160 255 / 0.05);
+  background: rgb(var(--electric) / 0.05);
   border: 1.5px solid transparent;   // placeholder, el rim real lo pinta ::before (1.5px match middle card border)
   color: rgb(180 220 255);
   box-shadow:
     inset 0 1px 0 rgb(200 230 255 / 0.18),
     inset 0 -1px 0 rgb(0 0 0 / 0.35),
-    0 0 14px -3px rgb(80 160 255 / 0.22),
+    0 0 14px -3px rgb(var(--electric) / 0.22),
     0 4px 12px -2px rgb(0 0 0 / 0.45),
     0 1px 2px rgb(0 0 0 / 0.30);
 
@@ -963,11 +963,11 @@
   }
 
   &:hover {
-    background: rgb(80 160 255 / 0.10);
+    background: rgb(var(--electric) / 0.10);
     box-shadow:
       inset 0 1px 0 rgb(210 235 255 / 0.25),
       inset 0 -1px 0 rgb(0 0 0 / 0.35),
-      0 0 18px -3px rgb(80 160 255 / 0.38),
+      0 0 18px -3px rgb(var(--electric) / 0.38),
       0 4px 12px -2px rgb(0 0 0 / 0.45),
       0 1px 2px rgb(0 0 0 / 0.30);
 

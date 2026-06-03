@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
+import { prefersReducedMotion } from '@cas-ui-shared/utils/device-capability';
 
 import {
   FloatingNav,
@@ -52,7 +53,7 @@ export class App implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
 
     this.orientationMql = window.matchMedia('(orientation: portrait)');
     this.orientationHandler = () => {
