@@ -1,0 +1,232 @@
+// =============================================================================
+// Footer — shell inferior compacto. Vive sobre el OceanBackground; el
+// `bg-abyss` es indispensable para que las costuras entre secciones no se
+// vean. Diseño orientado a mínima altura: brand inline, nav horizontal,
+// bottom bar de una sola línea cuando el ancho lo permite.
+// =============================================================================
+
+.footer {
+  position: relative;
+  margin-top: 2rem;
+  // Footer transparente — el OceanBackground (fixed) sigue visible debajo,
+  // los peces nadan también detrás del footer y no se corta el continuum.
+  background: transparent;
+  color: rgb(var(--foam));
+}
+
+.footer__container {
+  position: relative;
+  margin-inline: auto;
+  max-width: 80rem;
+  // Padding vertical recortado al mínimo legible.
+  // Padding inline + bottom: respetan safe-area-inset para que en iOS con
+  // notch landscape y home indicator inferior el footer no quede tapado.
+  padding:
+    1.25rem
+    max(1.5rem, env(safe-area-inset-right))
+    max(1.25rem, calc(0.75rem + env(safe-area-inset-bottom)))
+    max(1.5rem, env(safe-area-inset-left));
+
+  @media (min-width: 1024px) {
+    padding:
+      1.5rem
+      max(2rem, env(safe-area-inset-right))
+      max(1.5rem, calc(1rem + env(safe-area-inset-bottom)))
+      max(2rem, env(safe-area-inset-left));
+  }
+}
+
+.footer__top {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+}
+
+// Brand horizontal: emblema chico + meta inline en columna a su derecha.
+// Antes: BrandLockup 150×180 (la versión grande con texto vertical) que
+// solo era visible aquí — overkill para un footer. Ahora: emblema 36px.
+.footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+
+  // El emblema (lobo) por defecto mira a la derecha; en el footer queremos
+  // que mire hacia la izquierda — hacia el eyebrow + tagline a su derecha.
+  // Setear la custom property cascadea hasta el `<img>` dentro de
+  // <app-emblem-mark>, que la lee con scaleX(var(--emblem-flip, 1)).
+  --emblem-flip: -1;
+}
+
+// Wrapper que convierte el emblema en link al home. Sin chrome visible —
+// el emblema sigue siendo el elemento perceptible. Solo aporta cursor,
+// touch target y focus ring para accesibilidad.
+.footer__brand-link {
+  display: inline-flex;
+  border-radius: 9999px;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 280ms var(--ease-fluid);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  &:active {
+    transform: scale(0.97);
+    transition-duration: 120ms;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--lagoon));
+    outline-offset: 4px;
+  }
+}
+
+.footer__brand-meta {
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.footer__eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.5);
+}
+
+.footer__tagline {
+  text-wrap: pretty;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgb(var(--foam) / 0.6);
+}
+
+// ─── Right column actions ───────────────────────────────────────────────────
+// Wrapper de la derecha: WhatsApp arriba (CTA prioritario) + nav debajo.
+// En desktop ambos alineados a la derecha; en mobile fluyen al ancho
+// disponible (alineación a inicio).
+.footer__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+
+  @media (min-width: 768px) {
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+}
+
+// ─── WhatsApp hub ────────────────────────────────────────────────────────────
+// El componente vive en `WhatsappHub` (shared). Acá solo controlamos su
+// alineación dentro de la columna de actions del footer: pegado al borde
+// derecho con un pequeño respiro respecto al nav.
+.footer__whatsapp-hub {
+  align-self: flex-end;
+  margin-top: 0.5rem;
+}
+
+// Nav horizontal: lista en una línea con separador visual `·` (vía
+// pseudo-elemento). Sin eyebrow "Recorrer" arriba — los links se leen
+// solos y el header sumaba 18px innecesarios.
+.footer__nav {
+  @media (min-width: 768px) {
+    flex-shrink: 0;
+  }
+}
+
+.footer__nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.875rem;
+  list-style: none;
+  font-size: 0.8125rem;
+
+  @media (min-width: 768px) {
+    justify-content: flex-end;
+  }
+
+  // Separador `·` entre items en desktop. En mobile el wrap respira mejor
+  // sin separadores.
+  @media (min-width: 768px) {
+    > li + li::before {
+      content: '·';
+      margin-right: 0.875rem;
+      color: rgb(var(--foam) / 0.25);
+    }
+  }
+}
+
+.footer__nav-link {
+  // Padding-block 0.5rem (= 8px arriba/abajo) + line-height ~20px del texto
+  // deja un hit area de ~36px de alto — cumple WCAG 2.2 SC 2.5.8 (24×24
+  // mínimo) y se acerca al objetivo iOS HIG / WCAG 2.5.5 AAA (44×44). Es
+  // crítico en mobile donde estos links se tocan con el dedo. En desktop
+  // (pointer: fine) el padding queda como respiro visual.
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  color: rgb(var(--foam) / 0.75);
+  transition: color 500ms;
+  touch-action: manipulation;
+
+  &:hover {
+    color: rgb(var(--lagoon));
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--lagoon));
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+}
+
+// Bottom bar: una línea en desktop, dos en mobile. Antes margin-top 2rem
+// + padding-top 1.25rem = 3.25rem solo de aire entre top y bottom; ahora
+// la suma es ~1rem.
+.footer__bottom {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgb(var(--foam) / 0.08);
+  padding-top: 0.875rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.footer__copyright {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.footer__meta-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  list-style: none;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.5);
+}

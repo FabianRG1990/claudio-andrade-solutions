@@ -1,0 +1,58 @@
+<footer class="footer">
+  <div class="footer__container">
+    <div class="footer__top">
+      <!-- Brand block — emblema chico inline (sin BrandLockup completo).
+           El emblema es link al home: click vuelve a /. -->
+      <div class="footer__brand">
+        <a routerLink="/" class="footer__brand-link" aria-label="Volver al inicio">
+          <app-emblem-mark [size]="112" />
+        </a>
+        <div class="footer__brand-meta">
+          <p class="footer__eyebrow">
+            Claudio Andrade Solutions · Est. 2019 · Costa Rica · Remoto
+          </p>
+          <p class="footer__tagline">
+            Consultora tecnológica enfocada en soluciones a medida —
+            auditorías, sistemas, integraciones de IA y automatización para
+            empresas que ya tienen tracción.
+          </p>
+        </div>
+      </div>
+
+      <!-- Acciones de la derecha: navegación secundaria arriba + WhatsApp
+           debajo (cierra la columna como punto de contacto directo).
+           Alineado a la derecha en desktop; en mobile fluye al ancho
+           disponible. -->
+      <div class="footer__actions">
+        <nav class="footer__nav" aria-label="Pie de página">
+          <ul class="footer__nav-list">
+            @for (link of navLinks; track link.label) {
+              <li>
+                <a [routerLink]="link.href" class="footer__nav-link">
+                  {{ link.label }}
+                </a>
+              </li>
+            }
+          </ul>
+        </nav>
+
+        <!-- Hub WhatsApp — trigger único circular que despliega un popover
+             con los 3 contactos. Componente compartido: misma pieza se usa
+             en el hero como CTA inline (variante sm). -->
+        <app-whatsapp-hub class="footer__whatsapp-hub" />
+      </div>
+    </div>
+
+    <!-- Bottom bar legal -->
+    <div class="footer__bottom">
+      <p class="footer__copyright">
+        © {{ currentYear }} · Claudio Andrade Solutions · Costa Rica · Operación remota
+      </p>
+      <ul class="footer__meta-list">
+        @for (item of metaItems; track item) {
+          <li>{{ item }}</li>
+        }
+      </ul>
+    </div>
+  </div>
+</footer>

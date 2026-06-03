@@ -1,0 +1,29 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@cas-ui-shared": ["./libs/claudio-andrade-solutions/frontend/shared/src/index.ts"],
+      "@cas-ui-shared/*": ["./libs/claudio-andrade-solutions/frontend/shared/src/lib/*"],
+      "@cas-ui-home": ["./libs/claudio-andrade-solutions/frontend/home/src/index.ts"],
+      "@cas-ui-productos": [
+        "./libs/claudio-andrade-solutions/frontend/productos/src/index.ts"
+      ],
+      "@cas-ui-nosotros": ["./libs/claudio-andrade-solutions/frontend/nosotros/src/index.ts"],
+      "@cas-ui-contacto": ["./libs/claudio-andrade-solutions/frontend/contacto/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

@@ -1,0 +1,74 @@
+// Main wrapper — replica el `<main className="relative z-10">` del original.
+// Vive sobre el OceanBackground (z:0) pero por debajo del FloatingNav (z:50).
+.app-main {
+  position: relative;
+  z-index: 10;
+
+  // Entrada por boot — fade + rise sutil (8px) tras el splash. Delay 500ms:
+  // empieza después de que el splash arrancó su fade pero antes de que
+  // termine, así el ojo percibe crossfade en vez de "splash → vacío → main".
+  // 750ms de duración: cómodo para el body, no apresurado. La regla
+  // `html.app-booted .app-main { opacity:1; transform:translateY(0) }` vive
+  // en `index.html` (inline <style>) por la limitación de view-encapsulation
+  // con `:root` documentada arriba.
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 750ms 500ms var(--ease-fluid),
+    transform 750ms 500ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Footer comparte la cadencia del main pero entra ligeramente después para
+// que la jerarquía visual (top → bottom) se respete en la animación.
+app-footer {
+  display: block;
+  opacity: 0;
+  transition: opacity 750ms 750ms var(--ease-fluid);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+  }
+}
+
+// =============================================================================
+// Rotation veil — overlay full-viewport que enmascara el snap del layout
+// cuando el teléfono cambia de orientación. El listener en app.ts toggla
+// `.is-active` justo cuando matchMedia 'change' dispara (microtask después
+// del relayout, antes del paint). En ese paint el velo aparece OPACO de
+// inmediato (transition: none) en el mismo frame que el nuevo layout —
+// el ojo no percibe el snap, ve un fade dim. Luego quitamos la clase y
+// la opacidad transiciona de 0.55 a 0 en 320ms.
+//
+// z-index 9999 para quedar arriba de TODO (nav, companion, modales) durante
+// el momento crítico. pointer-events:none para no robar input.
+// =============================================================================
+.rotation-veil {
+  position: fixed;
+  inset: 0;
+  background: #06091a;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 320ms var(--ease-fluid);
+  // GPU layer — evita repaints del documento debajo durante el fade.
+  will-change: opacity;
+  transform: translateZ(0);
+
+  &.is-active {
+    opacity: 0.55;
+    // Transition: none → la opacidad pasa de 0 a 0.55 sin animar, en el
+    // mismo paint que el layout snap. Eso es lo que enmascara el cambio.
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
+  }
+}

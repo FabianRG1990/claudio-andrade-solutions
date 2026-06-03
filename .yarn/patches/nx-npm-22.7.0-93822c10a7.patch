@@ -1,0 +1,42 @@
+diff --git a/dist/bin/nx.js b/dist/bin/nx.js
+index 1740d7d0a143038423913b1fb1841e12315d8e7a..35d59d68a8f481948589ff5d6a72c0c403988e2f 100644
+--- a/dist/bin/nx.js
++++ b/dist/bin/nx.js
+@@ -69,7 +69,8 @@ async function main() {
+         catch {
+             localNx = null;
+         }
+-        const isLocalInstall = localNx === resolveNx(null) || localNx === __filename;
++        const __nxNormalizePath = (p) => p && process.platform === 'win32' ? p.toLowerCase() : p;
++        const isLocalInstall = __nxNormalizePath(localNx) === __nxNormalizePath(resolveNx(null)) || __nxNormalizePath(localNx) === __nxNormalizePath(__filename);
+         const { LOCAL_NX_VERSION, GLOBAL_NX_VERSION } = determineNxVersions(localNx, workspace, isLocalInstall);
+         if (process.argv[2] === '--version') {
+             handleNxVersionCommand(LOCAL_NX_VERSION, GLOBAL_NX_VERSION);
+diff --git a/dist/src/utils/workspace-root.js b/dist/src/utils/workspace-root.js
+index 74f0682269ede01ee9ee4819e39f38c90a719894..18e8515cd06dd82fc8890f82d8f60295477aa8c1 100644
+--- a/dist/src/utils/workspace-root.js
++++ b/dist/src/utils/workspace-root.js
+@@ -9,14 +9,20 @@ const fileutils_1 = require("./fileutils");
+ /**
+  * The root of the workspace
+  */
+-exports.workspaceRoot = workspaceRootInner(process.cwd(), process.cwd());
++exports.workspaceRoot = __nxNormalizeWindowsDrive(workspaceRootInner(process.cwd(), process.cwd()));
+ // Required for integration tests in projects which depend on Nx at runtime, such as lerna and angular-eslint
+ function setWorkspaceRoot(root) {
+-    exports.workspaceRoot = root;
++    exports.workspaceRoot = __nxNormalizeWindowsDrive(root);
++}
++function __nxNormalizeWindowsDrive(p) {
++    if (process.platform === 'win32' && typeof p === 'string' && /^[a-z]:/.test(p)) {
++        return p.charAt(0).toUpperCase() + p.slice(1);
++    }
++    return p;
+ }
+ function workspaceRootInner(dir, candidateRoot) {
+     if (process.env.NX_WORKSPACE_ROOT_PATH)
+-        return process.env.NX_WORKSPACE_ROOT_PATH;
++        return __nxNormalizeWindowsDrive(process.env.NX_WORKSPACE_ROOT_PATH);
+     if (path.dirname(dir) === dir)
+         return candidateRoot;
+     const matches = [

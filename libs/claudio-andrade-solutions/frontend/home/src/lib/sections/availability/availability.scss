@@ -1,0 +1,424 @@
+.availability {
+  position: relative;
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
+}
+
+.availability__container {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+}
+
+.availability__grid {
+  display: grid;
+  // Gap entre las dos columnas (lead + info): 2.5rem en phones, 4rem en
+  // desktop. Antes 4rem constante creaba un hueco vertical excesivo en
+  // mobile entre el title-lead y la primera info-row.
+  gap: clamp(2.5rem, 2rem + 2vw, 4rem);
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1fr 1.1fr;
+    align-items: start;
+  }
+}
+
+// ─── Left column ─────────────────────────────────────────────────────────────
+// Sticky se activa solo a partir de 1280px. En el rango 1024-1279 (laptop
+// chica, iPad landscape, viewport intermedio) el `top: 8rem` dejaba la
+// columna izquierda muy pegada al nav y el contenido de la derecha pasaba
+// "bajo" la columna en una vertical larga — ergonómicamente confuso. Desde
+// 1280px hay aire suficiente para que el sticky se lea como ancla, no como
+// obstáculo. En tablet portrait (768px) el grid sigue 1-col, así que la
+// columna izquierda no tiene sentido sticky.
+.availability__lead {
+  @media (min-width: 1280px) {
+    position: sticky;
+    top: max(8rem, calc(env(safe-area-inset-top) + 7rem));
+  }
+}
+
+.availability__title {
+  margin-top: 1.5rem;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-size: var(--type-h2-lg);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+}
+
+.availability__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  // Italic editorial brass — coherente con section-heading.
+  color: rgb(var(--brass) / 0.92);
+}
+
+.availability__copy {
+  margin-top: 2rem;
+  max-width: 52ch;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.7);
+  line-height: 1.625;
+  // Token fluido 17→20px en lugar del step a 18px @768. Coherente con
+  // engagements/timeline — todos los leads del home en la misma curva.
+  font-size: var(--type-body-lg);
+}
+
+.availability__ctas {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.availability__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 14px;
+  padding: 0.375rem 0.375rem 0.375rem 1.5rem;
+  // Tipografía gobernada por el mixin .gold-pill-button.
+  // Touch target AAA — pill completo ≥44px alto.
+  min-height: 44px;
+
+  &:hover .availability__cta-icon,
+  &:active .availability__cta-icon {
+    transform: translate(2px, -2px);
+  }
+}
+
+.availability__cta-label {
+  padding-block: 0.375rem;
+}
+
+.availability__cta-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  transition: transform 700ms var(--ease-fluid);
+}
+
+// ─── Right column (info rows) ────────────────────────────────────────────────
+.availability__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+// =============================================================================
+// InfoRow card
+// =============================================================================
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║ CARD DESIGN — derivado ÚNICAMENTE de la imagen referencia.            ║
+// ║ Sistema previo eliminado. NO restaurar. Patrón clonado en             ║
+// ║ timeline.scss (tech-card) y engagements.scss (engagement-card).       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD STYLE — port exacto del HTML/SCSS standalone que el user proveyó.
+// Técnica: oklch(--hue 256) + gradient-border via mask-composite (::before)
+// + halo radial top-right (::after) + 4-layer box-shadow (inner ring +
+// inset top highlight + atmospheric drop + outer bloom).
+// MISMO patrón clonado en timeline.scss (.tech-card) y engagements.scss
+// (.engagement-card). NO improvisar — esto es spec del user.
+// ═══════════════════════════════════════════════════════════════════════════
+.info-row {
+  position: relative;
+  border-radius: 22px;
+  isolation: isolate;
+  // Sin box-shadow aquí — todo el detalle vive en __inner per spec.
+}
+
+.info-row__inner {
+  position: relative;
+  border-radius: 22px;
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  overflow: hidden;
+
+  // Surface — navy premium con corner lighting sutil.
+  // Tres capas: top-right glow (tenue pero perceptible) + bottom-left
+  // ambient (casi imperceptible) + base navy profundo. Patrón 3-point
+  // lighting de premium product photography. Todo contained DENTRO del
+  // card por overflow:hidden — no bleed externo, son detalles internos.
+  background:
+    // 1) Top-right corner glow — la luz "premium" tenue
+    radial-gradient(
+      ellipse 55% 45% at 88% 5%,
+      oklch(0.30 0.11 256 / 0.32),
+      oklch(0.22 0.09 256 / 0.10) 38%,
+      transparent 68%
+    ),
+    // 2) Bottom-left ambient — casi imperceptible, anchor de la esquina opuesta
+    radial-gradient(
+      ellipse 48% 40% at 6% 96%,
+      oklch(0.22 0.08 256 / 0.20),
+      transparent 62%
+    ),
+    // 3) Base — navy profundo
+    linear-gradient(
+      180deg,
+      oklch(0.17 0.07 256) 0%,
+      oklch(0.10 0.05 256) 100%
+    );
+
+  // Border base — visible en todo el perímetro. El ::before agrega el "lit
+  // edge" direccional encima. Sin un base alpha alto, el border queda
+  // invisible salvo en el top (donde el ::before brilla).
+  border: 1px solid oklch(0.58 0.12 256 / 0.50);
+
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.04),
+    0 16px 32px -12px rgb(0 0 0 / 0.55),
+    0 6px 12px -4px rgb(0 0 0 / 0.30);
+
+  // Border gradient direccional — top bright, perímetro presente todo el camino.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      170deg,
+      oklch(0.78 0.14 256 / 0.55) 0%,
+      oklch(0.62 0.11 256 / 0.30) 25%,
+      oklch(0.52 0.10 256 / 0.18) 70%,
+      oklch(0.48 0.09 256 / 0.14) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  &::after { display: none; }
+}
+
+// Glow halos accent — eliminados.
+.info-row__glow {
+  display: none;
+}
+
+// Hijos del inner sobre los pseudo-elementos (::before z-index 1, ::after 0).
+.info-row__head,
+.info-row__body {
+  position: relative;
+  z-index: 2;
+}
+
+.info-row__head {
+  display: flex;
+  // Phone: stack vertical — el helper text "REUNIONES DE DESCUBRIMIENTO"
+  // a la derecha del título compite por ~140px en un card de 310px de
+  // contenido. En lugar de usar `flex-wrap` (que descoloca verticalmente
+  // el helper), pasamos a columna en mobile: título arriba, helper debajo
+  // alineado al título. ≥480px (phones medianos+) volvemos al row con
+  // space-between original.
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+}
+
+.info-row__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+// Badge icon — port exacto del .badge del HTML standalone del user.
+// 44px circle + radial gradient + border + outer ring shadow + glow + inset ring.
+.info-row__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  background: radial-gradient(
+    circle at 30% 30%,
+    oklch(0.40 0.12 256 / 0.55),
+    oklch(0.18 0.07 256 / 0.55)
+  );
+  border: 1px solid oklch(0.65 0.16 256 / 0.35);
+  // Sin glow externo — el outer ring 4px y el bloom 18px hacían bleeding
+  // hacia el borde del card. Solo inset highlight estructural.
+  box-shadow:
+    inset 0 0 0 1px oklch(0.85 0.10 256 / 0.18);
+  color: oklch(0.92 0.05 256);
+}
+
+.info-row__title {
+  font-family: var(--font-display);
+  // Fluid 18→20px — en phones angostos ese 1px ahorra spillover al lado del
+  // helper-text de la derecha del head.
+  font-size: clamp(1.125rem, 1rem + 0.4vw, 1.25rem);
+  letter-spacing: var(--tracking-tight);
+}
+
+.info-row__helper {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.info-row__body {
+  margin-top: 0.5rem;
+  // En phones angostos el padding-left de 3rem (48px) come ~17% del ancho
+  // del card y sumado al padding del inner deja muy poca canvas para el
+  // contenido. Reducimos a 0 en phones — la alineación visual con el icono
+  // queda fea pero el contenido respira. ≥768px restauramos el inset.
+  padding-left: 0;
+
+  @media (min-width: 768px) {
+    padding-left: 3rem; // pl-12
+  }
+}
+
+// ─── Horarios specifics ──────────────────────────────────────────────────────
+.info-row__hours {
+  margin-top: 1rem;
+  list-style: none;
+  border-top: 1px solid rgb(var(--foam) / 0.08);
+
+  > li {
+    border-bottom: 1px solid rgb(var(--foam) / 0.08);
+  }
+  > li:last-child {
+    border-bottom: 0;
+  }
+
+  // Desktop: grid 2-col (día | hora) para que las horas se alineen en su
+  // propio segmento entre todas las filas. `display: contents` en cada li
+  // hace que sus dos spans pasen a ser items directos del grid del ul —
+  // sin esto, cada li sería un único item de una columna. Como el li
+  // pierde su box, los borders y padding-block se mueven a los spans.
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 1.5rem;
+    align-items: baseline;
+
+    > li {
+      display: contents;
+      border-bottom: 0;
+    }
+    > li > .info-row__hour-day,
+    > li > .info-row__hour-value {
+      padding-block: 0.75rem;
+      border-bottom: 1px solid rgb(var(--foam) / 0.08);
+    }
+    > li:last-child > .info-row__hour-day,
+    > li:last-child > .info-row__hour-value {
+      border-bottom: 0;
+    }
+  }
+}
+
+.info-row__hour {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-block: 0.75rem;
+}
+
+.info-row__hour-day {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+.info-row__hour-value {
+  color: rgb(var(--foam) / 0.9);
+}
+
+// ─── Ubicación specifics ─────────────────────────────────────────────────────
+.info-row__address {
+  margin-top: 0.75rem;
+  color: rgb(var(--foam) / 0.85);
+}
+
+.info-row__transport {
+  margin-top: 1.25rem;
+  display: grid;
+  // Phones angostos (<480): cae a 1 columna — cada transporte se lee
+  // limpio. ≥480: 3 columnas en grid uniforme. Antes el repeat(3,1fr) en
+  // 360 daba ~90px por celda y el value 14px se cortaba.
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  border-top: 1px solid rgb(var(--foam) / 0.08);
+  padding-top: 1.25rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.info-row__transport-label {
+  // hereda
+}
+
+.info-row__transport-value {
+  margin-top: 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  text-transform: none;
+  letter-spacing: var(--tracking-normal);
+  color: rgb(var(--foam) / 0.85);
+}
+
+// ─── Entrada specifics ───────────────────────────────────────────────────────
+.info-row__price-row {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.info-row__price {
+  font-family: var(--font-mono);
+  // Fluid 28→36px en lugar del 36px fijo. En phones 320-400 el 36px hardcoded
+  // hacía que el precio (4-5 dígitos) compitiera con el `info-row__price-note`
+  // por ancho.
+  font-size: clamp(1.75rem, 1.5rem + 1vw, 2.25rem);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+  // Precio en brass — el price es el dato más buscado en la card de entrada.
+  // Mismo color que las cifras de timeline stats hero. La paleta brass marca
+  // todos los números editoriales de la página: stats, año, precio.
+  color: rgb(var(--brass));
+}
+
+.info-row__price-cadence {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+.info-row__price-note {
+  margin-top: 0.75rem;
+  color: rgb(var(--foam) / 0.65);
+}

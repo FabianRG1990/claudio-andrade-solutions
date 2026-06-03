@@ -1,0 +1,47 @@
+
+[2m> [22m[2mnx run[22m claudio-andrade-solutions:serve:development --port 4300
+
+[33m❯[39m Building...
+[32m✔[39m Building...
+[37m[35mBrowser bundles[37m     
+[1mInitial chunk files[22m [2m | [22m[1mNames[22m           [2m | [22m [1mRaw size[22m
+[32mmain.js[37m             [2m | [22m[2mmain[22m            [2m | [22m[36m124.09 kB[37m[2m | [22m
+[32mchunk-KDUNOQQP.js[37m   [2m | [22m[2m-[22m               [2m | [22m [36m43.94 kB[37m[2m | [22m
+[32mstyles.css[37m          [2m | [22m[2mstyles[22m          [2m | [22m [36m26.65 kB[37m[2m | [22m
+[32mchunk-BIZCSJY5.js[37m   [2m | [22m[2m-[22m               [2m | [22m [36m26.23 kB[37m[2m | [22m
+[32mchunk-52DDECWC.js[37m   [2m | [22m[2m-[22m               [2m | [22m [36m17.86 kB[37m[2m | [22m
+[32mchunk-4RMHEGGU.js[37m   [2m | [22m[2m-[22m               [2m | [22m [36m15.17 kB[37m[2m | [22m
+[32mchunk-INOV2PCJ.js[37m   [2m | [22m[2m-[22m               [2m | [22m  [36m9.07 kB[37m[2m | [22m
+[32mchunk-KLJTLUPX.js[37m   [2m | [22m[2m-[22m               [2m | [22m  [36m8.24 kB[37m[2m | [22m
+[32mchunk-MUSZOYYC.js[37m   [2m | [22m[2m-[22m               [2m | [22m  [36m2.16 kB[37m[2m | [22m
+[32mchunk-VUJOFXKG.js[37m   [2m | [22m[2m-[22m               [2m | [22m[36m938 bytes[37m[2m | [22m
+[1m [22m                   [2m | [22m[1mInitial total[22m   [2m | [22m[1m274.34 kB[22m
+[1mLazy chunk files[22m    [2m | [22m[1mNames[22m           [2m | [22m [1mRaw size[22m
+[32mchunk-O7HZMZYA.js[37m   [2m | [22m[2mindex[22m           [2m | [22m[36m509.45 kB[37m[2m | [22m
+[32mchunk-EX3PWIWY.js[37m   [2m | [22m[2mindex[22m           [2m | [22m [36m54.85 kB[37m[2m | [22m
+[32mchunk-LO54PW4T.js[37m   [2m | [22m[2mindex[22m           [2m | [22m [36m45.58 kB[37m[2m | [22m
+[32mchunk-FTQUC2D4.js[37m   [2m | [22m[2mcompanion-fish[22m  [2m | [22m [36m27.92 kB[37m[2m | [22m
+[32mchunk-3MXJVWEJ.js[37m   [2m | [22m[2mindex[22m           [2m | [22m [36m22.34 kB[37m[2m | [22m
+[35mServ[39m[37mer bundles[37m      
+[1mInitial chunk files[22m [2m | [22m[1mNames[22m           [2m | [22m [1mRaw size[22m
+[32mmain.server.mjs[37m     [2m | [22m[2mmain.server[22m     [2m | [22m[36m125.45 kB[37m[2m | [22m
+[32mchunk-OFYXLQTR.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m [36m44.07 kB[37m[2m | [22m
+[32mchunk-QG2IKOIL.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m [36m26.27 kB[37m[2m | [22m
+[32mchunk-EPCLVVQM.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m [36m17.89 kB[37m[2m | [22m
+[32mchunk-CVNB4PKT.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m [36m15.21 kB[37m[2m | [22m
+[32mchunk-IW2RXFUY.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m  [36m9.10 kB[37m[2m | [22m
+[32mchunk-KLOLTU6R.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m  [36m8.27 kB[37m[2m | [22m
+[32mchunk-UYSPBNIU.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m  [36m2.19 kB[37m[2m | [22m
+[32mchunk-54EZUNS5.mjs[37m  [2m | [22m[2m-[22m               [2m | [22m[36m972 bytes[37m[2m | [22m
+[32mpolyfills.server.mjs[37m[2m | [22m[2mpolyfills.server[22m[2m | [22m[36m268 bytes[37m[2m | [22m
+[1mLazy chunk files[22m    [2m | [22m[1mNames[22m           [2m | [22m [1mRaw size[22m
+[32mchunk-4APFCHDF.mjs[37m  [2m | [22m[2mindex[22m           [2m | [22m[36m509.49 kB[37m[2m | [22m
+[32mchunk-PZYGELTO.mjs[37m  [2m | [22m[2mindex[22m           [2m | [22m [36m54.89 kB[37m[2m | [22m
+[32mchunk-S6JGKI7Q.mjs[37m  [2m | [22m[2mindex[22m           [2m | [22m [36m45.61 kB[37m[2m | [22m
+[32mchunk-52HWKVFH.mjs[37m  [2m | [22m[2mcompanion-fish[22m  [2m | [22m [36m27.95 kB[37m[2m | [22m
+[32mchunk-CZA7SYBI.mjs[37m  [2m | [22m[2mindex[22m           [2m | [22m [36m22.38 kB[37m[2m | [22m
+Application bundle generation complete. [4.780 seconds] - 2026-06-03T02:18:10.035Z
+[39m
+[37mWatch mode enabled. Watching for file changes...[39m
+[37mNOTE: Raw file sizes do not reflect development server per-request transformations.[39m
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4300[22m/[39m

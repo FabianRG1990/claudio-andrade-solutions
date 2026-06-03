@@ -1,0 +1,134 @@
+<section class="contacto">
+  <div class="contacto__container">
+    <header class="contacto__header">
+      <div appReveal>
+        <app-eyebrow tone="lagoon">Contacto · Estamos aquí</app-eyebrow>
+      </div>
+      <p appReveal [delay]="0.05" class="contacto__chapter">
+        Capítulo 04 / 04 · Contáctenos
+      </p>
+      <h1 appReveal [delay]="0.1" class="contacto__title">
+        Hablemos.
+        <span class="contacto__title-italic">Tu próximo proyecto empieza acá.</span>
+      </h1>
+    </header>
+
+    <div class="contacto__body">
+      <form
+        appReveal
+        [delay]="0.18"
+        class="contacto__form"
+        (submit)="$event.preventDefault()"
+      >
+        <div class="contacto__form-inner">
+          <div class="contacto__form-row">
+            <label class="form-field">
+              <span class="form-field__label">Nombre</span>
+              <input
+                type="text"
+                name="name"
+                placeholder="Tu nombre"
+                class="form-field__input form-field__input--pill"
+              />
+            </label>
+            <label class="form-field">
+              <span class="form-field__label">Email</span>
+              <input
+                type="email"
+                name="email"
+                placeholder="tu@correo.com"
+                class="form-field__input form-field__input--pill"
+              />
+            </label>
+          </div>
+
+          <label class="form-field">
+            <span class="form-field__label">Asunto</span>
+            <input
+              type="text"
+              name="subject"
+              placeholder="¿De qué nos querés hablar?"
+              class="form-field__input form-field__input--pill"
+            />
+          </label>
+
+          <label class="form-field form-field--message">
+            <span class="form-field__label">Mensaje</span>
+            <textarea
+              name="message"
+              rows="3"
+              placeholder="Contanos lo que necesités. Sin formalidades."
+              class="form-field__input form-field__input--block"
+            ></textarea>
+          </label>
+
+          <div class="contacto__form-footer">
+            <p class="contacto__form-legal">
+              Al enviar, aceptás nuestra política de privacidad.
+            </p>
+            <button type="submit" class="contacto__submit glass-button">
+              <span class="contacto__submit-label">Enviar mensaje</span>
+              <span class="contacto__submit-icon glass-button-icon">
+                <ng-icon name="phosphorPaperPlaneTiltBold" size="14" />
+              </span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <aside appReveal [delay]="0.22" class="contacto__info">
+        <a
+          href="mailto:hola@claudioandrade.com"
+          class="info-card"
+          data-accent="lagoon"
+        >
+          <div class="info-card__inner">
+            <span class="info-card__glow" aria-hidden="true"></span>
+            <span class="info-card__icon">
+              <ng-icon name="phosphorEnvelopeSimpleDuotone" size="22" />
+            </span>
+            <div class="info-card__copy">
+              <span class="info-card__label">Email</span>
+              <span class="info-card__value">hola&#64;claudioandrade.com</span>
+            </div>
+          </div>
+        </a>
+
+        <app-whatsapp-hub triggerless #wsHub>
+          <button
+            type="button"
+            class="info-card"
+            data-accent="whatsapp"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="wsHub.isOpen()"
+            (click)="wsHub.toggleMenu($event)"
+          >
+            <div class="info-card__inner">
+              <span class="info-card__glow" aria-hidden="true"></span>
+              <span class="info-card__icon">
+                <ng-icon name="phosphorWhatsappLogoBold" size="22" />
+              </span>
+              <div class="info-card__copy">
+                <span class="info-card__label">WhatsApp</span>
+                <span class="info-card__value">Hablemos por chat — respuesta el mismo día</span>
+              </div>
+            </div>
+          </button>
+        </app-whatsapp-hub>
+
+        <div class="info-card" data-accent="kelp">
+          <div class="info-card__inner">
+            <span class="info-card__glow" aria-hidden="true"></span>
+            <span class="info-card__icon">
+              <ng-icon name="phosphorMapPinDuotone" size="22" />
+            </span>
+            <div class="info-card__copy">
+              <span class="info-card__label">Dirección</span>
+              <span class="info-card__value">Costa Rica · Operación 100 % remota</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>

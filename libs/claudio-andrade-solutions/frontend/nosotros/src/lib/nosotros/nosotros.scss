@@ -1,0 +1,278 @@
+// =============================================================================
+// NosotrosPage — segmento de casos recientes (4 cards en grid).
+// =============================================================================
+
+%container {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+}
+
+// ─── Programas ─────────────────────────────────────────────────────────────
+.nosotros-cases {
+  position: relative;
+  padding-bottom: clamp(4rem, 3rem + 3vw, 7rem);
+}
+
+.nosotros-cases__container {
+  @extend %container;
+}
+
+.nosotros-cases__title {
+  max-width: 48rem;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-size: var(--type-h2);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-tight);
+}
+
+.nosotros-cases__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  // Italic editorial brass — coherente con todos los títulos italics del sitio.
+  color: rgb(var(--brass) / 0.92);
+}
+
+.nosotros-cases__grid {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: clamp(2rem, 2rem + 1.5vw, 3.5rem);
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// ─── Program card — mismo lenguaje visual que .info-card de contacto ──────
+// El user pidió que estos cards usen el estilo del card system que vive en
+// contacto y "casi todo el resto de la app" (engagement-card → info-card →
+// tech-card → info-row): 3-point lighting OKLCH + directional gradient-
+// border via mask-composite. Receta clonada 1:1 del info-card de contacto
+// para que la familia de cards sea visualmente coherente.
+.program-card {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-squircle);
+  padding: 0.25rem;
+  isolation: isolate;
+
+  // Surface — 3-point lighting OKLCH:
+  //   1. TR glow LED (top-right blue accent).
+  //   2. BL ambient sutil (bottom-left soft fill).
+  //   3. Vertical gradient navy claro → navy profundo.
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
+
+  border: 1px solid oklch(0.62 0.14 248 / 0.55);
+
+  // Shadow stack — inset bevel cenital + drop atmosférico multi-capa.
+  box-shadow:
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
+
+  // Border directional via mask — TR lit, falloff hacia BL. Idéntico al
+  // info-card de contacto.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      155deg,
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+  }
+}
+
+// Accent del code-badge: el dot ya existe, lo coloreamos por el accent del
+// case — refuerza la lectura de que cada caso tiene una identidad propia.
+.program-card[data-accent='lagoon'] .program-card__code-dot {
+  background: rgb(var(--lagoon));
+  box-shadow: 0 0 6px rgb(var(--lagoon) / 0.7);
+}
+.program-card[data-accent='kelp'] .program-card__code-dot {
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 6px rgb(var(--bioluminescent) / 0.7);
+}
+.program-card[data-accent='coral'] .program-card__code-dot {
+  background: rgb(var(--coral));
+  box-shadow: 0 0 6px rgb(var(--coral) / 0.7);
+}
+.program-card[data-accent='bioluminescent'] .program-card__code-dot {
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 8px rgb(var(--bioluminescent) / 0.8);
+}
+
+// Region eyebrow también toma el color del accent — más coherencia.
+.program-card[data-accent='lagoon'] .program-card__region {
+  color: rgb(var(--lagoon));
+}
+.program-card[data-accent='kelp'] .program-card__region {
+  color: rgb(var(--bioluminescent));
+}
+.program-card[data-accent='coral'] .program-card__region {
+  color: rgb(var(--coral));
+}
+.program-card[data-accent='bioluminescent'] .program-card__region {
+  color: rgb(var(--bioluminescent));
+}
+
+.program-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  // Concéntrica con outer (-0.25rem padding -1px border = inset 5px).
+  border-radius: calc(var(--radius-squircle) - 0.25rem - 1px);
+}
+
+.program-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.program-card__gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(var(--abyss)) 0%,
+    rgb(var(--abyss) / 0.3) 35%,
+    transparent 100%
+  );
+}
+
+.program-card__code {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: rgb(var(--foam) / 0.08);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam));
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.15);
+}
+
+.program-card__code-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: rgb(var(--bioluminescent));
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.program-card__body {
+  position: relative;
+  // Padding inner fluido — 1.25rem en phones angostos para que el card no
+  // se sienta cramped en 320-380px de viewport.
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+
+  // Ambient lighting — el user pidió iluminación sutil que diferencie la
+  // zona de texto del fondo (sin un hairline o glow, la imagen y el body
+  // se mezclaban en el navy abyss del bottom). Radial top-down con la
+  // misma paleta OKLCH lit-blue del card (hue 245) — la luz se siente
+  // parte del mismo light source. Alpha 0.10 → premium = sentir, no ver.
+  background: radial-gradient(
+    ellipse 95% 65% at 50% 0%,
+    oklch(0.62 0.18 245 / 0.10),
+    oklch(0.45 0.14 248 / 0.04) 45%,
+    transparent 75%
+  );
+
+  // Hairline divider — luz cenital de 1px en el umbral del body. Mimics
+  // el filo iluminado de una repisa de cristal: ancla la separación
+  // visual entre media (imagen) y body (texto). Inset 1rem de los bordes
+  // para que no choque visualmente con el gradient-border del card.
+  // Peak central foam-light (oklch 0.94) con fades laterales — la luz
+  // "respira" al centro y se disuelve hacia los costados.
+  &::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(0.88 0.07 250 / 0.45) 25%,
+      oklch(0.94 0.04 250 / 0.75) 50%,
+      oklch(0.88 0.07 250 / 0.45) 75%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+}
+
+.program-card__region {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--lagoon));
+}
+
+.program-card__title {
+  margin-top: 0.75rem;
+  font-family: var(--font-display);
+  // Fluid 22→30px sin step en 768. La jerarquía se mantiene legible en
+  // todos los anchos.
+  font-size: clamp(1.375rem, 1.15rem + 1vw, 1.875rem);
+  line-height: 1.15;
+  letter-spacing: var(--tracking-tight);
+}
+
+.program-card__copy {
+  margin-top: 1rem;
+  max-width: 52ch;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.7);
+  line-height: 1.625;
+}

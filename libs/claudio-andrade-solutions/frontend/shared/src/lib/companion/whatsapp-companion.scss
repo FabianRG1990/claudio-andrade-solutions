@@ -1,0 +1,134 @@
+// =============================================================================
+// WhatsappCompanion — global WhatsApp que sigue al scroll.
+//
+// Capas:
+//   • :host es el contenedor lógico — no posiciona, sus hijos sí.
+//   • .companion__fish-canvas: full-viewport fixed z=44, transparente.
+//     Solo recibe pixels durante el swim. pointer-events: none.
+//   • .companion__pivot: position fixed, transform-translate al dock
+//     activo. z=46, contiene el hub (botón + popover). Durante el
+//     swim el hub se oculta vía .is-swimming.
+//
+// El nav fixed vive en z=50; el hub popover usa z:50 interno; ambos
+// quedan por arriba del companion.
+// =============================================================================
+
+:host {
+  // El componente no se posiciona — son sus hijos los que viven
+  // fixed. Mantenemos :host sin estilo de posición para no crear un
+  // stacking context innecesario.
+  display: contents;
+}
+
+.companion__fish-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 44;
+  // El renderer setea width/height attributes (back buffer) y CSS size
+  // matches el viewport. Forzamos display block para evitar el inline
+  // gap por debajo del canvas.
+  display: block;
+}
+
+.companion__pivot {
+  // CLAVE: position absolute (NO fixed) — así el ícono está en el flow del
+  // documento y el browser lo scrollea naturalmente junto a la página, igual
+  // que cualquier elemento normal. JS solo necesita escribir el transform
+  // UNA vez por dock cambio; el scroll no requiere sincronización JS.
+  //
+  // Con position: fixed (anterior) el ícono vive en viewport coords y JS
+  // tenía que actualizar el transform CADA FRAME del scroll para mantener
+  // alignment con el dock — cualquier sub-frame lag = desalineación visible.
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 46;
+  // Transform aplicado por JS en coords de PÁGINA (no viewport).
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  pointer-events: auto;
+  // visibility:hidden hasta que JS llame a applyTransform() y posicione
+  // el pivot en su lugar correcto. Sin esto, hay UN FRAME post-mount
+  // (cuando @if(activeDockId() !== null) hace render) en el que el pivot
+  // existe a translate3d(0,0,0) — esquina superior izquierda — antes
+  // de que tick() corra applyTransform. applyTransform setea visibility
+  // a 'visible' inline una vez posicionado.
+  visibility: hidden;
+  // Entrada coordinada con la cadena de reveal del hero. El último
+  // elemento del hero (.hero__scroll-hint) arranca su fade a 1450ms con
+  // 600ms duration → settled a 2050ms. El ícono cierra la composición:
+  // delay 1700ms (entre el "Hablemos" label que aparece a 1450ms y el
+  // settle a 2050ms del scroll-hint), duration 500ms, settled ~2200ms.
+  // backwards mantiene opacity:0 durante el delay (sin esto, el ícono se
+  // ve apenas monta el componente y rompe la lectura del hero).
+  //
+  // OJO: animamos SOLO opacity acá — el transform del pivot lo controla
+  // JS (translate3d a coords de página). Si la animación incluyera
+  // transform, pisaría el posicionamiento del JS y el ícono saltaría
+  // a (0,0). El scale-up de entrada lo aplica .companion__hub que tiene
+  // su propio transform independiente.
+  animation: companion-intro-opacity 500ms 1700ms var(--ease-fluid) backwards;
+}
+
+@keyframes companion-intro-opacity {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companion__pivot,
+  .companion__hub {
+    animation: none;
+  }
+}
+
+// Anchor por centro: el hub queda centrado en el punto del transform.
+//
+// OJO con la durations/bezier: la transformación pez ↔ hub es uno de los
+// momentos premium del producto. El opacity fade rápido (220ms ease-fluid)
+// borra el hub limpio para que el pez curled se vea atrás; el transform
+// más lento (320ms easeOutBack) hace que el SCALE tenga un mini overshoot
+// al volver (0.85 → 1.05 → 1) — el "settle" característico de íconos que
+// nacen del aire (Apple Vision Pro icon coalesce, Linear command palette).
+// El overshoot inverso (depart 1 → 0.82 → 0.85) es invisible porque ocurre
+// durante el opacity fade-out.
+.companion__hub {
+  display: block;
+  transform: translate(-50%, -50%);
+  opacity: 1;
+  // Opacity 180ms (matchea CROSSFADE_DUR_MS del companion.ts) — el pez
+  // fadea OUT exactamente cuando el hub fadea IN, ambos sobre los
+  // últimos 180ms del swim. Transform sigue siendo 320ms easeOutBack
+  // para que el spring del scale persista un poco después del fade,
+  // dando el "settle" característico.
+  transition:
+    opacity 180ms var(--ease-fluid),
+    transform 320ms cubic-bezier(0.34, 1.32, 0.64, 1);
+  // Scale-up de entrada — mismo delay/duración que la opacity del pivot,
+  // pero solo afecta el TAMAÑO del hub (no su posición, que se mantiene
+  // por el translate(-50%, -50%) en `from` y `to`). El ícono "emerge"
+  // desde 0.6 hasta 1.0, en sync con el fade del pivot.
+  animation: companion-intro-scale 500ms 1700ms var(--ease-fluid) backwards;
+}
+
+@keyframes companion-intro-scale {
+  from { transform: translate(-50%, -50%) scale(0.6); }
+  to   { transform: translate(-50%, -50%) scale(1); }
+}
+
+// Durante swim: hub queda oculto a scale 0.85 (≈ tamaño del pez curled).
+// Continuidad geométrica: con FISH_SIZE=14 → bodyLen=98px → curled circle
+// diameter = 98/π ≈ 31.2px. El hub trigger sm es 32px. Al ocultar a 0.85
+// el "ghost" del hub queda a 27px — un toque más chico que el orbe curled,
+// dejando margen para que el emerge crezca con overshoot. Antes era
+// scale(0.3) (9.6px), un microbotón que se notaba "popping in" al volver.
+.companion__pivot.is-swimming .companion__hub {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  pointer-events: none;
+}
+

@@ -1,0 +1,285 @@
+// =============================================================================
+// WolfSky — 30 estrellas titilando sobre el cielo del hero.
+// Núcleo blanco + halo box-shadow tenue. Animación que pulsa entre una
+// baseline visible (≈35 % del pico) y el pico — la estrella nunca se
+// apaga del todo, sólo modula su brillo sobre un mínimo siempre presente.
+// =============================================================================
+
+:host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  // z-index 4 — encima del flow shader (z=3, ahora compone lago+peces).
+  // El flow es opaco fuera de la máscara también (outputs la imagen del
+  // lago), así que si las estrellas quedaran debajo del flow, no se
+  // verían. Las estrellas siempre van arriba de todo lo que sea agua.
+  z-index: 4;
+  overflow: hidden;
+
+  // Escala responsive de las estrellas — declarada en :host así inherits
+  // a todos los descendientes (.sky-star y .sky-shooting-star). El default
+  // 0.85 corresponde a laptop standard (1280-1439 px); las media queries
+  // de más abajo la ajustan al breakpoint actual.
+  //
+  // ¿Por qué media queries y no clamp(0.55, calc(100vw / 1440px), 1.1)?
+  // Esa fórmula depende de calc() type-checking (length÷length → number),
+  // feature de CSS Values 4 que Firefox sólo soporta desde la versión 118
+  // (oct 2023). En FF anterior — y reportado en producción aún en 132 — el
+  // clamp queda inválido → --star-scale sin valor → width:0 → estrellas
+  // invisibles. Las media queries sólo hacen `length × number`, primitivo
+  // y soportado en todos los browsers desde 2018.
+  --star-scale: 0.85;
+}
+
+// Phone (<640px): mismo piso que la versión clamp original. Las estrellas
+// pintadas del poster están a ~0.68× por object-fit cover; un overlay a
+// 0.55 queda un poco más chico — preferible a "demasiado grande".
+@media (max-width: 639.98px) {
+  :host {
+    --star-scale: 0.55;
+  }
+}
+
+// Tablet / phone landscape (640-1023): paso intermedio.
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  :host {
+    --star-scale: 0.65;
+  }
+}
+
+// Desktop pleno (≥1440): tamaño "nativo" del diseño.
+@media (min-width: 1440px) {
+  :host {
+    --star-scale: 1;
+  }
+}
+
+// Ultra-wide / 4K (≥1920): un toque más grandes para no perderse en
+// monitores grandes.
+@media (min-width: 1920px) {
+  :host {
+    --star-scale: 1.1;
+  }
+}
+
+.sky-stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+// Cada estrella son DOS cosas:
+//   1. Un box envelope FIJO de 4×4 px (no escalado, no responsive). Su
+//      única función es darle a Firefox un container con tamaño integer
+//      y suficiente espacio para que el render del background no caiga
+//      en sub-pixel ni se trunque.
+//   2. Un radial-gradient con radio EXPLÍCITO en px (0.4-1.1 px según
+//      `--size` y `--star-scale`) que dibuja un puntito sólido en el
+//      centro y se vuelve transparente al borde. El "puntito" es lo único
+//      visible — el resto del envelope queda transparente.
+//
+// ¿Por qué este enfoque?
+// La versión original (box solid + box-shadow) renderizaba el box mismo
+// como cuadrado en Firefox cuando el box tenía sub-pixel size (~1-1.5 px).
+// La versión gradient anterior (envelope ESCALADO con calc) producía
+// pelotas grandes porque el envelope determinaba el tamaño visible.
+// Esta versión separa los dos: envelope grande/fijo para Firefox, gradient
+// chiquito y crisp para el ojo. El gradient está antialiaseado por diseño
+// en todos los browsers (CSS Image Values 3, universal desde 2014).
+//
+// `--star-scale` se hereda desde :host (phone 0.55, laptop 0.85, desktop
+// 1.0, ultra 1.1) y multiplica al --size para escalar SÓLO el gradient,
+// no el envelope.
+.sky-star {
+  position: absolute;
+  // Envelope fijo en 8 px — integer, generoso para acomodar el gradient
+  // completo (radio máx ~2.6 px con scale 1.1) sin que recorte el halo.
+  width: 8px;
+  height: 8px;
+  // Radial-gradient con núcleo brillante chiquito + halo soft de fade-out.
+  // Las estrellas pintadas del poster también tienen su halo (es parte del
+  // glow incorporado en la imagen) — sin halo aquí las animadas resultaban
+  // invisibles a 1 px puro. El núcleo solid es sólo 18 % del radio = punto
+  // crisp; el 82 % restante es fade gradual = halo natural, no "pelota".
+  background: radial-gradient(
+    circle calc(var(--size, 2px) * var(--star-scale)) at center,
+    rgb(255 255 255 / 1) 0%,
+    rgb(255 255 255 / 0.92) 18%,
+    rgb(240 248 255 / 0.42) 38%,
+    rgb(215 232 255 / 0.16) 62%,
+    rgb(190 215 255 / 0.04) 85%,
+    transparent 100%
+  );
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  // ease-in-out → la entrada y salida son suaves, no abruptas. Período
+  // continuo por estrella vía custom property (3-5 s).
+  animation: sky-twinkle var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+  will-change: opacity;
+}
+
+// ─── Density: ocultar estrellas extra en phone ─────────────────────────────
+// 30 estrellas en un viewport 360×640 dan ~5× la densidad por área que en
+// 1440×900 — el sky se siente "lleno de puntos" en lugar de "cielo con
+// algunas estrellas titilando". Sin tocar el TS (que sigue generando 30 con
+// posiciones estables SSR/CSR), apagamos las que sobran via :nth-child.
+// Mantenemos las primeras N visibles — su orden coincide con el índice del
+// PRNG determinístico del componente, así la distribución cobertura del
+// cielo se mantiene representativa.
+//   phone <640  → solo 12 estrellas visibles
+//   tablet 640-1023 → 20 estrellas
+//   desktop ≥1024 → las 30 originales
+@media (max-width: 639.98px) {
+  .sky-star:nth-child(n + 13) {
+    display: none;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .sky-star:nth-child(n + 21) {
+    display: none;
+  }
+}
+
+// Curva del titileo — multi-stop irregular para simular scintillation real.
+// El twinkle atmosférico no es un pulso sinusoidal: la atmósfera refracta
+// la luz en patrones erráticos, así que la estrella tiene VARIOS picos y
+// bajadas dentro de un mismo ciclo, a brillos distintos.
+//
+//   0 % / 100 % : valle (30 % del pico) — punto base.
+//   20 %        : primer pico (brillo máximo).
+//   40 %        : bajada parcial (50 % del pico) — la estrella "pestañea".
+//   62 %        : segundo pico (brillo máximo).
+//   83 %        : bajada parcial (40 % del pico).
+//
+// Resultado: cada estrella hace 2 picos asimétricos por ciclo (cada
+// ~1.5-2.5 s con período 3-5 s) en patrón no-repetitivo. Combinado con
+// los delays desfasados y períodos distintos por estrella, el cielo se
+// ve como un cielo real, no como un display sincronizado.
+@keyframes sky-twinkle {
+  0%,
+  100% {
+    opacity: calc(var(--peak, 0.9) * 0.3);
+  }
+  20% {
+    opacity: var(--peak, 0.9);
+  }
+  40% {
+    opacity: calc(var(--peak, 0.9) * 0.5);
+  }
+  62% {
+    opacity: var(--peak, 0.9);
+  }
+  83% {
+    opacity: calc(var(--peak, 0.9) * 0.4);
+  }
+}
+
+// ─── Estrella fugaz ──────────────────────────────────────────────────────────
+// Trayecto: arranca cerca del punto rojo del screenshot (73 %, 14 %) y baja
+// en diagonal hacia la izquierda. Visible ~1.4 s cada 16 s.
+//
+// Decisiones críticas para fluidez:
+//   • `transform` y `opacity` corren en animaciones SEPARADAS sobre el mismo
+//     elemento. Si las dos viven en el mismo @keyframes, los stops intermedios
+//     de opacity fuerzan stops intermedios en transform, y CSS aplica el
+//     timing-function entre CADA par consecutivo → produce micro-frenadas
+//     que se leen como "brincos". Separadas, el `translate` es un único
+//     segmento entre 2 keyframes → motion 100 % fluida.
+//   • Unidades simétricas (`vw` en ambos ejes) → el ángulo del trayecto es
+//     idéntico en todo aspect-ratio, así el `rotate` del trail siempre queda
+//     perfectamente alineado con el vector de movimiento. Sacrifica ~2 % de
+//     precisión en el landing point a cambio de coherencia visual universal.
+//   • `linear` en el movimiento — un trayecto corto a velocidad constante
+//     se ve más natural que con aceleración/desaceleración.
+//
+// Construcción:
+//   • Head — dot 2 px con halo apilado. Position absolute en el origen.
+//   • Trail (`::before`) — barra 1 px con linear-gradient. transform-origin
+//     left center la deja pegada al head; rotate(−22deg) la orienta a la
+//     OPUESTA del vector de viaje (que apunta a ~158° desde east). scaleX
+//     0 → 1 entrando y 1 → 0 saliendo, sincronizado con el fade del head.
+.sky-shooting-star {
+  // --star-scale se hereda desde :host — mismo motivo que .sky-star.
+  position: absolute;
+  top: 14%;
+  left: 73%;
+  // Head escalado con viewport — antes 2px fijo daba una cabeza
+  // proporcionalmente enorme en phone vs los baked stars. Ahora 1.1-2.2px.
+  width: calc(2px * var(--star-scale));
+  height: calc(2px * var(--star-scale));
+  border-radius: 50%;
+  background: rgb(245 250 255);
+  box-shadow:
+    0 0 calc(3px * var(--star-scale)) 0 rgb(220 240 255 / 0.85),
+    0 0 calc(8px * var(--star-scale)) calc(1px * var(--star-scale)) rgb(180 210 255 / 0.45),
+    0 0 calc(16px * var(--star-scale)) calc(2px * var(--star-scale)) rgb(150 190 245 / 0.18);
+  opacity: 0;
+  pointer-events: none;
+  // Dos animaciones sobre el mismo elemento — ver decisión crítica arriba.
+  animation:
+    sky-shooting-move 16s linear 6s infinite,
+    sky-shooting-fade 16s linear 6s infinite;
+  will-change: transform, opacity;
+}
+
+.sky-shooting-star::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6vw;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgb(255 255 255 / 0.95) 0%,
+    rgb(245 250 255 / 0.7) 20%,
+    rgb(230 245 255 / 0.35) 55%,
+    rgb(220 235 255 / 0.08) 85%,
+    rgb(220 235 255 / 0) 100%
+  );
+  transform-origin: left center;
+  transform: translateY(-50%) rotate(-22deg) scaleX(0);
+  animation: sky-shooting-trail 16s linear 6s infinite;
+  will-change: transform;
+}
+
+// Motion: UN solo segmento entre origen y destino. Después se mantiene en el
+// destino (invisible por opacity:0) hasta el próximo ciclo. Sin keyframes
+// intermedios → trayectoria perfectamente lineal y fluida.
+@keyframes sky-shooting-move {
+  0%        { transform: translate(0, 0); }
+  9%, 100%  { transform: translate(-15vw, 6vw); }
+}
+
+// Opacidad independiente: fade-in rápido (0 → 1 en el primer 1 % del cycle),
+// plateau a brillo máximo hasta 7 %, fade-out al llegar (7 % → 9 %).
+@keyframes sky-shooting-fade {
+  0%, 100%  { opacity: 0; }
+  1%, 7%    { opacity: 1; }
+  9%        { opacity: 0; }
+}
+
+// Trail: crece a su largo máximo en el primer 2 % (junto con el fade-in del
+// head), se mantiene durante el journey, colapsa en el fade-out (7 % → 9 %).
+// Plateau largo = trail siempre presente mientras la cabeza viaja, sin
+// pulsos extraños.
+@keyframes sky-shooting-trail {
+  0%        { transform: translateY(-50%) rotate(-22deg) scaleX(0); }
+  2%, 7%    { transform: translateY(-50%) rotate(-22deg) scaleX(1); }
+  9%, 100%  { transform: translateY(-50%) rotate(-22deg) scaleX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-star {
+    animation: none;
+    // Sostiene una opacidad media — visible pero estática.
+    opacity: calc(var(--peak, 0.7) * 0.55);
+  }
+
+  .sky-shooting-star,
+  .sky-shooting-star::before {
+    animation: none;
+    opacity: 0;
+  }
+}

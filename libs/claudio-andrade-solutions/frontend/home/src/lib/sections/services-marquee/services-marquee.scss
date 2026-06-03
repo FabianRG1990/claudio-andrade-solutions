@@ -1,0 +1,441 @@
+.services-marquee {
+  position: relative;
+  // Padding vertical fluido: 4rem en phones → 10rem en desktop. Antes 8rem
+  // base era asfixiante en phones (consume ~25 % del viewport vertical solo
+  // en aire). Mobile-first: arranca cómodo y crece.
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
+}
+
+.services-marquee__container {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+}
+
+// ─── Header ────────────────────────────────────────────────────────────────
+// Antes este header tenía 3 ideas en el title ("Cada solución a medida —
+// una arquitectura y un beneficio claro de negocio.") que con `text-wrap:
+// balance` quebraba en líneas torcidas. Ahora el title usa el patrón
+// editorial estándar del proyecto: oración corta + cierre italic — la
+// misma forma que el hero ("Soluciones / que escalan."). Lectura limpia
+// en cualquier ancho.
+.services-marquee__head {
+  display: grid;
+  // Gap fluido — 1.5rem en phones (consistente con engagements/case-studies/
+  // featured-products), 3rem en desktop donde el head es 2-col side-by-side y
+  // el gap horizontal manda. Antes 3rem constante creaba un valle entre el
+  // eyebrow "Capítulo 02" y el título en mobile.
+  gap: clamp(1.5rem, 1rem + 1.5vw, 3rem);
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 0.6fr 1fr;
+    align-items: end;
+  }
+}
+
+.services-marquee__count {
+  margin-top: 1.5rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+}
+
+.services-marquee__title {
+  text-wrap: balance;
+  max-width: 18ch;
+  font-family: var(--font-display);
+  font-size: var(--type-h2-lg);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-tight);
+}
+
+.services-marquee__title-italic {
+  display: block; // fuerza salto de línea entre las dos oraciones —
+                  // garantiza que "Una obsesión." viva en su propia línea
+                  // sin depender de balance/wrap.
+  margin-top: 0.25rem;
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  // Italic editorial brass — coherente con todos los títulos italics del sitio.
+  color: rgb(var(--brass) / 0.92);
+}
+
+// =============================================================================
+// Reel — carrusel drag-scroll infinito. Patrón industry-standard de Embla /
+// Swiper / Splide. Las decisiones críticas, una por una:
+//
+//   1. overflow: hidden + transform: translate3d (NO overflow-x: auto +
+//      scrollLeft). Razón: en iOS/Android, un overflow-x: auto roba el
+//      pan-y al browser cuando el dedo está sobre el carrusel — el usuario
+//      no puede scrollear la página verticalmente porque el touch queda
+//      atrapado en el scroll horizontal. Con transform, el viewport es
+//      overflow:hidden (no scroll) y delegamos el pan-y al browser via
+//      touch-action.
+//
+//   2. touch-action: pan-y pinch-zoom — declara que el browser puede
+//      iniciar pan VERTICAL (scroll de página) y pinch-zoom (a11y).
+//      Cualquier pan horizontal queda libre para que JS lo capture via
+//      pointer events. Resultado: swipe vertical → página baja como
+//      cualquier sección; swipe horizontal → JS conduce el drag.
+//
+//   3. Axis lock con umbral de 6px — en el primer pointermove de un touch,
+//      el JS compara |dx| vs |dy|. Si dy > dx, abandona el drag, libera
+//      el touch, y el browser maneja el scroll vertical de la página. Si
+//      dx > dy, captura el pointer y conduce el drag con preventDefault.
+//      Patrón documentado en Pointer Events spec, implementado en Embla,
+//      Swiper, Splide, react-spring-carousel-js.
+//
+//   4. user-select: none + -webkit-touch-callout: none — siempre, no sólo
+//      durante drag. Razón: en móvil, un long-press sobre el card debe
+//      mantener la cinta pausada (el usuario está LEYENDO), no disparar
+//      la lupa de selección de iOS ni la toolbar de Android. Aplicado al
+//      viewport + reel + cards para cubrir herencia incompleta en Safari.
+//
+//   5. cursor: grab → grabbing en .is-dragging. Affordance estándar
+//      (Apple Music, Stripe, Linear).
+//
+//   6. Edges absolutas sobre el viewport — overflow:hidden las clipea
+//      contra las orillas visibles. No se mueven con el contenido porque
+//      el viewport no scrollea (el que se mueve es el reel hijo).
+// =============================================================================
+.services-marquee__viewport {
+  position: relative;
+  margin-top: 5rem;
+  overflow: hidden;
+
+  // touch-action: pan-y pinch-zoom — el browser maneja scroll vertical
+  // de página y pinch-zoom para a11y. Cualquier gesto horizontal queda
+  // libre para que los pointer events del JS lo conduzcan. Esto es lo
+  // que evita que el carrusel atrape el touch y bloquee el scroll vertical.
+  touch-action: pan-y pinch-zoom;
+
+  // Cursor grab/grabbing en desktop. Affordance estándar de carruseles
+  // arrastrables. Se hereda al reel y a los cards (no necesitan setearlo).
+  cursor: grab;
+
+  // user-select: none + -webkit-touch-callout: none en TODA la zona
+  // interactiva. Razón crítica: long-press en móvil debe ser "pausar para
+  // leer", no "abrir lupa de selección iOS / toolbar Android". user-select
+  // no se hereda confiablemente en Safari, por eso se replica abajo en
+  // .services-marquee__reel y sus descendientes.
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  // -webkit-tap-highlight: transparent — sin flash gris/azul al tocar en
+  // móvil (otro signal de "esto no es un botón clickable, es una superficie
+  // arrastrable").
+  -webkit-tap-highlight-color: transparent;
+
+  &.is-dragging {
+    cursor: grabbing;
+  }
+}
+
+.services-marquee__edge {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  height: 100%;
+  width: 8rem;
+}
+
+.services-marquee__edge--left {
+  left: 0;
+  background: linear-gradient(to right, rgb(var(--abyss)), transparent);
+}
+
+.services-marquee__edge--right {
+  right: 0;
+  background: linear-gradient(to left, rgb(var(--abyss)), transparent);
+}
+
+.services-marquee__reel {
+  display: flex;
+  align-items: stretch;
+  // `width: max-content` — el reel debe medir el ancho real de sus 30
+  // cards (10 únicas × 3 sets para loop infinito + margen de drag en
+  // ambas direcciones). El JS calcula W = scrollWidth / 3 y wrappea la
+  // translateX cuando el offset cruza ±W.
+  width: max-content;
+  // Padding vertical para la sombra-drop de las cards en hover
+  // (translateY(-4px) + box-shadow ~80px blur abajo) — no se recorta
+  // dentro del viewport overflow:hidden.
+  padding-block: 1.5rem;
+  // will-change: transform — el reel se mueve cada frame. Hint al
+  // compositor para promote a layer y obtener composición GPU.
+  will-change: transform;
+
+  // user-select replicado por la herencia incompleta en Safari. Sin esto,
+  // long-press en una card iOS abre la lupa de selección.
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  // Todos los descendientes — texto del card incluido — no son
+  // seleccionables ni disparan callout. Aplicar al reel solo no alcanza
+  // porque el shadow DOM-ish de la card-inner queda fuera del cascade en
+  // algunos engines.
+  & * {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+// =============================================================================
+// Service card · Solid 3D tier
+//
+// El usuario rechazó dos tratamientos anteriores: (1) glass-shell con halo
+// de color de fondo + ring foam — leído como "demasiado decorado"; (2)
+// versión translúcida tipo fondo glass — "murió la flor, ya no se siente
+// premium". Brief actual: cards SÓLIDAS, opacas, que salgan de la pantalla
+// con sombras 3D reales.
+//
+// Solución: superficie sólida ~8% más clara que el abyss + stack de 4 capas
+// de sombra (referencia: Material Design elevation 16-24 e iOS app-card
+// shadow stacks). Cada capa cumple un rol específico:
+//   • Contact (1px·2px) — separación tight contra la superficie de abajo
+//   • Definition (6px·12px) — "borde de objeto" sin necesidad de border ring
+//   • Lift (18px·36px) — cuerpo principal del drop shadow
+//   • Atmosphere (40px·80px) — sombra difusa lejana, "flotando"
+// El inset 1px foam-low arriba sugiere luz cenital sobre un bevel real —
+// es DEPTH, no border. Sin halo, sin gradient en el fondo, sin ring foam.
+// La identidad por categoría sobrevive en el dot del eyebrow y el
+// `--icon-color` del tile.
+// =============================================================================
+.service-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: clamp(17rem, 75vw, 21.25rem);
+  height: clamp(23.75rem, 90vw, 30rem);
+  margin-right: clamp(0.75rem, 1vw + 0.5rem, 1.5rem);
+  border-radius: var(--radius-squircle);
+
+  // Superficie sólida opaca. abyss=#06091A (rgb 6 9 26) → lift a #141937
+  // (rgb 20 25 55) = ~8% más claro, misma familia hue. Lectura de "material
+  // elevado" sin perder pertenencia a la paleta.
+  background: rgb(20 25 55);
+
+  // 4-layer shadow stack. La sumatoria desplaza el peso visual hacia abajo
+  // y crea profundidad atmosférica — la card "se levanta" de la pantalla.
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.50),
+    0 6px 12px -2px rgb(0 0 0 / 0.45),
+    0 18px 36px -6px rgb(0 0 0 / 0.55),
+    0 40px 80px -12px rgb(0 0 0 / 0.65),
+    inset 0 1px 0 rgb(var(--foam) / 0.08);
+
+  transition:
+    transform 700ms var(--ease-fluid),
+    box-shadow 700ms var(--ease-fluid);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.50),
+        0 8px 16px -2px rgb(0 0 0 / 0.55),
+        0 24px 48px -6px rgb(0 0 0 / 0.70),
+        0 52px 104px -12px rgb(0 0 0 / 0.80),
+        inset 0 1px 0 rgb(var(--foam) / 0.12);
+    }
+  }
+
+  @media (hover: none) {
+    &:active {
+      transform: scale(0.99);
+      transition: transform 150ms var(--ease-fluid);
+    }
+  }
+}
+
+.service-card__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: inherit;
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem)
+           clamp(1.125rem, 0.875rem + 1vw, 1.625rem)
+           clamp(1rem, 0.75rem + 1vw, 1.5rem);
+  gap: clamp(1rem, 0.5rem + 1.5vw, 1.5rem);
+}
+
+// ─── HEAD: icono + secuencia + status ──────────────────────────────────────
+.service-card__hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgb(var(--foam) / 0.08);
+}
+
+// Tile rounded-square plano tipo iOS app-icon — fondo neutro (no tintado
+// del color del icono, eso creaba un halo/glow alrededor) y el icono toma
+// su color de `--icon-color` que cada servicio define en data.ts.
+.service-card__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.875rem;
+  background: rgb(255 255 255 / 0.035);
+  color: var(--icon-color, rgb(var(--foam)));
+}
+
+.service-card__hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.625rem;
+  padding-top: 0.25rem;
+}
+
+.service-card__sequence {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  color: rgb(var(--foam) / 0.45);
+}
+
+.service-card__status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  // Outline-only — el user pidió quitar el fondo y dejar solo letra y
+  // marco. Sin fill = sin necesidad de backdrop-filter ni capa traslúcida.
+  // El frame (inset 0 0 0 1px) se sube en opacidad respecto a la versión
+  // anterior porque ya no hay un campo de color que lo ancle visualmente.
+  background: transparent;
+  white-space: nowrap;
+
+  &[data-status='estable'] {
+    color: rgb(var(--bioluminescent));
+    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.45);
+  }
+  // Vulnerable / En peligro / Crítico — la jerarquía de urgencia sobrevive
+  // por opacidad creciente del frame (0.40 → 0.55 → 0.70) ahora que no hay
+  // fill de fondo que aporte intensidad. Color del texto y del border se
+  // mantiene en lagoon (sin naranja, regla del marquee).
+  &[data-status='vulnerable'] {
+    color: rgb(var(--lagoon));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.40);
+  }
+  &[data-status='en-peligro'] {
+    color: rgb(var(--lagoon));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.55);
+  }
+  &[data-status='critico'] {
+    color: rgb(var(--foam));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.70);
+  }
+}
+
+// ─── BODY: categoría + nombre + tagline ────────────────────────────────────
+.service-card__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.service-card__category {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+}
+
+// Acento de categoría — un punto chico en el color del accent antes del
+// texto. Detalle premium que vincula la card al halo sin competir con él.
+[data-accent='lagoon'] .service-card__category::before,
+[data-accent='kelp'] .service-card__category::before,
+[data-accent='coral'] .service-card__category::before,
+[data-accent='bioluminescent'] .service-card__category::before {
+  content: '';
+  display: inline-block;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 9999px;
+  margin-right: 0.5rem;
+  vertical-align: 0.1em;
+}
+[data-accent='lagoon'] .service-card__category::before { background: rgb(var(--lagoon)); box-shadow: 0 0 6px rgb(var(--lagoon) / 0.6); }
+[data-accent='kelp'] .service-card__category::before { background: rgb(var(--bioluminescent)); box-shadow: 0 0 6px rgb(var(--bioluminescent) / 0.6); }
+// coral pasó a lagoon — mismo motivo que los status chips: el dot coral
+// rompía la unidad visual del marquee con un hue caliente solitario.
+[data-accent='coral'] .service-card__category::before { background: rgb(var(--lagoon)); box-shadow: 0 0 6px rgb(var(--lagoon) / 0.6); }
+[data-accent='bioluminescent'] .service-card__category::before { background: rgb(var(--bioluminescent)); box-shadow: 0 0 8px rgb(var(--bioluminescent) / 0.7); }
+
+.service-card__name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  text-wrap: balance;
+}
+
+.service-card__tagline {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgb(var(--foam) / 0.68);
+  text-wrap: pretty;
+}
+
+// ─── HIGHLIGHTS: bullets con check ─────────────────────────────────────────
+.service-card__highlights {
+  margin: 0;
+  padding: 1.25rem 0 0 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid rgb(var(--foam) / 0.08);
+}
+
+.service-card__highlight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgb(var(--foam) / 0.88);
+}
+
+.service-card__highlight-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  background: rgb(var(--foam) / 0.06);
+  color: rgb(var(--foam) / 0.65);
+  box-shadow: inset 0 0 0 1px rgb(var(--foam) / 0.10);
+}
+
+// El "check" del entregable se distingue del clock con tinte lagoon —
+// señal visual de "esto te llevás" vs "esto demora".
+.service-card__highlight-icon--check {
+  background: rgb(var(--lagoon) / 0.18);
+  color: rgb(var(--bioluminescent));
+  box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.30);
+}

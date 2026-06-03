@@ -1,0 +1,19 @@
+{
+  "//": "Stylelint enfocado en mantenibilidad ESTRUCTURAL del SCSS (skill estructura-de-codigo/04). No extiende el config estándar a propósito: en un sitio premium hand-tuned eso tira una pared de errores estilísticos no accionables. Acá solo las reglas que importan para que el SCSS no se pudra: anidamiento, especificidad, !important. Todas como `warning` (visibles, no bloquean). Correr con `yarn lint:styles`. No está wireado a `nx lint` todavía.",
+  "customSyntax": "postcss-scss",
+  "rules": {
+    "max-nesting-depth": [
+      3,
+      {
+        "ignore": ["pseudo-classes", "blockless-at-rules"],
+        "ignoreAtRules": ["media", "supports", "include", "mixin", "if", "else", "each", "for", "function", "content"],
+        "severity": "warning"
+      }
+    ],
+    "selector-max-compound-selectors": [4, { "severity": "warning" }],
+    "selector-max-id": [0, { "severity": "warning" }],
+    "selector-no-qualifying-type": [true, { "ignore": ["attribute"], "severity": "warning" }],
+    "declaration-no-important": [true, { "severity": "warning" }],
+    "no-descending-specificity": [true, { "severity": "warning" }]
+  }
+}

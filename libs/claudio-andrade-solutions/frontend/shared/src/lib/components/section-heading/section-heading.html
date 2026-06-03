@@ -1,0 +1,28 @@
+<div class="section-heading" [attr.data-align]="align()">
+  <div appReveal>
+    @if (dockId(); as id) {
+      <app-eyebrow
+        [tone]="tone()"
+        [appCompanionDock]="id"
+        [order]="dockOrder()"
+        [offsetX]="dockOffsetX()"
+        [label]="eyebrow()"
+      >{{ eyebrow() }}</app-eyebrow>
+    } @else {
+      <app-eyebrow [tone]="tone()">{{ eyebrow() }}</app-eyebrow>
+    }
+  </div>
+
+  <h2 appReveal [delay]="0.08" class="section-heading__title">
+    {{ title() }}
+    @if (italic()) {
+      <span class="section-heading__italic">{{ italic() }}</span>
+    }
+  </h2>
+
+  @if (description(); as desc) {
+    <p appReveal [delay]="0.16" class="section-heading__description">
+      {{ desc }}
+    </p>
+  }
+</div>

@@ -1,0 +1,49 @@
+// Public API curada del lib `@cas-ui-shared`.
+//
+// Para imports más quirúrgicos (sin pasar por este barrel) los consumers
+// pueden usar el path mapping `@cas-ui-shared/*` declarado en
+// `tsconfig.base.json`. Por ejemplo:
+//
+//   import { PageHeader } from '@cas-ui-shared/components/page-header/page-header';
+//
+// Esto es preferido cuando solo necesitás un componente puntual y querés
+// evitar tirarle al bundler todo el árbol de re-exports del barrel.
+
+// ─── Layout (aplicaciones que componen su shell) ───────────────────────────
+export { FloatingNav } from './lib/layout/floating-nav/floating-nav';
+export { Footer } from './lib/layout/footer/footer';
+export { OceanBackground } from './lib/layout/ocean-background/ocean-background';
+
+// ─── UI atoms ──────────────────────────────────────────────────────────────
+export { Eyebrow } from './lib/components/eyebrow/eyebrow';
+export { PillButton } from './lib/components/pill-button/pill-button';
+export { PageHeader } from './lib/components/page-header/page-header';
+export { SectionHeading } from './lib/components/section-heading/section-heading';
+export { WhatsappHub } from './lib/components/whatsapp-hub/whatsapp-hub';
+
+// ─── Companion (global WhatsApp que sigue al scroll) ──────────────────────
+export { WhatsappCompanion } from './lib/companion/whatsapp-companion';
+export { CompanionDockDirective } from './lib/companion/companion-dock.directive';
+export { CompanionDockRegistry } from './lib/companion/companion-dock.service';
+
+// ─── Directives ────────────────────────────────────────────────────────────
+export { RevealDirective } from './lib/directives/reveal/reveal.directive';
+export { ImgFadeDirective } from './lib/directives/img-fade/img-fade.directive';
+
+// ─── Data + types ──────────────────────────────────────────────────────────
+export {
+  products,
+  services,
+  caseStudies,
+  availability,
+  engagements,
+} from './lib/data/data';
+export type {
+  Product,
+  Service,
+  ServiceStatus,
+  Metric,
+  CaseSlide,
+  CaseStudy,
+  Engagement,
+} from './lib/data/data';

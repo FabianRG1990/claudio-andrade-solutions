@@ -1,0 +1,63 @@
+<div class="whatsapp-hub" [class.is-open]="open()" #hub>
+  @if (triggerless()) {
+    <ng-content></ng-content>
+  } @else {
+    <button
+      type="button"
+      class="whatsapp-hub__trigger"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="open()"
+      aria-label="Mostrar contactos de WhatsApp"
+      (click)="toggle($event)"
+    >
+      <span class="whatsapp-hub__trigger-ring" aria-hidden="true"></span>
+      <span class="whatsapp-hub__trigger-ring whatsapp-hub__trigger-ring--delay" aria-hidden="true"></span>
+      <span class="whatsapp-hub__trigger-icon" aria-hidden="true">
+        <ng-icon name="phosphorWhatsappLogoBold" />
+      </span>
+      <span class="whatsapp-hub__trigger-label" aria-hidden="true">WhatsApp</span>
+    </button>
+  }
+
+  <div class="whatsapp-hub__menu" role="menu" #menu>
+    <p class="whatsapp-hub__menu-eyebrow">
+      <span class="whatsapp-hub__menu-eyebrow-dot" aria-hidden="true"></span>
+      Hablemos por WhatsApp
+    </p>
+    <ul class="whatsapp-hub__menu-list">
+      @for (contact of contacts; track contact.id) {
+        <li role="none">
+          <a
+            class="whatsapp-hub__menu-item"
+            [class.whatsapp-hub__menu-item--pending]="!contact.href"
+            [attr.href]="contact.href"
+            [attr.target]="contact.href ? '_blank' : null"
+            [attr.rel]="contact.href ? 'noopener noreferrer' : null"
+            [attr.aria-label]="contact.aria"
+            [attr.aria-disabled]="contact.href ? null : 'true'"
+            [attr.tabindex]="contact.href ? '0' : '-1'"
+            role="menuitem"
+          >
+            <span class="whatsapp-hub__menu-item-avatar" aria-hidden="true">
+              <span class="whatsapp-hub__menu-item-initial">{{ contact.initial }}</span>
+              @if (contact.href) {
+                <span class="whatsapp-hub__menu-item-status"></span>
+              }
+            </span>
+            <div class="whatsapp-hub__menu-item-meta">
+              <p class="whatsapp-hub__menu-item-name">{{ contact.name }}</p>
+              <p class="whatsapp-hub__menu-item-role">{{ contact.role }}</p>
+            </div>
+            @if (contact.href) {
+              <span class="whatsapp-hub__menu-item-arrow" aria-hidden="true">
+                <ng-icon name="phosphorArrowUpRightBold" size="11" />
+              </span>
+            } @else {
+              <span class="whatsapp-hub__menu-item-pending-tag">Pronto</span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

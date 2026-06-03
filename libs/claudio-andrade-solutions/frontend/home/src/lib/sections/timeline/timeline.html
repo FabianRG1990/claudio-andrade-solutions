@@ -1,0 +1,102 @@
+<section class="timeline">
+  <div class="timeline__container">
+    <!-- ─── Header ───────────────────────────────────────────────────────── -->
+    <header class="timeline__head">
+      <div appReveal class="timeline__head-eyebrow">
+        <app-eyebrow
+          tone="lagoon"
+          appCompanionDock="timeline-head"
+          [order]="60"
+          [offsetX]="28"
+          label="Trayectoria + Stack"
+        >Trayectoria + Stack</app-eyebrow>
+      </div>
+      <div class="timeline__head-content">
+        <h2 appReveal [delay]="0.05" class="timeline__title">
+          Siete años.
+          <span class="timeline__title-italic">Tecnología con criterio.</span>
+        </h2>
+        <p appReveal [delay]="0.12" class="timeline__lead">
+          No elegimos por moda. Elegimos con evidencia: tecnología probada
+          en cuatro países, con ochenta usuarios concurrentes y cero caídas
+          críticas desde 2019. Cada herramienta del stack tiene una razón.
+        </p>
+      </div>
+    </header>
+
+    <!-- ─── Stats hero ───────────────────────────────────────────────────── -->
+    <!-- Cuatro cifras de respaldo: años, alcance geográfico, IA y uptime.
+         Tipografía mono grande + label en eyebrow para lectura editorial. -->
+    <dl class="timeline__stats">
+      @for (s of stats; track s.label; let i = $index) {
+        <div appReveal [delay]="0.04 * i" class="timeline__stat">
+          <dt class="timeline__stat-label">{{ s.label }}</dt>
+          <dd class="timeline__stat-value">{{ s.value }}</dd>
+        </div>
+      }
+    </dl>
+
+    <!-- ─── Hitos · timeline vertical ────────────────────────────────────── -->
+    <div class="timeline__zone">
+      <div appReveal class="timeline__zone-head">
+        <app-eyebrow
+          tone="kelp"
+          label="Hitos · 2019 → 2026"
+        >Hitos · 2019 → 2026</app-eyebrow>
+        <h3 class="timeline__zone-title">
+          Cómo llegamos hasta acá.
+        </h3>
+      </div>
+
+      <ol class="timeline__list">
+        @for (m of milestones; track m.year; let i = $index) {
+          <li
+            appReveal
+            [delay]="0.04 * i"
+            class="timeline__milestone"
+          >
+            <div class="timeline__milestone-marker" aria-hidden="true"></div>
+            <p class="timeline__year">{{ m.year }}</p>
+            <p class="timeline__body">{{ m.body }}</p>
+          </li>
+        }
+      </ol>
+    </div>
+
+    <!-- ─── Stack · por qué ──────────────────────────────────────────────── -->
+    <div class="timeline__zone">
+      <div appReveal class="timeline__zone-head">
+        <app-eyebrow
+          tone="lagoon"
+          appCompanionDock="timeline-stack"
+          [order]="70"
+          [offsetX]="28"
+          label="Stack & por qué"
+        >Stack & por qué</app-eyebrow>
+        <h3 class="timeline__zone-title">
+          Cada herramienta, una decisión técnica.
+        </h3>
+      </div>
+
+      <div class="timeline__stack-grid">
+        @for (t of techStack; track t.name; let i = $index) {
+          <article
+            appReveal
+            [delay]="0.05 * i"
+            class="tech-card"
+            [attr.data-accent]="t.accent"
+          >
+            <div class="tech-card__inner glass-core">
+              <span class="tech-card__glow" aria-hidden="true"></span>
+              <header class="tech-card__head">
+                <p class="tech-card__category">{{ t.category }}</p>
+              </header>
+              <h4 class="tech-card__name">{{ t.name }}</h4>
+              <p class="tech-card__reason">{{ t.reason }}</p>
+            </div>
+          </article>
+        }
+      </div>
+    </div>
+  </div>
+</section>

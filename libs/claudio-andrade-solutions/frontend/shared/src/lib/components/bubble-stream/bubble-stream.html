@@ -1,0 +1,12 @@
+<div class="bubble-stream" aria-hidden="true">
+  @for (b of bubbles(); track b.index) {
+    <span
+      class="bubble-stream__bubble animate-rise"
+      [style.left.%]="b.left"
+      [style.width.px]="b.size"
+      [style.height.px]="b.size"
+      [style.animation-delay.s]="b.delay"
+      [style.animation-duration.s]="b.duration"
+    ></span>
+  }
+</div>

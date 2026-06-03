@@ -1,0 +1,27 @@
+<app-ocean-background />
+
+<!-- Rotation veil — masking del snap del layout cuando el teléfono cambia
+     de portrait a landscape. Ver comentario en app.ts. -->
+<div
+  class="rotation-veil"
+  [class.is-active]="rotating()"
+  aria-hidden="true"
+></div>
+
+<main class="app-main">
+  <router-outlet />
+</main>
+
+<app-footer />
+
+<!-- Companion global de WhatsApp — pieza fija que sigue al scroll
+     anclándose a docks marcados con [appCompanionDock]. Vive entre footer
+     y nav porque tiene que pintar sobre las secciones pero quedar por
+     debajo del nav fijo. -->
+<app-whatsapp-companion />
+
+<!-- IMPORTANTE: el nav va al final del DOM (después de main + footer) para
+     garantizar que pinta encima de cualquier sección con isolation:isolate
+     o transform que pueda generar un nuevo stacking context. Position fixed
+     + z-index alto debería bastar, pero el orden DOM es el seguro extra. -->
+<app-floating-nav />

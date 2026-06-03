@@ -1,0 +1,223 @@
+<section class="hero">
+  <!-- `.hero__scene` envuelve la imagen + todas las capas animadas. Es la
+       pieza clave del responsive del hero:
+         · En viewports angostos (< 1024px), el wrapper tiene aspect-ratio
+           1672/941 (= ratio nativo del hero-mk6.png), así la imagen se
+           muestra COMPLETA sin recorte — wolf incluido. El contenido
+           editorial fluye debajo.
+         · En viewports anchos (≥ 1024px), el wrapper se vuelve `position:
+           absolute; inset: 0;` cubriendo todo el hero como fondo full-bleed
+           (comportamiento original). El aspect-ratio del viewport en
+           desktop coincide visualmente con el de la imagen, así que el
+           `object-fit: cover` apenas recorta.
+       Los tres componentes interactivos (`<app-wolf-lake-flow>`,
+       `<app-wolf-sky>`, `<app-wolf-lake-canvas>`) son `position: absolute;
+       inset: 0;` por dentro — siguen automáticamente el rect del `.hero__scene`
+       y el ResizeObserver en cada uno mantiene su canvas sincronizado al
+       tamaño del wrapper. La función `imgUVToCanvasUV` que mapea UV-de-imagen
+       a coordenadas-de-canvas asume `object-fit: cover` y funciona idéntico
+       cuando el contenedor y la imagen comparten aspect-ratio (caso mobile)
+       como cuando el contenedor es más ancho (caso desktop). -->
+  <div class="hero__scene">
+    <!-- Imagen estática MK6 (lago + lobo wireframe + skyline + cielo
+         estrellado). El `<picture>` negocia formato y variante:
+           • AVIF (preferido, ~60 KB) por variante
+           • WebP (fallback en <img>, ~135 KB) por variante seleccionada del
+             desktop default — el `<img>` selecciona webp del DESKTOP MK6 si
+             ningún <source> de breakpoint matchea. Para que phone/tablet/
+             cinematic carguen webp cuando AVIF no es soportado, agregamos
+             un <source type="image/webp"> después del AVIF de cada variante.
+         PNG removido del chain (1.8-3.3 MB cada uno, ~10 MB en total). En
+         2026, todos los browsers que pueden cargar Angular 21 (requiere ES
+         modules) soportan WebP — el PNG era disco muerto en el hosting.
+         Art direction: cada variante es una COMPOSICIÓN distinta:
+           • phone (portrait ≤640px) → 9:16 vertical, lobo centrado
+           • tablet (641-1099 con altura ≥640) → 1:1 cuadrado, balance
+           • cinematic (ultrawide ≥21:9) → 21:9 panorama, solo ultrawide reales
+           • desktop (default) → 16:9 MK6 (laptops, monitores 16:9/16:10,
+             tablet landscape, phone landscape — "horizontales no ultrawide")
+         IMPORTANTE: el orden importa — primer match gana. -->
+    <picture>
+      <!-- Cinematic: SOLO monitores ultrawide reales (≥21:9). -->
+      <source
+        media="(min-width: 1024px) and (min-aspect-ratio: 21/9)"
+        srcset="hero-wolf/hero-mk6-cinematic.avif"
+        type="image/avif"
+      />
+      <source
+        media="(min-width: 1024px) and (min-aspect-ratio: 21/9)"
+        srcset="hero-wolf/hero-mk6-cinematic.webp"
+        type="image/webp"
+      />
+
+      <!-- Tablet (641-1099 wide, altura ≥640, aspect ≤6/5). -->
+      <source
+        media="(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)"
+        srcset="hero-wolf/hero-mk6-tablet.avif"
+        type="image/avif"
+      />
+      <source
+        media="(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)"
+        srcset="hero-wolf/hero-mk6-tablet.webp"
+        type="image/webp"
+      />
+
+      <!-- Phone (≤640): portrait vertical. -->
+      <source
+        media="(max-width: 640px)"
+        srcset="hero-wolf/hero-mk6-phone.avif"
+        type="image/avif"
+      />
+      <source
+        media="(max-width: 640px)"
+        srcset="hero-wolf/hero-mk6-phone.webp"
+        type="image/webp"
+      />
+
+      <!-- Desktop wide (default): MK6 16:9. AVIF + img-fallback webp. -->
+      <source srcset="hero-wolf/hero-mk6.avif" type="image/avif" />
+      <img
+        class="hero__bg"
+        src="hero-wolf/hero-mk6.webp"
+        alt=""
+        aria-hidden="true"
+        width="1672"
+        height="941"
+        fetchpriority="high"
+        decoding="async"
+      />
+    </picture>
+
+    <!-- Capa de agua animada: flow map WebGL. Se monta encima de la imagen,
+         fade-in cuando todo está listo. Si el render falla por cualquier
+         motivo (no WebGL, prefers-reduced-motion, error de carga), la
+         imagen estática debajo sigue visible. -->
+    <app-wolf-lake-flow />
+
+    <!-- Capa de cielo: detecta las estrellas reales pintadas en el poster y
+         coloca halos suaves encima que titilan en aditivo (mix-blend: screen).
+         No crea estrellas nuevas — sólo le añade vida a las que ya existen. -->
+    <app-wolf-sky />
+
+    <!-- Canvas interactivo: peces ambientales + pez del cursor con física
+         de profundidad, todos clamped al polígono del lago. Loop infinito
+         (la simulación corre, no termina). Sin animación si el usuario
+         pidió prefers-reduced-motion. -->
+    <app-wolf-lake-canvas />
+
+    <!-- Cierre inferior — funde la base de la escena al abismo puro para
+         que el contenido editorial (mobile) o la siguiente sección (desktop)
+         no muestre una costura horizontal. -->
+    <div class="hero__seam" aria-hidden="true"></div>
+  </div>
+
+  <!-- Marco superior — solo columna izquierda. La derecha se quitó porque
+       quedaba sobre la cara del lobo. -->
+  <div class="hero__telemetry">
+    <div class="hero__telemetry-col">
+      <span>Angular 21 · Nx · Yarn</span>
+      <span class="hero__telemetry-secondary">Stack moderno, sin deuda técnica</span>
+    </div>
+  </div>
+
+  <!-- Capa principal -->
+  <div class="hero__container">
+    <div class="hero__grid">
+      <div class="hero__lead">
+        <span class="hero__badge">
+          <ng-icon
+            name="phosphorSparkleBold"
+            size="12"
+            class="hero__badge-icon"
+          />
+          <span class="hero__badge-prefix">Capacidad activa · </span>
+          <span class="hero__badge-key">Soluciones con IA</span>
+          <span class="hero__badge-suffix"> a medida</span>
+          <!-- Dock mobile/tablet del companion. En desktop (≥1100×720) este
+               anchor queda display:none y manda el de `.hero__scroll-hint`;
+               abajo de ese breakpoint el scroll-hint NO se renderiza, así
+               que el companion engancha aquí — al lado derecho del badge.
+               Order 0 coincide con el dock hero desktop para mantener la
+               misma posición lógica en la secuencia (badge → cap-02 → ...). -->
+          <span
+            appCompanionDock="hero-badge"
+            [order]="0"
+            [offsetX]="28"
+            label="Hero Badge"
+            class="hero__badge-anchor"
+            aria-hidden="true"
+          ></span>
+        </span>
+
+        <h1 class="hero__title">
+          Desarrollo
+          <span class="hero__title-line">
+            <em class="hero__title-italic">de</em> Software
+          </span>
+          <span class="hero__title-line">
+            <em class="hero__title-italic">y</em> Diseño.
+          </span>
+        </h1>
+
+        <p class="hero__copy">
+          Auditamos procesos, construimos sistemas a medida e integramos IA
+          aplicada en empresas que escalan, sin reinventar lo que ya funciona.
+        </p>
+      </div>
+
+      <div class="hero__aside">
+        <div class="hero__wave-card glass-shell">
+          <div class="hero__wave-core glass-core">
+            <div class="hero__wave-head">
+              <p class="hero__wave-label">Próxima cohorte</p>
+              <span class="hero__wave-pulse" aria-hidden="true"></span>
+            </div>
+            <p class="hero__wave-time">02</p>
+            <p class="hero__wave-context">
+              Cupos disponibles · Diagnóstico + Auditoría tecnológica
+            </p>
+
+            <div class="hero__wave-stats">
+              <div class="hero__stat">
+                <p class="hero__stat-label">proyectos</p>
+                <p class="hero__stat-value">120+</p>
+              </div>
+              <div class="hero__stat">
+                <p class="hero__stat-label">uptime</p>
+                <p class="hero__stat-value">99.97%</p>
+              </div>
+              <div class="hero__stat">
+                <p class="hero__stat-label">equipos</p>
+                <p class="hero__stat-value">46</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero__scroll-hint">
+          <div class="hero__scroll-cue">
+            <span class="hero__scroll-icon" aria-hidden="true">
+              <ng-icon name="phosphorArrowDown" size="11" />
+            </span>
+            Continuá
+          </div>
+          <!-- Dock anchor del companion global de WhatsApp. El companion
+               (montado en el app shell) se ancla aquí cuando el hero está
+               en viewport. La label "Hablemos" se mantiene como cue
+               editorial; el ícono lo pinta el companion al lado derecho
+               de este lockup. -->
+          <div class="hero__whatsapp-cue">
+            <span class="hero__whatsapp-label">Hablemos</span>
+            <span
+              appCompanionDock="hero"
+              [order]="0"
+              label="Hero"
+              class="hero__whatsapp-anchor"
+              aria-hidden="true"
+            ></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

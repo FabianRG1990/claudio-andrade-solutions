@@ -1,0 +1,116 @@
+.engagements {
+  position: relative;
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
+  isolation: isolate;
+
+  // Ambient atmospheric glow — bloom limpio sin blur (que generaba halos
+  // borrosos artefactuales). Los radial-gradients ya son intrínsecamente
+  // suaves; el blur encima sumaba mancha, no profundidad.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(
+        ellipse 55% 50% at 50% 45%,
+        rgb(31 120 232 / 0.10) 0%,
+        transparent 70%
+      );
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+.engagements__container {
+  position: relative;
+  isolation: isolate;
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+
+  // Fish vanishing zone — un solo background continuo que cubre __head +
+  // __grid y todo lo intermedio (evita que un wrapper interno deje hueco
+  // visible). Mask-composite: intersect fadea los 4 bordes simultáneamente
+  // (top, bottom, left, right) sin esquinas duras.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #06091b;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+            mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-composite: intersect;
+    pointer-events: none;
+  }
+}
+
+.engagements__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2.5rem;
+  // background lo provee .engagements__container::before (zona continua
+  // head + grid con fade en los 4 bordes).
+
+  @media (min-width: 1024px) {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+}
+
+.engagements__title {
+  margin-top: 1.5rem;
+  max-width: 38rem;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-size: var(--type-h2-lg);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-tight);
+}
+
+.engagements__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  color: rgb(var(--brass) / 0.92);
+}
+
+.engagements__lead {
+  max-width: 28rem;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.65);
+  font-size: var(--type-body-lg);
+}
+
+.engagements__grid {
+  display: grid;
+  // padding-top absorbe el viejo margin-top + el viejo padding-top de
+  // padding-block (1.5rem) — preserva el espaciado original ahora que
+  // .engagements__container::before pinta el background continuo.
+  padding-block: calc(clamp(2rem, 3vw + 1rem, 4rem) + 1.5rem) 1.5rem;
+  gap: 1.5rem;
+
+  // Las reglas de tamaño per-item (antes `> .engagement-card`) viven ahora en
+  // engagement-card.scss — el card es un componente aparte con :host
+  // display:contents, así que el <article> sigue siendo el grid-item directo.
+  @media (min-width: 1024px) {
+    // Width explícito en rem: middle 25rem, sides 20.833rem (25 / 1.2).
+    grid-template-columns: 20.833rem 25rem 20.833rem;
+    justify-content: center;
+    gap: 1.75rem;
+    // align-items: center — middle se centra verticalmente y extiende
+    // tanto ARRIBA como ABAJO de los side cards (no solo arriba). Match
+    // ref: middle desborda en ambos sentidos.
+    align-items: center;
+  }
+}

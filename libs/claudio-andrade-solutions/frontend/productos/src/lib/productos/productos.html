@@ -1,0 +1,78 @@
+<app-page-header
+  eyebrow="Catálogo · 6 productos premium"
+  capitulo="Capítulo 01 / 04 · Productos"
+  title="Soluciones"
+  italic="a medida."
+  description="Cada producto es una arquitectura completa, no una plantilla. Stack moderno (Angular · Nx · Firebase · Google Cloud · IA), entregables verificables y un plan claro de mantenimiento. Lo que vendemos es resultado, no horas."
+/>
+
+<section class="productos">
+  <div class="productos__container">
+    <div class="productos__list">
+      @for (p of products; track p.slug; let i = $index) {
+        <article
+          appReveal
+          class="product-row"
+          [class.product-row--reverse]="i % 2 === 1"
+        >
+          <div class="product-row__media">
+            <div class="product-row__media-inner">
+              <picture>
+                <!-- AVIF + WebP fallback. PNG removido del chain (1-2 MB vs
+                     50-100 KB webp). 2026: browsers con Angular 21 soportan webp. -->
+                <source [srcset]="p.image.replace('.png', '.avif')" type="image/avif" />
+                <img
+                  appImgFade
+                  [src]="p.image.replace('.png', '.webp')"
+                  [alt]="p.name"
+                  class="product-row__image"
+                  decoding="async"
+                  loading="lazy"
+                />
+              </picture>
+              <div class="product-row__media-gradient" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <div class="product-row__body">
+            <p class="product-row__zone">{{ p.zone }} · {{ p.timeline }}</p>
+            <h2 class="product-row__title">{{ p.name }}</h2>
+            <p class="product-row__copy">{{ p.description }}</p>
+            <dl class="product-row__stats">
+              <div class="product-row__stat">
+                <dt class="product-row__stat-label">Entregables</dt>
+                <dd class="product-row__stat-value">{{ p.deliverables }}</dd>
+              </div>
+              <div class="product-row__stat">
+                <dt class="product-row__stat-label">Cobertura</dt>
+                <dd class="product-row__stat-value">{{ p.coverage }}</dd>
+              </div>
+              <div class="product-row__stat">
+                <dt class="product-row__stat-label">Producto</dt>
+                <dd class="product-row__stat-value product-row__stat-value--accent">
+                  0{{ i + 1 }}
+                </dd>
+              </div>
+            </dl>
+            <div class="product-row__cta-wrap">
+              <app-whatsapp-hub triggerless #wsHub>
+                <button
+                  type="button"
+                  class="product-row__cta gold-pill-button"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="wsHub.isOpen()"
+                  (click)="wsHub.toggleMenu($event)"
+                >
+                  <span class="product-row__cta-label">Pedir propuesta</span>
+                  <span class="product-row__cta-icon glass-button-icon">
+                    <ng-icon name="phosphorArrowUpRightBold" size="12" />
+                  </span>
+                </button>
+              </app-whatsapp-hub>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

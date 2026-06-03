@@ -1,0 +1,37 @@
+:host {
+  display: inline-flex;
+}
+
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 14px;
+  padding: 0.375rem 0.375rem 0.375rem 1.5rem; // py-1.5 pl-6 pr-1.5
+  // Tipografía gobernada por el mixin .gold-pill-button (single source of
+  // truth) — antes acá vivían font-family/size/weight/letter-spacing que
+  // ganaban por especificidad scope y bloqueaban los overrides del mixin.
+  // Touch target AAA (Apple HIG 44pt + WCAG 2.5.5).
+  min-height: 44px;
+}
+
+.pill-button__label {
+  padding-block: 0.5rem;
+}
+
+.pill-button__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem; // size-9
+  height: 2.25rem;
+  border-radius: 9999px;
+  transition: transform 700ms var(--ease-fluid);
+
+  // Hover translate del icono — group-hover en el original. :active es
+  // el fallback táctil (pointer:coarse no dispara :hover consistente).
+  .pill-button:hover &,
+  .pill-button:active & {
+    transform: translate(2px, -2px);
+  }
+}

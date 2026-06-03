@@ -1,0 +1,176 @@
+// =============================================================================
+// Mixins compartidos. Vienen del análisis de patrones recurrentes en el origen
+// (max-w-7xl + px-6 lg:px-8, eyebrows uppercase + tracking, etc.).
+//
+// Mobile-first: todos los mixins arrancan en la versión phone (≤640px) y
+// suben breakpoints con `min-width`. Los breakpoints viven en _tokens.scss
+// (sm 640 / md 768 / lg 1024 / xl 1280) — usamos esos valores literal acá
+// porque @use no permite interpolar SCSS vars en media queries sin importar.
+// =============================================================================
+
+// ---- Container con safe-area integrada ------------------------------------
+// El container fluid combina padding fluido con safe-area-inset para que en
+// landscape con notch (iPhone Pro) el contenido nunca toque el recorte. Usa
+// `max()` para que el inset solo aplique si excede el padding base. El padding
+// base ya es `clamp(1rem, 4vw, 2rem)` desde tokens, así que en phones angostos
+// (<360px) el contenido tiene 16px aire, sube a 32px en desktop. Safe-area
+// solo dispara cuando hay notch real.
+@mixin container {
+  margin-inline: auto;
+  max-width: 80rem; // max-w-7xl
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+}
+
+// Container "estrecho" para columnas editoriales (copy, formularios). Cap a
+// 38ch en mobile (~45-50 chars de body por línea, óptimo según Baymard) y
+// max-w-3xl en desktop. Lo usamos en contacto/nosotros donde la prosa manda.
+@mixin container-prose {
+  margin-inline: auto;
+  max-width: 48rem; // max-w-3xl
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+}
+
+// ---- Section padding mobile-first -----------------------------------------
+// Padding vertical fluido para secciones de página completa. Phones obtienen
+// 4rem (64px) — premium pero no asfixiante; sube a 7rem (112px) en desktop.
+// Usar en lugar de `padding-block: 7rem` hardcoded.
+@mixin section-padding {
+  padding-block: clamp(3rem, 5vw + 2rem, 7rem);
+}
+
+@mixin section-padding-sm {
+  padding-block: clamp(2rem, 3vw + 1rem, 4rem);
+}
+
+// ---- Touch target — garantiza ≥44×44 (WCAG 2.5.5 AAA, Apple HIG) ----------
+// Para botones de icono, links de nav inline, controles de form. Aplica
+// min-height/min-width 44px + flex-center para que el hit-box sea correcto
+// aunque el icono visual sea más chico.
+@mixin touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ---- Stack a grid responsive --------------------------------------------
+// 1 columna en phone, 2 en tablet, N en desktop. Usar en stats / cards /
+// listings de feature. Gap fluido para que se sienta cohesivo en mobile.
+@mixin auto-grid($desktop-cols: 3, $min-card: 16rem) {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(auto-fit, minmax($min-card, 1fr));
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat($desktop-cols, 1fr);
+  }
+}
+
+// ---- Stats grid — para `repeat(3, 1fr)` con reflow mobile ----------------
+// En 360-639: 1 columna (cada stat se lee completo). 640-1023: 2 columnas
+// con la tercera ocupando ancho completo si es impar. 1024+: 3 columnas.
+@mixin stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+// ---- Stats grid de 2 — stack a 1 col en phone ----------------------------
+@mixin stats-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// ---- Landscape phone override --------------------------------------------
+// `@include landscape-phone { ... }` para reglas que solo aplican cuando el
+// usuario gira el teléfono. `max-height: 540px` captura iPhones (375-430 ×
+// 812+) y la mayoría de Androids en landscape, evitando matchear tablets
+// portrait con resoluciones similares (768 × 1024 mínimo).
+@mixin landscape-phone {
+  @media (orientation: landscape) and (max-height: 540px) {
+    @content;
+  }
+}
+
+// ---- Short-laptop override -----------------------------------------------
+// Para 11" / 13" MacBook Air / Surface en landscape: 1024×600/640/768 hasta
+// 1280×720. Vertical apretado: si el hero usa `min-height: 100svh` el
+// contenido siguiente queda completamente fuera del fold y el usuario
+// no percibe que hay más página. Captura viewports HORIZONTAL (≥1024 ancho)
+// donde la altura es ≤780px — laptops chicas físicas, ventanas a media
+// pantalla, presentaciones proyectadas.
+@mixin short-laptop {
+  @media (min-width: 1024px) and (max-height: 780px) {
+    @content;
+  }
+}
+
+// ---- Reduce motion -------------------------------------------------------
+@mixin reduce-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}
+
+// ---- Line-length cap para body copy --------------------------------------
+// Limita ancho a ~45-50 chars en mobile, ~65 en desktop. Sin esto el body
+// puede llegar a 100vw y la lectura sufre.
+@mixin prose-width {
+  max-width: 45ch;
+
+  @media (min-width: 1024px) {
+    max-width: 65ch;
+  }
+}
+
+@mixin eyebrow-text {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+@mixin eyebrow-text-11 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+// Botón pill base — variante glass-bubble. Reusable por PillButton, CTAs
+// inline en hero/contacto/etc.
+@mixin pill-button-base {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem; // gap-3
+  border-radius: 9999px;
+  padding: 0.375rem 1.5rem 0.375rem 1.5rem; // py-1.5 px-6 (luego padding right reducido para el icono)
+  padding-right: 0.375rem; // pr-1.5
+  font-family: var(--font-button);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-button);
+  // Mínimo 44px de alto del pill completo (label + icon-trailing) para AAA
+  // touch target sin afectar el visual del padding existente.
+  min-height: 44px;
+}

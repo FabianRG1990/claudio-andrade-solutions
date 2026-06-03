@@ -1,0 +1,128 @@
+<section class="availability">
+  <div class="availability__container">
+    <div class="availability__grid">
+      <!-- LEFT — manifiesto sticky -->
+      <div class="availability__lead">
+        <div appReveal>
+          <app-eyebrow
+            appCompanionDock="cap-05"
+            [order]="50"
+            [offsetX]="28"
+            label="Capítulo 05 · Empezar"
+          >Capítulo 05 · Empezar</app-eyebrow>
+        </div>
+        <h2 appReveal [delay]="0.08" class="availability__title">
+          Llegás cuando querés.
+          <span class="availability__title-italic">Te quedás cuanto necesites.</span>
+        </h2>
+        <p appReveal [delay]="0.16" class="availability__copy">
+          {{ availability.ticketingNote }}
+        </p>
+
+        <div appReveal [delay]="0.24" class="availability__ctas">
+          <a routerLink="/contacto" class="availability__cta gold-pill-button">
+            <span class="availability__cta-label">Pedir reunión</span>
+            <span class="availability__cta-icon glass-button-icon">
+              <ng-icon name="phosphorArrowUpRightBold" size="14" />
+            </span>
+          </a>
+          <a routerLink="/productos" class="availability__cta gold-pill-button">
+            <span class="availability__cta-label">Ver productos</span>
+            <span class="availability__cta-icon glass-button-icon">
+              <ng-icon name="phosphorBrowsersBold" size="14" />
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT — info rows -->
+      <div class="availability__info">
+        <!-- Disponibilidad -->
+        <div appReveal class="info-row" data-accent="lagoon">
+          <div class="info-row__inner glass-core">
+            <span class="info-row__glow" aria-hidden="true"></span>
+            <div class="info-row__head">
+              <div class="info-row__title-wrap">
+                <span class="info-row__icon">
+                  <ng-icon name="phosphorClock" size="20" />
+                </span>
+                <h3 class="info-row__title">Disponibilidad</h3>
+              </div>
+              <span class="info-row__helper">Reuniones de descubrimiento</span>
+            </div>
+            <div class="info-row__body">
+              <ul class="info-row__hours">
+                @for (h of availability.hours; track h.day) {
+                  <li class="info-row__hour">
+                    <span class="info-row__hour-day">{{ h.day }}</span>
+                    <span class="info-row__hour-value">{{ h.hours }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ubicación · operación -->
+        <div appReveal [delay]="0.1" class="info-row" data-accent="kelp">
+          <div class="info-row__inner glass-core">
+            <span class="info-row__glow" aria-hidden="true"></span>
+            <div class="info-row__head">
+              <div class="info-row__title-wrap">
+                <span class="info-row__icon">
+                  <ng-icon name="phosphorMapPin" size="20" />
+                </span>
+                <h3 class="info-row__title">Operación</h3>
+              </div>
+              <span class="info-row__helper">100 % remoto</span>
+            </div>
+            <div class="info-row__body">
+              <p class="info-row__address">{{ availability.address }}</p>
+              <div class="info-row__transport">
+                <div>
+                  <p class="info-row__transport-label">Husos</p>
+                  <p class="info-row__transport-value">CST · EST · PT</p>
+                </div>
+                <div>
+                  <p class="info-row__transport-label">Idiomas</p>
+                  <p class="info-row__transport-value">ES · EN</p>
+                </div>
+                <div>
+                  <p class="info-row__transport-label">Cobertura</p>
+                  <p class="info-row__transport-value">LATAM · USA</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Discovery sin costo -->
+        <div appReveal [delay]="0.16" class="info-row" data-accent="bioluminescent">
+          <div class="info-row__inner glass-core">
+            <span class="info-row__glow" aria-hidden="true"></span>
+            <div class="info-row__head">
+              <div class="info-row__title-wrap">
+                <span class="info-row__icon">
+                  <ng-icon name="phosphorTicket" size="20" />
+                </span>
+                <h3 class="info-row__title">Diagnóstico</h3>
+              </div>
+              <span class="info-row__helper">Cupos por mes</span>
+            </div>
+            <div class="info-row__body">
+              <div class="info-row__price-row">
+                <span class="info-row__price">Sin costo</span>
+                <span class="info-row__price-cadence">primera reunión</span>
+              </div>
+              <p class="info-row__price-note">
+                90 minutos para entender tu negocio, mapear el problema y
+                proponer un primer plan. Si no encajamos, te lo decimos
+                directo y te recomendamos a alguien que sí.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

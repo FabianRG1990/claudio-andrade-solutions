@@ -1,0 +1,121 @@
+<section class="featured-products">
+  <div class="featured-products__container">
+    <div class="featured-products__head">
+      <app-section-heading
+        eyebrow="Capítulo 01 · Productos"
+        title="Seis productos."
+        italic="Una arquitectura."
+        description="Auditorías, sistemas a medida, integraciones de IA, apps verticales para retail y landing pages premium. Cada producto está pensado para resolver un problema concreto — sin acomodar la realidad al stack."
+        tone="lagoon"
+        dockId="cap-01"
+        [dockOrder]="10"
+      />
+      <a
+        routerLink="/productos"
+        class="featured-products__cta gold-pill-button"
+        appReveal
+        [delay]="0.2"
+      >
+        <span class="featured-products__cta-emblem glass-button-icon" aria-hidden="true">
+          <svg
+            width="30"
+            height="30"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <!-- Brilliant-cut diamond ESTILO OUTLINE: solo bordes en brass,
+                 cuerpo transparente. Composición:
+                   • Path outline: table (top horizontal) + crown shoulders
+                     + girdle corners + pavilion converging a culet.
+                   • Girdle: línea horizontal al ancho máximo.
+                   • Pavilion main diagonals: desde los extremos de la table
+                     hacia el culet (point bottom).
+                   • Crown kite facet: el triangulito ▽ en el center-top — V
+                     desde dos puntos sobre la table convergiendo a un punto
+                     sobre el girdle. Es la firma de un brilliant-cut visto
+                     de frente, lo que el user identificó como "triangulito". -->
+            <path d="M6.5 4 L17.5 4 L22.5 9 L12 21 L1.5 9 Z" />
+            <line x1="1.5" y1="9" x2="22.5" y2="9" />
+            <line x1="6.5" y1="4" x2="12" y2="21" />
+            <line x1="17.5" y1="4" x2="12" y2="21" />
+            <path d="M9.5 4 L12 9 L14.5 4" />
+          </svg>
+        </span>
+        <span class="featured-products__cta-label">Ver los 6 productos</span>
+        <span class="featured-products__cta-icon glass-button-icon">
+          <ng-icon name="phosphorArrowRightBold" size="22" />
+        </span>
+      </a>
+    </div>
+
+    <!-- Bento fijo (5 cards expandidos siempre, sin accordion). Top row: 2
+         cards grandes (foundational services). Bottom row: 3 cards medianos
+         (specialized products). Cada card aspect-ratio 4:3 — matchea la AR
+         nativa de las imágenes (1448×1086) → object-fit:cover llena el card
+         sin zoom ni crop perceptible. Mobile: stack vertical full-width. -->
+    <div class="featured-products__grid" role="list">
+      @for (p of featured; track p.slug; let i = $index) {
+        <div
+          appReveal
+          [delay]="0.05 * i"
+          class="product-card"
+          [attr.data-accent]="p.accent"
+          [attr.aria-label]="p.name + ' — ' + p.tagline"
+          role="listitem"
+        >
+          <div class="product-card__inner">
+            <picture>
+              <source [srcset]="p.image.replace('.png', '.avif')" type="image/avif" />
+              <img
+                appImgFade
+                [src]="p.image.replace('.png', '.webp')"
+                [alt]="p.name"
+                class="product-card__image"
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
+            <div class="product-card__gradient"></div>
+            <div class="product-card__hairline hairline"></div>
+
+            <div class="product-card__top">
+              <span
+                class="product-card__badge"
+                [attr.data-accent]="p.accent"
+              >
+                <span class="product-card__badge-dot" aria-hidden="true"></span>
+                {{ p.zone }}
+              </span>
+              <span class="product-card__timeline">{{ p.timeline }}</span>
+            </div>
+
+            <div class="product-card__bottom">
+              <div class="product-card__row">
+                <div>
+                  <h3 class="product-card__title">{{ p.name }}</h3>
+                  <p class="product-card__description">{{ p.tagline }}</p>
+                </div>
+                <a
+                  routerLink="/productos"
+                  class="product-card__arrow"
+                  [attr.aria-label]="'Ver detalle de ' + p.name"
+                >
+                  <ng-icon name="phosphorArrowUpRightBold" size="14" />
+                </a>
+              </div>
+              <div class="product-card__meta">
+                <span>{{ p.deliverables }} entregables</span>
+                <span class="product-card__meta-dot" aria-hidden="true"></span>
+                <span>{{ p.coverage }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

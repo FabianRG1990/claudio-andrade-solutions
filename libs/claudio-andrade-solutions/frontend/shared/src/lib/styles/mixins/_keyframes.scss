@@ -1,0 +1,126 @@
+// =============================================================================
+// Keyframes ambientes — caustics, drift, shimmer, marquee, rise, godray,
+// sediment. Reproducción 1:1 del tailwind.config.ts del proyecto Next.
+// =============================================================================
+
+@keyframes caustic {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(2%, -1%, 0) scale(1.04);
+    opacity: 0.75;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes marquee-x {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(120%) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-120%) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes godray {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate3d(-50%, 0, 0) scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scaleY(1.04);
+  }
+}
+
+@keyframes sediment {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.55;
+  }
+  92% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate3d(0, 60vh, 0);
+    opacity: 0;
+  }
+}
+
+// Pulse — usado para los puntos de "vivo" en eyebrows. Equivalente a la clase
+// `animate-pulse` de Tailwind.
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// Clases utilitarias que aplican estos keyframes — equivalencias 1:1 a las
+// clases `animate-*` de Tailwind del proyecto original.
+.animate-caustic {
+  animation: caustic 14s ease-in-out infinite;
+}
+.animate-drift {
+  animation: drift 6s ease-in-out infinite;
+}
+.animate-shimmer {
+  animation: shimmer 2.5s linear infinite;
+}
+.animate-marquee {
+  animation: marquee-x 50s linear infinite;
+}
+.animate-rise {
+  animation: rise 9s linear infinite;
+}
+.animate-godray {
+  animation: godray 14s ease-in-out infinite;
+}
+.animate-sediment {
+  animation: sediment 16s linear infinite;
+}
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

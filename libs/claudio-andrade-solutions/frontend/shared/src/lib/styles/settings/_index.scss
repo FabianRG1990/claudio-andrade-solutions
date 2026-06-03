@@ -1,0 +1,4 @@
+// Re-exporta los tokens del design system (CSS custom properties + SCSS
+// variables como breakpoints/funciones). Cualquier componente o app que
+// necesite acceso namespaced hace `@use 'settings/tokens' as tokens;`.
+@forward 'tokens';

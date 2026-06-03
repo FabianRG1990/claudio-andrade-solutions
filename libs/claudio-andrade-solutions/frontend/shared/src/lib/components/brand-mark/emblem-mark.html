@@ -1,0 +1,18 @@
+<span
+  class="emblem-mark"
+  [style.width.px]="size()"
+  [style.height.px]="size()"
+  aria-hidden="true"
+>
+  <picture>
+    <source srcset="/logo/logo-192.avif" type="image/avif" />
+    <source srcset="/logo/logo-192.webp" type="image/webp" />
+    <img
+      src="/logo/logo-192.png"
+      alt=""
+      class="emblem-mark__image"
+      fetchpriority="high"
+      decoding="async"
+    />
+  </picture>
+</span>

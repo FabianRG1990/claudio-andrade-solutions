@@ -1,0 +1,59 @@
+<app-page-header
+  eyebrow="Acerca de nosotros · Quiénes somos"
+  capitulo="Capítulo 02 / 04 · Equipo + Casos"
+  title="Construimos lo que falta,"
+  italic="con quienes lo necesitan."
+  description="Claudio Andrade Solutions es una consultora tecnológica enfocada en soluciones a medida. Trabajamos con empresas que ya tienen tracción y necesitan tecnología al servicio del negocio — auditorías honestas, sistemas que escalan, e IA integrada al proceso real del negocio."
+/>
+
+<!-- Lo que hacemos — segmento pinned/scrubbed (inspirado en baunfire). -->
+<app-what-we-do />
+
+<!-- Casos / proyectos en los que hemos trabajado. Grid de 2 columnas con
+     glass-shell-hover; contenido portafolio. -->
+<section class="nosotros-cases">
+  <div class="nosotros-cases__container">
+    <h3 class="nosotros-cases__title" appReveal>
+      Algunos casos recientes.
+      <span class="nosotros-cases__title-italic">
+        El resto, bajo NDA.
+      </span>
+    </h3>
+    <div class="nosotros-cases__grid">
+      @for (p of programs; track p.code; let i = $index) {
+        <article
+          appReveal
+          [delay]="0.05 * i"
+          class="program-card"
+          [attr.data-accent]="p.accent"
+        >
+          <div class="program-card__media">
+            <picture>
+              <!-- AVIF + WebP fallback. PNG removido del chain (~1.6 MB vs
+                   50-100 KB webp). 2026: browsers con Angular 21 soportan webp. -->
+              <source [srcset]="p.image.replace('.png', '.avif')" type="image/avif" />
+              <img
+                appImgFade
+                [src]="p.image.replace('.png', '.webp')"
+                [alt]="p.title"
+                class="program-card__image"
+                decoding="async"
+                loading="lazy"
+              />
+            </picture>
+            <div class="program-card__gradient" aria-hidden="true"></div>
+            <div class="program-card__code">
+              <span class="program-card__code-dot" aria-hidden="true"></span>
+              {{ p.code }}
+            </div>
+          </div>
+          <div class="program-card__body">
+            <p class="program-card__region">{{ p.region }}</p>
+            <h4 class="program-card__title">{{ p.title }}</h4>
+            <p class="program-card__copy">{{ p.body }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

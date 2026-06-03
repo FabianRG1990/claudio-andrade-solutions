@@ -1,0 +1,505 @@
+// =============================================================================
+// Timeline — sección de cierre del home: trayectoria + stack + por qué.
+// Cuatro zonas verticales: header editorial → stats hero → hitos (timeline
+// con dot+line) → tech stack (cards premium con halo de color por accent).
+// =============================================================================
+
+.timeline {
+  position: relative;
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
+  // Section divider brass — antes foam/0.05 era una línea fantasma que no
+  // separaba nada. Brass tenue convierte cada transición de sección en un
+  // hairline editorial dorado, como las reglas de las revistas premium.
+  border-top: 1px solid rgb(var(--brass) / 0.18);
+}
+
+.timeline__container {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  // Gap entre zonas (head / stats / hitos / stack) fluido. 5rem en mobile
+  // se sentía hueco; 3rem es premium y cohesionado.
+  gap: clamp(3rem, 2rem + 3vw, 7rem);
+}
+
+// ─── Header editorial ────────────────────────────────────────────────────────
+// Layout 2-col en desktop: eyebrow a la izquierda, título + lead a la derecha
+// — patrón premium tipo magazine. En mobile colapsa a 1-col stack natural.
+.timeline__head {
+  display: grid;
+  gap: 2rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 0.4fr 1fr;
+    align-items: start;
+    gap: 4rem;
+  }
+}
+
+.timeline__head-eyebrow {
+  @media (min-width: 1024px) {
+    padding-top: 0.625rem; // visual baseline alignment con el título
+  }
+}
+
+.timeline__head-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.timeline__title {
+  text-wrap: balance;
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-size: var(--type-h2-lg);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+.timeline__title-italic {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  // Italic editorial brass — coherente con section-heading__italic, marca
+  // la "voz editorial" del título de la sección como un acento dorado.
+  color: rgb(var(--brass) / 0.92);
+}
+
+.timeline__lead {
+  max-width: 56ch;
+  text-wrap: pretty;
+  // Fluid 16→17px (en lugar del step a 768) — la curva es chica pero el
+  // salto era visible al rotar el dispositivo cerca de 768.
+  font-size: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem);
+  line-height: 1.65;
+  color: rgb(var(--foam) / 0.7);
+}
+
+// ─── Stats hero ──────────────────────────────────────────────────────────────
+// Cuatro cifras numéricas grandes. Mono font + tabular-nums para alineación
+// vertical perfecta. Border top + bottom hairline para enmarcar la zona.
+.timeline__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2.5rem 1.5rem;
+  margin: 0;
+  padding-block: 2.5rem;
+  // Hairlines brass en lugar de foam invisible. Antes `foam/0.08` era una
+  // línea que prácticamente no existía — la zona de stats hero quedaba
+  // visualmente "sin marco". Brass/0.22 + brass/0.10 abajo enmarca la
+  // zona como una banda editorial: arriba más presente, abajo más sutil
+  // para que el ojo continúe hacia los hitos.
+  border-top: 1px solid rgb(var(--brass) / 0.22);
+  border-bottom: 1px solid rgb(var(--brass) / 0.10);
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    padding-block: 3rem;
+  }
+}
+
+.timeline__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.timeline__stat-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.45);
+  order: 2; // label DEBAJO del valor para jerarquía editorial
+}
+
+.timeline__stat-value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(2.25rem, 1.8rem + 1.6vw, 3.25rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+  // Color brass — cifras grandes son el foco visual de la zona stats hero.
+  // Antes foam blanco puro las hacía "altas pero anónimas"; brass apagado
+  // las convierte en señales editoriales con peso de marca. Patrón usado
+  // por Stripe, Apple investor relations y editoriales de lujo para cifras
+  // que tienen que recordarse. Token --brass (#F2C65B) define el accent
+  // cálido de marca.
+  color: rgb(var(--brass));
+  font-variant-numeric: tabular-nums;
+  order: 1;
+}
+
+// ─── Zona genérica (hitos + stack) ───────────────────────────────────────────
+// Layout 2-col en desktop: head editorial a la izquierda, contenido a la
+// derecha. Mismo patrón que el header de la sección — coherencia interna.
+.timeline__zone {
+  display: grid;
+  gap: 2.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 0.4fr 1fr;
+    gap: 4rem;
+    align-items: start;
+  }
+}
+
+.timeline__zone-head {
+  display: flex;
+  flex-direction: column;
+  // align-items: flex-start evita que app-eyebrow (inline-flex) se estire
+  // al 100% del contenedor por el default stretch del flex column. Sin esto,
+  // el companion dock (anclado al borde derecho del eyebrow) queda muy lejos
+  // del pill visible. El H3 ya tiene max-width: 16ch, así que no afecta.
+  align-items: flex-start;
+  gap: 1rem;
+
+  @media (min-width: 1024px) {
+    position: sticky;
+    top: 8rem;
+  }
+}
+
+.timeline__zone-title {
+  text-wrap: balance;
+  max-width: 16ch;
+  font-family: var(--font-display);
+  // Fluid 24→28px sin step en 768. Mantiene la jerarquía intermedia entre
+  // body lg y h2-lg que el zone-title necesita.
+  font-size: clamp(1.5rem, 1.4rem + 0.5vw, 1.75rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam) / 0.92);
+}
+
+// ─── Timeline list · vertical con dot+line ──────────────────────────────────
+// Línea vertical hairline a la izquierda + dot por hito. El dot tiene glow
+// lagoon para que se sienta "vivo" — cada hito es un punto en el viaje.
+.timeline__list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  // Línea de tiempo: gradient vertical hairline, intensidad mayor arriba
+  // (los hitos antiguos) y desvanece hacia abajo (futuro abierto).
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0.4375rem;
+    top: 0.625rem;
+    bottom: 0.625rem;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      rgb(var(--foam) / 0.22) 0%,
+      rgb(var(--foam) / 0.08) 100%
+    );
+  }
+}
+
+.timeline__milestone {
+  position: relative;
+  padding-left: 2.25rem;
+  padding-bottom: 2rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1.5rem;
+  align-items: baseline;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 639.98px) {
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+  }
+}
+
+// Dot del hito — con glow lagoon + border que combina con el fondo navy
+// para crear el efecto de "punto encajado en la línea".
+.timeline__milestone-marker {
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  width: 0.9375rem;
+  height: 0.9375rem;
+  border-radius: 50%;
+  background: rgb(var(--lagoon));
+  border: 3px solid rgb(var(--abyss));
+  box-shadow:
+    0 0 0 1px rgb(var(--lagoon) / 0.5),
+    0 0 14px rgb(var(--lagoon) / 0.55);
+}
+
+.timeline__year {
+  margin: 0;
+  font-family: var(--font-mono);
+  // Fluid 26→30px en lugar del step a 768. El año (mono, tabular-nums) es
+  // el ancla visual del hito — la curva suave evita el "pop" en el cambio
+  // de orientación cerca de 768.
+  font-size: clamp(1.625rem, 1.5rem + 0.55vw, 1.875rem);
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+  // Año en brass — el año es la marca temporal de cada hito, el ojo lo
+  // busca primero al escanear la línea de tiempo. Brass apagado le da
+  // protagonismo editorial sin gritar. Mismo color que las cifras de
+  // stats hero arriba — coherencia interna de la sección.
+  color: rgb(var(--brass));
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__body {
+  margin: 0;
+  max-width: 52ch;
+  text-wrap: pretty;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: rgb(var(--foam) / 0.7);
+}
+
+// ─── Tech stack · cards premium ──────────────────────────────────────────────
+// Mismo lenguaje visual que las service-cards del capítulo 2: glass-shell +
+// glass-core, halo de color por accent en la esquina superior derecha,
+// glass-bubble-icon como protagonista. Lectura inmediata: tech + por qué.
+.timeline__stack-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// Cards 3D estáticos — sin animaciones hover. La sensación de profundidad
+// viene del modelado de luz (no de la interacción): key cenital + fills
+// laterales + ambient occlusion + bevels en el borde + sombras
+// atmosféricas multi-capa. Mismo enfoque que premium cards de Linear /
+// Stripe / Vercel cuando no usan tilt 3D.
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║ CARD DESIGN — derivado ÚNICAMENTE de la imagen referencia.            ║
+// ║ Se eliminó por completo el sistema previo (3 spotlights radiales,     ║
+// ║ gradient diagonal 162°, 11-layer box-shadow, brass key light, ring    ║
+// ║ brass, glow halos top-right). NO restaurarlo bajo ningún pretexto.    ║
+// ║ Mismo patrón clonado en engagements.scss e availability.scss.         ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD STYLE — port exacto del HTML/SCSS standalone que el user proveyó.
+// Mismo patrón que .info-row (availability) y .engagement-card (engagements).
+// Técnica: oklch(--hue 256) + gradient-border via mask-composite + halo
+// radial top-right + 4-layer box-shadow.
+// ═══════════════════════════════════════════════════════════════════════════
+.tech-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  isolation: isolate;
+  // Sin box-shadow aquí — todo el detalle vive en __inner per spec.
+}
+
+.tech-card__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 22px;
+  padding: 1.5rem 1.5rem 1.625rem;
+  gap: 1rem;
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      ellipse 55% 45% at 88% 5%,
+      oklch(0.30 0.11 256 / 0.32),
+      oklch(0.22 0.09 256 / 0.10) 38%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 48% 40% at 6% 96%,
+      oklch(0.22 0.08 256 / 0.20),
+      transparent 62%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.17 0.07 256) 0%,
+      oklch(0.10 0.05 256) 100%
+    );
+
+  border: 1px solid oklch(0.58 0.12 256 / 0.50);
+
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.04),
+    0 16px 32px -12px rgb(0 0 0 / 0.55),
+    0 6px 12px -4px rgb(0 0 0 / 0.30);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      170deg,
+      oklch(0.78 0.14 256 / 0.55) 0%,
+      oklch(0.62 0.11 256 / 0.30) 25%,
+      oklch(0.52 0.10 256 / 0.18) 70%,
+      oklch(0.48 0.09 256 / 0.14) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  &::after { display: none; }
+}
+
+// Glow halos top-right ELIMINADOS — no aparecen en la imagen referencia.
+.tech-card__glow {
+  display: none;
+}
+
+// Halo de color por accent — copia de service-card. Un sibling absoluto en
+// la esquina superior derecha que se recorta al border-radius del glass-core.
+.tech-card__glow {
+  position: absolute;
+  top: -3rem;
+  right: -3rem;
+  width: 12rem;
+  height: 12rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(26px);
+  opacity: 0.62;
+  z-index: 0;
+}
+
+.tech-card[data-accent='lagoon'] .tech-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--lagoon) / 0.40) 0%,
+    rgb(var(--lagoon) / 0.10) 38%,
+    transparent 72%
+  );
+}
+.tech-card[data-accent='kelp'] .tech-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--kelp) / 0.45) 0%,
+    rgb(var(--kelp) / 0.12) 38%,
+    transparent 72%
+  );
+}
+.tech-card[data-accent='coral'] .tech-card__glow {
+  // Antes coral (rgb 216 112 96) — la única gradiente cálida en un set de
+  // tech-cards azules. Movido a lagoon para coherencia visual con el resto
+  // del stack (Frontend lagoon, Monorepo kelp, Infraestructura bioluminescent
+  // — todos hues fríos). La identidad de la card sigue viniendo del contenido
+  // (Claude · IA, INTELIGENCIA) y de su posición en el grid, no del hue.
+  background: radial-gradient(
+    circle,
+    rgb(var(--electric) / 0.38) 0%,
+    rgb(var(--electric) / 0.10) 38%,
+    transparent 72%
+  );
+}
+.tech-card[data-accent='bioluminescent'] .tech-card__glow {
+  background: radial-gradient(
+    circle,
+    rgb(var(--bioluminescent) / 0.38) 0%,
+    rgb(var(--bioluminescent) / 0.10) 38%,
+    transparent 72%
+  );
+}
+
+// Hijos sobre los pseudo-elementos (::before z-index 1, ::after 0).
+.tech-card__head,
+.tech-card__name,
+.tech-card__reason {
+  position: relative;
+  z-index: 2;
+}
+
+.tech-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.tech-card__category {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  // Categoría tech (FRONTEND / BACKEND / 3D / DATA) en brass — antes foam
+  // tenue se perdía. Brass las eleva a marcadores editoriales tipo magazine
+  // spread. Coherente con case-row__zone y page-header__capitulo.
+  color: rgb(var(--brass));
+}
+
+// Accent dot antes del category — vincula la card al halo cromático.
+.tech-card[data-accent] .tech-card__category::before {
+  content: '';
+  display: inline-block;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 9999px;
+  margin-right: 0.5rem;
+  vertical-align: 0.1em;
+}
+.tech-card[data-accent='lagoon'] .tech-card__category::before {
+  background: rgb(var(--lagoon));
+  box-shadow: 0 0 6px rgb(var(--lagoon) / 0.6);
+}
+.tech-card[data-accent='kelp'] .tech-card__category::before {
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 6px rgb(var(--bioluminescent) / 0.6);
+}
+.tech-card[data-accent='coral'] .tech-card__category::before {
+  // dot coral → blue, mismo motivo que el glow de arriba.
+  background: rgb(var(--electric));
+  box-shadow: 0 0 6px rgb(var(--electric) / 0.6);
+}
+.tech-card[data-accent='bioluminescent'] .tech-card__category::before {
+  background: rgb(var(--bioluminescent));
+  box-shadow: 0 0 8px rgb(var(--bioluminescent) / 0.7);
+}
+
+.tech-card__name {
+  margin: 0;
+  font-family: var(--font-display);
+  // Fluid 20→22px sin step. El nombre de la tech (Angular/Nx/Three.js/etc.)
+  // es el ancla de la card — la curva suave evita pop visible al pasar 768.
+  font-size: clamp(1.25rem, 1.2rem + 0.25vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  text-wrap: balance;
+}
+
+.tech-card__reason {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgb(var(--foam) / 0.7);
+  text-wrap: pretty;
+}

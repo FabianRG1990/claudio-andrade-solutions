@@ -1,0 +1,716 @@
+// =============================================================================
+// ContactoPage — single-screen layout en desktop (100dvh, sin scroll). Mobile
+// stack vertical con scroll natural. Información mínima: form + email + tel +
+// dirección.
+//
+// Versión CAS premium: las info-cards heredan el sistema `glass-shell` +
+// `glass-core` con halo `data-accent` (mismo patrón que `Visit` en el home),
+// el icono vive sobre un ring tonal con catchlight inset y los valores
+// ganan contraste sobre el cristal.
+// =============================================================================
+
+.contacto {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  background-image:
+    radial-gradient(80% 60% at 25% 0%, rgb(94 196 209 / 0.07), transparent 70%),
+    radial-gradient(60% 50% at 90% 25%, rgb(127 227 214 / 0.04), transparent 75%),
+    linear-gradient(180deg, #06091A 0%, #080D24 40%, #070C22 70%, #06091A 100%);
+
+  padding-block: clamp(6rem, 4rem + 6vw, 7rem) clamp(2.5rem, 2rem + 1vw, 3rem);
+
+  @media (min-width: 1024px) {
+    // 100svh en lugar de 100dvh — `dvh` refleja URL-bar collapse de iOS
+    // Safari, lo que en una página single-screen como contacto se ve como
+    // "la card se estira" al primer scroll y el form salta. svh es estable.
+    // En desktop con barra del browser fija no hay diferencia, pero deja
+    // el comportamiento consistente con mobile cuando el ancho cae a tablet
+    // landscape (1024-1200px en iPad Pro).
+    height: 100svh;
+    min-height: 640px;
+    display: flex;
+    align-items: center;
+    padding-block: 6.5rem 2.5rem;
+  }
+
+  // Landscape corto (phone/tablet girado, height ≤ 540px): el "single-screen"
+  // de desktop apretaba el form. Devolvemos el flow vertical scrolleable y
+  // recortamos paddings para no perder superficie útil.
+  @media (orientation: landscape) and (max-height: 540px) {
+    height: auto;
+    min-height: 0;
+    display: block;
+    padding-block: clamp(4.5rem, 3.5rem + 2vw, 6rem) clamp(2rem, 1.5rem + 1vw, 2.5rem);
+  }
+
+  &::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 8rem;
+    z-index: 0;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgb(var(--abyss) / 0.45) 40%,
+      rgb(var(--abyss) / 0.85) 75%,
+      #06091A 100%
+    );
+  }
+}
+
+.contacto__container {
+  position: relative;
+  z-index: 1;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+
+  @media (min-width: 1024px) {
+    gap: 2.5rem;
+  }
+}
+
+// ─── Header inline ────────────────────────────────────────────────────────
+.contacto__chapter {
+  margin-top: 1rem;
+  font-size: var(--type-label-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.62);
+}
+
+.contacto__title {
+  margin-top: 1rem;
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.5rem + 2.5vw, 3.5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+
+  @media (min-width: 1024px) {
+    margin-top: 1.25rem;
+  }
+}
+
+.contacto__title-italic {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 300;
+  // Italic editorial brass — coherente con todos los títulos italics del sitio.
+  color: rgb(var(--brass) / 0.92);
+}
+
+// ─── Body: form + info ────────────────────────────────────────────────────
+.contacto__body {
+  display: grid;
+  gap: 1.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 2.25rem;
+    align-items: stretch;
+  }
+}
+
+// ─── Form ─────────────────────────────────────────────────────────────────
+// Wrapper transparente — antes tenía .glass-shell (capa exterior con bg +
+// blur + ring) y 0.5rem padding para el efecto "shell + core". Migramos al
+// nuevo card system (engagement-card pattern) donde TODO el visual vive en
+// el inner element, así el wrapper exterior debe ser invisible.
+.contacto__form {
+  border-radius: 22px;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.contacto__form-inner {
+  position: relative;
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  overflow: hidden;
+
+  // Mismo surface system que .info-card__inner / .engagement-card__inner —
+  // 3-point lighting (TR glow + BL ambient + vertical gradient navy).
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
+
+  border: 1px solid oklch(0.62 0.14 248 / 0.55);
+
+  box-shadow:
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      155deg,
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  // Form children por encima del ::before (z:1) para que se vean.
+  > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  @media (min-width: 768px) {
+    padding: 1.75rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 1.75rem 2rem;
+    gap: 1.125rem;
+  }
+}
+
+.contacto__form-row {
+  display: grid;
+  gap: 1rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.form-field {
+  display: block;
+}
+
+.form-field--message {
+  @media (min-width: 1024px) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+
+    .form-field__input--block {
+      flex: 1;
+    }
+  }
+}
+
+// Labels del form — ascendidos de "eyebrow tag" a "field heading". Un
+// formulario premium trata sus campos como estructura, no como decoración:
+// Nombre / Email / Asunto / Mensaje son la base del card y deben leerse
+// con jerarquía propia (sentence case, peso editorial, contraste pleno),
+// no como tracking-out caps al 10px que desaparecen visualmente.
+.form-field__label {
+  position: relative;
+  // El glass-core inyecta una textura `::before` con `mix-blend-mode: overlay`
+  // que cubre a sus hijos. Sin un z-index explícito, los labels viven debajo
+  // de ese ruido — eso explica la sensación de "blur" sobre los caracteres
+  // pequeños (sobre todo el punto de la `i`). Subimos el contenido fuera.
+  z-index: 2;
+  display: block;
+  font-family: var(--font-display);
+  // Subimos de 15px → 17px (clamp) — Roboto a 17px tiene una x-height más
+  // generosa, el punto de la `i` se distingue claramente del trazo de la `l`
+  // y los caracteres no necesitan apretar para caber.
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+  // Roboto 600 es un peso sintetizado (la familia carga 300/400/500/700),
+  // así que el browser engorda artificialmente los trazos — y trazos gordos
+  // a 15px = letras pegadas. Roboto 500 (Medium real) lee igual de "weighty"
+  // por la fuente foam pero deja aire entre glifos.
+  font-weight: 500;
+  line-height: 1.25;
+  // 0.03em es el rango "Body Large" de Material para Roboto a 16-17px —
+  // tracking positivo notorio que abre los pares conflictivos (il / mm / rn).
+  letter-spacing: 0.03em;
+  color: rgb(var(--foam));
+  transition: color 350ms var(--ease-fluid);
+}
+
+.form-field:focus-within .form-field__label {
+  color: rgb(var(--lagoon));
+}
+
+.form-field__input {
+  position: relative;
+  z-index: 2;
+  margin-top: 0.5rem;
+  width: 100%;
+  border: 1px solid rgb(var(--foam) / 0.22);
+  background: rgb(var(--foam) / 0.04);
+  color: rgb(var(--foam));
+  font-family: inherit;
+  // `max(16px, 1rem)` previene zoom automático de iOS al focus en
+  // inputs/textareas con font-size <16px. Reglar lo ponemos en el reset
+  // global (`mixins/_base.scss`), pero acá lo afirmamos como guardia local
+  // para que tweaks futuros del rem-base no lo rompan.
+  font-size: max(16px, 1rem);
+  letter-spacing: 0.018em;
+  outline: none;
+  transition:
+    border-color 500ms var(--ease-fluid),
+    background 500ms var(--ease-fluid);
+
+  &::placeholder {
+    color: rgb(var(--foam) / 0.5);
+    letter-spacing: 0.018em;
+  }
+
+  &:focus {
+    border-color: rgb(var(--lagoon) / 0.6);
+    background: rgb(var(--foam) / 0.06);
+  }
+
+  &--pill {
+    border-radius: 9999px;
+    padding: 0.625rem 1.125rem;
+    // Touch target — el input es un control interactivo. AAA = 44px,
+    // padding-block 0.625rem + line-height ~1.5 sobre 16px = ~44px exactos,
+    // pero forzamos min-height para el caso safari donde el line-height del
+    // input puede compactar.
+    min-height: 44px;
+  }
+
+  &--block {
+    border-radius: 1rem;
+    padding: 0.75rem 1rem;
+    resize: none;
+    min-height: 5.5rem;
+  }
+}
+
+.contacto__form-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid rgb(var(--foam) / 0.22);
+}
+
+.contacto__form-legal {
+  max-width: 36ch;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.012em;
+  color: rgb(var(--foam) / 0.78);
+}
+
+.contacto__submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.375rem 0.375rem 1.25rem;
+  border-radius: 14px;
+  font-family: var(--font-button);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-button);
+  cursor: pointer;
+  color: rgb(var(--foam));
+  // Touch target AAA — el submit es el CTA principal de la página, debe
+  // ser >=44 alto sin negociación.
+  min-height: 44px;
+}
+
+.contacto__submit-label {
+  padding-block: 0.375rem;
+}
+
+.contacto__submit-icon {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  transition: transform 700ms var(--ease-fluid);
+
+  // Hover + active (mobile) — sin :active el feedback táctil desaparece
+  // en pointer:coarse, donde :hover no dispara consistente.
+  .contacto__submit:hover &,
+  .contacto__submit:active & {
+    transform: translate(2px, -2px);
+  }
+}
+
+// ─── Info column — premium upgrade ────────────────────────────────────────
+// Cada info-card es un `glass-shell` + `glass-core` con halo de accent en
+// la esquina superior derecha (mismo idioma que `Visit` en el home). El
+// halo se intensifica en hover; los textos viven en foam alto-contraste
+// sobre el cristal.
+.contacto__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+
+  @media (min-width: 1024px) {
+    gap: 1rem;
+    justify-content: stretch;
+  }
+}
+
+.info-card {
+  position: relative;
+  display: block;
+  border-radius: 22px;
+  text-decoration: none;
+  color: inherit;
+  isolation: isolate;
+  // Wrapper transparente — antes tenía padding + drop-shadow propio
+  // (patrón shell+core). Migrado al engagement-card pattern: todo el
+  // visual (surface, border, drop-shadow) vive en __inner. El outer
+  // solo provee hover/transform.
+  transition: transform 600ms var(--ease-fluid);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:is(a):hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    flex: 1;
+  }
+}
+
+.info-card__inner {
+  position: relative;
+  height: 100%;
+  border-radius: 22px;
+  padding: 1.125rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  overflow: hidden;
+
+  // Surface idéntico al engagement-card — 3-point lighting (TR glow LED,
+  // BL ambient sutil, vertical gradient navy claro → navy profundo).
+  // El user pidió que las info-cards de contacto matcheen el lenguaje
+  // visual del nuevo card system (engagement-card → tech-card → info-row).
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
+
+  border: 1px solid oklch(0.62 0.14 248 / 0.55);
+
+  // Shadow stack — el "3D pop". Mismo patrón que engagement-card.
+  box-shadow:
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
+
+  // Border directional via mask — TR lit, falloff hacia BL. Mismo del
+  // engagement-card base.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      155deg,
+      oklch(0.92 0.06 250 / 0.65) 0%,
+      oklch(0.78 0.13 248 / 0.55) 18%,
+      oklch(0.62 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+    // Sobre-escribe la opacidad noise default del glass-core (0.045);
+    // acá usamos el ::before para gradient-border, no para grain.
+    opacity: 1;
+  }
+}
+
+// Halo de color por accent — ELIMINADO. El nuevo surface (3-point lighting)
+// ya pinta el TR glow en el background gradient, así que el accent-halo
+// flotante duplicaba la fuente de luz y rompía la unidad visual. Se
+// conserva el atributo data-accent solo para tintar el icono.
+.info-card__glow {
+  display: none;
+}
+
+[data-accent='lagoon'] {
+  --accent-rgb: var(--lagoon);
+}
+[data-accent='bioluminescent'] {
+  --accent-rgb: var(--bioluminescent);
+}
+[data-accent='kelp'] {
+  --accent-rgb: var(--kelp);
+}
+
+// El card WhatsApp ocupa el slot que antes era Teléfono. Surface, border,
+// padding, tipografía y dimensiones — IDÉNTICOS a los otros info-cards
+// (no override de __inner, no halo verde sobre el cristal). La única marca
+// de identidad WhatsApp vive en el icon-pill (gradiente verde oficial).
+//
+// En triggerless el host del hub es layout-transparent (block + 100% en
+// ambos ejes, definido en el componente). Para participar del column-stack
+// como un info-card más, solo necesita el mismo `flex:1` que reciben los
+// otros direct children del aside en ≥1024.
+.contacto__info app-whatsapp-hub {
+  @media (min-width: 1024px) {
+    flex: 1;
+  }
+}
+
+// El card pasó de <a> a <button> (para abrir el popover en vez de navegar).
+// Sin reset el browser pinta border/bg/font defaults que rompen el surface
+// del info-card. Replicamos también el lift hover que la regla original
+// (`.info-card:is(a):hover`) sólo aplica a anchors.
+button.info-card {
+  width: 100%;
+  // Llena la altura del wrapper para matchear las alturas de email/dirección
+  // (que reciben flex:1 directamente desde .contacto__info en ≥1024).
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.info-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+button.info-card:focus-visible {
+  outline: 2px solid #25d366;
+  outline-offset: 3px;
+}
+
+// ─── WhatsApp accent — efecto verde completo (matchea imagen ref) ─────────
+// Tres capas de verde, no una:
+//   (1) Surface — halo verde TR sobre el navy base (suplanta el blue glow
+//       de las otras info-cards). Lee como "el card tiene luz verde adentro".
+//   (2) Border — ring de gradient verde (oscurece BL → brillante TL).
+//   (3) Icon — pill verde oficial + drop-shadow verde sutil que sangra al
+//       surface, conectando icon con halo.
+// La altura y dimensiones del card NO cambian — todo el efecto vive en
+// colores y sombras, no en geometría.
+
+.info-card[data-accent='whatsapp'] .info-card__inner {
+  // (1) Surface — halo verde TR + base navy preservada.
+  background:
+    radial-gradient(
+      ellipse 75% 60% at 90% -8%,
+      rgb(80 240 145 / 0.42),
+      rgb(37 211 102 / 0.22) 35%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      rgb(18 140 126 / 0.20),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    );
+
+  // (2) Border solid + ring de gradient (::before) en verde brillante.
+  border-color: rgb(37 211 102 / 0.60);
+
+  &::before {
+    background: linear-gradient(
+      155deg,
+      rgb(120 250 175 / 0.90) 0%,
+      rgb(80 240 145 / 0.75) 22%,
+      rgb(37 211 102 / 0.55) 50%,
+      rgb(18 140 126 / 0.35) 78%,
+      rgb(18 140 126 / 0.22) 100%
+    );
+  }
+}
+
+// (3) Icon-pill verde WhatsApp oficial + drop-shadow verde que conecta
+// con el halo del surface.
+.info-card[data-accent='whatsapp'] .info-card__icon {
+  color: #ffffff;
+  background: linear-gradient(155deg, #25d366 0%, #128c7e 100%);
+  border-color: rgb(255 255 255 / 0.22);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.32),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.30),
+    0 4px 12px -2px rgb(37 211 102 / 0.45),
+    0 2px 4px -1px rgb(0 0 0 / 0.30);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .info-card:is(a):hover .info-card__glow {
+    opacity: 0.85;
+    transform: scale(1.06);
+  }
+}
+
+.info-card__icon,
+.info-card__copy {
+  position: relative;
+  // z-index 2 — encima del ::before (z-index 1) que pinta el gradient-border.
+  z-index: 2;
+}
+
+// Icon-pill — cuadrado redondeado "futurista" (NO círculo). Mismo patrón
+// que engagement-card__icon: gradient diagonal TR claro → BL oscuro para
+// volumen + inset top highlight + drop shadow propio.
+.info-card__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+
+  background: linear-gradient(
+    155deg,
+    oklch(0.32 0.10 250) 0%,
+    oklch(0.20 0.08 254) 50%,
+    oklch(0.14 0.06 258) 100%
+  );
+  border: 1px solid oklch(0.55 0.13 250 / 0.45);
+  box-shadow:
+    inset 0 1px 0 0 rgb(200 225 255 / 0.30),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.45),
+    0 4px 8px -2px rgb(0 0 0 / 0.45),
+    0 2px 4px -1px rgb(0 0 0 / 0.30);
+}
+
+.info-card[data-accent='lagoon'] .info-card__icon {
+  color: rgb(var(--lagoon));
+}
+.info-card[data-accent='bioluminescent'] .info-card__icon {
+  color: rgb(var(--bioluminescent));
+}
+.info-card[data-accent='kelp'] .info-card__icon {
+  color: rgb(var(--bioluminescent));
+}
+
+.info-card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+// Labels del card — mismo principio que los del form: el rótulo (Email /
+// Teléfono / Dirección) es estructura, no tag. Sentence case + peso 600 +
+// foam pleno para que se lea como "headline del card". El valor de abajo
+// se aliviana en mono (Times) para que el peso jerárquico viva en el label.
+// Labels y values de los info-cards — mismo principio que los labels del form:
+// Roboto 500 (Medium real, no 600 sintetizado), tamaño más grande, tracking
+// abierto, y z-index por encima del ruido del glass-core.
+.info-card__label {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  color: rgb(var(--foam));
+}
+
+.info-card__value {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-mono);
+  // Times a 15.2px con tracking 0 se ve apretado — los caracteres serif
+  // necesitan más aire que un sans para no quedar pegados. Subimos también
+  // un poquito el tamaño para mejorar lectura del @ y los puntos.
+  font-size: 1rem;
+  letter-spacing: 0.022em;
+  color: rgb(var(--foam) / 0.92);
+  // El valor se envuelve a múltiples líneas cuando hace falta — antes
+  // teníamos `white-space: nowrap + text-overflow: ellipsis` para todos
+  // los anchos <1024, lo que truncaba el email `hola@claudioandrade.com`
+  // a `hola@cl...andrade...` en phone 360. Premium = mostrar la info,
+  // no esconderla con puntos suspensivos. `overflow-wrap: anywhere` para
+  // que el email se parta en cualquier carácter (no solo espacios) si
+  // el ancho lo exige — alternativa a `word-break: break-all` que es
+  // demasiado agresiva con palabras normales.
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

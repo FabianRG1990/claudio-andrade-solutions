@@ -1,0 +1,71 @@
+<!-- Track alto (N × 100svh): da duración al pin. La escena interior queda
+     sticky mientras el usuario recorre el track. -->
+<section #track class="whatwedo" aria-label="Nuestro equipo">
+  <div class="whatwedo__stage">
+    <p class="whatwedo__eyebrow">Nuestro equipo</p>
+
+    <!-- Slides apilados (absolute cuando está animado; solo el activo visible).
+         Un segmento de scroll por persona. -->
+    <div class="whatwedo__slides">
+      @for (p of people; track p.name; let i = $index) {
+        <article class="whatwedo__slide" [class]="slideState(i)">
+          <span class="whatwedo__ghost" aria-hidden="true">{{ p.ghost }}</span>
+
+          <div
+            class="whatwedo__frame"
+            [class.is-placeholder]="!p.image"
+            [attr.data-accent]="p.accent"
+          >
+            @if (p.image; as img) {
+              <div class="whatwedo__frame-inner">
+                <picture>
+                  <source [srcset]="img + '.avif'" type="image/avif" />
+                  <!-- eager: son 3 imágenes clave y los slides arrancan en
+                       visibility:hidden, por lo que `lazy` nunca dispararía la
+                       carga hasta activarse. -->
+                  <img
+                    appImgFade
+                    [src]="img + '.webp'"
+                    [alt]="p.name"
+                    class="whatwedo__img"
+                    decoding="async"
+                    loading="eager"
+                  />
+                </picture>
+              </div>
+            }
+            <!-- Sin foto: el rectángulo placeholder (degradado + hairline) se
+                 muestra solo, sin contenido extra. -->
+          </div>
+
+          <div class="whatwedo__panel">
+            <p class="whatwedo__role" [attr.data-accent]="p.accent">{{ p.role }}</p>
+            <h3 class="whatwedo__name">{{ p.name }}</h3>
+            <p class="whatwedo__bio">{{ p.bio }}</p>
+          </div>
+        </article>
+      }
+    </div>
+
+    <!-- CTA estático (igual que la referencia: no cambia entre slides). -->
+    <div class="whatwedo__cta">
+      <app-pill-button href="/contacto">Hablemos</app-pill-button>
+    </div>
+
+    <!-- Dots de paginación — el activo se llena y crece. Clickables. -->
+    <nav class="whatwedo__dots" aria-label="Navegación de personas">
+      @for (p of people; track p.name; let i = $index) {
+        <button
+          type="button"
+          class="whatwedo__dot"
+          [class.is-active]="i === activeIndex()"
+          (click)="goTo(i)"
+          [attr.aria-label]="'Ir a ' + p.name"
+          [attr.aria-current]="i === activeIndex() ? 'true' : null"
+        ></button>
+      }
+    </nav>
+
+    <span class="whatwedo__scroll" aria-hidden="true">Scroll</span>
+  </div>
+</section>

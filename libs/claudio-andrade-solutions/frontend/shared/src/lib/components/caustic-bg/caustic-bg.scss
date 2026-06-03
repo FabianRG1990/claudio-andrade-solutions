@@ -1,0 +1,45 @@
+// Orbes diluidos al máximo + blur más generoso. En pantallas de alta
+// resolución antes se notaban los blobs de color como manchas de "neón";
+// ahora aportan apenas una variación tonal sin lecturas de color discreto.
+// Antes: lagoon/kelp 0.15 + bio 0.10 con blur 120-140px.
+// Ahora: 0.05-0.07 con blur 180-200px — el color casi desaparece, queda
+// solo la insinuación de profundidad atmosférica.
+.caustic-bg {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.caustic-bg__orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(180px);
+}
+
+.caustic-bg__orb--lagoon {
+  left: -25%;
+  top: 0;
+  width: 60vh;
+  height: 60vh;
+  background: rgb(var(--lagoon) / 0.07);
+}
+
+.caustic-bg__orb--bio {
+  right: 0;
+  top: 33.333%;
+  width: 50vh;
+  height: 50vh;
+  background: rgb(var(--bioluminescent) / 0.05);
+  filter: blur(200px);
+  animation-delay: -7s;
+}
+
+.caustic-bg__orb--kelp {
+  bottom: 0;
+  left: 33.333%;
+  width: 45vh;
+  height: 45vh;
+  background: rgb(var(--kelp) / 0.06);
+  animation-delay: -3s;
+}

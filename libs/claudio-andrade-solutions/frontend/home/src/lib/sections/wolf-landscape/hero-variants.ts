@@ -1,0 +1,156 @@
+/**
+ * Hero variants — metadata compartida entre `<picture>` HTML y los canvases.
+ *
+ * Cada variante define:
+ *   • mediaQuery: el mismo `<source media="...">` del <picture> del hero
+ *   • image:      URL del archivo a samplear color (.png/.jpg/.webp)
+ *   • lakeMask:   máscara hard-edge inset (para wolf-lake-canvas, peces)
+ *   • waterMask:  máscara con blur (para wolf-lake-flow, shader del agua)
+ *   • width/height: dimensiones nativas del asset
+ *
+ * CRÍTICO: el orden de evaluación coincide con el orden de los <source>
+ * del <picture>. La primera coincidencia gana. La variante `desktop` es
+ * el fallback (sin mediaQuery) — se usa cuando ningún breakpoint matchea.
+ *
+ * Si en el futuro se cambian los breakpoints en el HTML, ACTUALIZAR ACÁ
+ * también — los dos sistemas deben estar perfectamente sincronizados o
+ * los peces nadarán en una geometría distinta a la imagen visible.
+ */
+
+export interface HeroVariant {
+  readonly name: 'cinematic' | 'tablet' | 'phone' | 'desktop';
+  /** Media query que activa esta variante. `null` = fallback default. */
+  readonly mediaQuery: string | null;
+  /** URL del hero image (preferimos webp por liviano, sirve para sampleColor). */
+  readonly image: string;
+  /** Máscara para peces — polígono hard-edge inset 4%. */
+  readonly lakeMask: string;
+  /** Máscara para shader de agua — polígono con blur grueso. */
+  readonly waterMask: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+// Mismas media queries que en wolf-landscape.html — mantener sincronizado.
+export const HERO_VARIANTS: ReadonlyArray<HeroVariant> = [
+  {
+    name: 'cinematic',
+    // Servimos cinematic SOLO cuando hay aspect-ratio realmente ultrawide
+    // (≥ 21:9 ≈ 2.33) — monitores ultrawide reales tipo LG 34"/Alienware
+    // 3440×1440, Samsung Odyssey, etc.
+    //
+    // Histórico:
+    // 1) Antes se servía a `(min-width: 1024px) and (max-height: 780px)` —
+    //    eso atrapaba laptops 14"/15" estándar (1366×768, 1600×720) que son
+    //    16:9 / ~2.22:1, no ultrawide.
+    // 2) Después incluimos `(orientation: landscape) and (max-height: 540px)`
+    //    para phone landscape, asumiendo que la cinematic 21:9 encajaría
+    //    bien en ~2:1. En la práctica el shader del agua también ondulaba
+    //    la base de la ciudad/roca por la geometría delgada del lago en esa
+    //    composición. El usuario lo confirmó visualmente y pidió usar la
+    //    misma imagen del laptop (mk6 desktop) también ahí.
+    // Resultado: cinematic queda reservada SOLO para monitores ultrawide
+    // reales. Phone landscape cae al fallback `desktop` (mk6 16:9) —
+    // tablet (1:1) lo excluye por su requisito `min-height: 640px`, y la
+    // mk6 se ajusta a 844×390 con crop vertical leve (el lobo queda visible
+    // a la derecha y el lago a la base, mismo tratamiento que en la laptop).
+    mediaQuery: '(min-width: 1024px) and (min-aspect-ratio: 21/9)',
+    image: '/hero-wolf/hero-mk6-cinematic.webp',
+    lakeMask: '/hero-wolf/lake-mask-cinematic.png',
+    waterMask: '/hero-wolf/water-mask-cinematic.png',
+    width: 2520,
+    height: 1080,
+  },
+  {
+    name: 'tablet',
+    // min-height: 640px excluye landscape phone (atrapado por la cinematic
+    // arriba). max-aspect-ratio: 6/5 (=1.2) excluye iPad landscape (~1.33),
+    // que cae al fallback desktop con MK6 16:9 — composición que encaja
+    // mejor en orientaciones horizontales del tablet.
+    mediaQuery: '(min-width: 641px) and (max-width: 1099px) and (min-height: 640px) and (max-aspect-ratio: 6/5)',
+    image: '/hero-wolf/hero-mk6-tablet.webp',
+    lakeMask: '/hero-wolf/lake-mask-tablet.png',
+    waterMask: '/hero-wolf/water-mask-tablet.png',
+    width: 1600,
+    height: 1600,
+  },
+  {
+    name: 'phone',
+    mediaQuery: '(max-width: 640px)',
+    image: '/hero-wolf/hero-mk6-phone.webp',
+    lakeMask: '/hero-wolf/lake-mask-phone.png',
+    waterMask: '/hero-wolf/water-mask-phone.png',
+    width: 1080,
+    height: 1920,
+  },
+  {
+    name: 'desktop',
+    mediaQuery: null, // default fallback
+    image: '/hero-wolf/hero-mk6.webp',
+    lakeMask: '/hero-wolf/lake-mask-mk3.png',
+    waterMask: '/hero-wolf/water-mask-mk6.png',
+    width: 1672,
+    height: 941,
+  },
+];
+
+/**
+ * Devuelve la variante activa según el viewport actual.
+ * Itera en orden hasta encontrar la primera media query que matchea.
+ * Si ninguna matchea (raro — sería un viewport entre breakpoints), cae a
+ * `desktop`.
+ */
+export function getActiveHeroVariant(): HeroVariant {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    // SSR / fallback — usar desktop.
+    return HERO_VARIANTS[HERO_VARIANTS.length - 1];
+  }
+  for (const v of HERO_VARIANTS) {
+    if (v.mediaQuery === null) continue;
+    if (window.matchMedia(v.mediaQuery).matches) return v;
+  }
+  return HERO_VARIANTS[HERO_VARIANTS.length - 1];
+}
+
+/**
+ * Escucha cambios de variant. Llama el callback cuando el viewport pasa de
+ * una variante a otra (resize, rotación, ventana redimensionada).
+ *
+ * Retorna una función de cleanup que remueve todos los listeners.
+ *
+ * Implementación: registra un listener `change` en CADA media query y
+ * comparamos por nombre — esto evita disparar el callback múltiples veces
+ * cuando un solo resize cambia varios match al mismo tiempo (típico
+ * cuando el user rota el dispositivo).
+ */
+export function onHeroVariantChange(
+  callback: (variant: HeroVariant) => void,
+): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return () => {
+      // noop in SSR
+    };
+  }
+
+  let lastVariantName = getActiveHeroVariant().name;
+  const cleanups: Array<() => void> = [];
+
+  const onChange = (): void => {
+    const v = getActiveHeroVariant();
+    if (v.name !== lastVariantName) {
+      lastVariantName = v.name;
+      callback(v);
+    }
+  };
+
+  for (const v of HERO_VARIANTS) {
+    if (v.mediaQuery === null) continue;
+    const mql = window.matchMedia(v.mediaQuery);
+    mql.addEventListener('change', onChange);
+    cleanups.push(() => mql.removeEventListener('change', onChange));
+  }
+
+  return () => {
+    for (const c of cleanups) c();
+  };
+}

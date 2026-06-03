@@ -1,0 +1,547 @@
+.featured-products {
+  position: relative;
+  padding-block: clamp(4rem, 5vw + 3rem, 10rem);
+
+  // Fish vanishing zone — el ocean-bg global (position: fixed) pinta peces
+  // dorados en toda la ventana. Su mask interno fade solo en los 140px
+  // superiores/inferiores del VIEWPORT, no en los boundaries de sección.
+  // Al pasar del hero a chapter 1, los peces que entran bajo el techo del
+  // hero quedan cortados abruptamente porque la imagen del hero es opaca.
+  //
+  // Esto agrega un fade abyss → transparente DENTRO del techo de chapter 1.
+  // Continúa el darkening que el .hero__seam ya tiene (sin tocar el hero),
+  // así los peces que nadan justo bajo el boundary se desvanecen en abyss
+  // antes de chocar con la línea de corte del hero. El color de inicio
+  // (#06091A) matchea exactamente el bottom-stop del hero seam — el
+  // blend que ya rendía bien queda intacto, solo se extiende ~140px más.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 140px;
+    background: linear-gradient(
+      to bottom,
+      #06091A 0%,
+      rgb(var(--abyss) / 0.55) 45%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+.featured-products__container {
+  position: relative;
+  isolation: isolate;
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+
+  // Fish vanishing zone — un solo background continuo que cubre __head +
+  // __grid y todo lo intermedio. Mask-composite: intersect fadea los 4
+  // bordes simultáneamente sin esquinas duras.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #06091b;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+            mask-image:
+      linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-composite: intersect;
+    pointer-events: none;
+  }
+}
+
+.featured-products__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2.5rem;
+  // background lo provee .featured-products__container::before (zona
+  // continua head + grid con fade en los 4 bordes).
+
+  @media (min-width: 1024px) {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+}
+
+// CTA "Ver los 6 productos" — pattern emblem-left + label-center + arrow-right,
+// según referencia del user. El frame visual (border brass, halo upward,
+// specular top-center) lo provee el mixin .gold-pill-button.
+.featured-products__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 14px;
+  // Padding-block aumentado: el ancho queda igual, solo crece en alto.
+  // Match al spec visual mandado por el user — pill más generoso, no chato.
+  padding: 1.25rem 1.25rem;
+  flex-shrink: 0;
+  // Touch target AAA — el pill completo ≥44px alto.
+  min-height: 76px;
+
+  &:hover .featured-products__cta-icon,
+  &:active .featured-products__cta-icon {
+    transform: translateX(3px);
+  }
+}
+
+.featured-products__cta-emblem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.featured-products__cta-label {
+  padding-block: 0.25rem;
+}
+
+.featured-products__cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  transition: transform 700ms var(--ease-fluid);
+}
+
+// =============================================================================
+// Bento grid fijo — 5 cards SIEMPRE expandidos (sin accordion). El user pidió
+// volver a "cards fijos como antes" porque el accordion escondía información,
+// pero conservando el principio visual ganado: imágenes que llenan el card
+// sin zoom ni crop perceptible (aspect-ratio del card = AR nativa de la imagen).
+//
+// Layout (tablet+):
+//   Row 1: [card1 span-3] [card2 span-3]     ← cards grandes (hero del capítulo)
+//   Row 2: [card3 span-2] [card4 span-2] [card5 span-2]   ← cards medianos
+//
+// 6-column track porque MCD(2,3) = 6. Da 50/50 en row 1 y 33/33/33 en row 2,
+// con todas las cards manteniendo AR 4/3 — la diferencia de tamaño viene
+// solo del span, NO de aspect-ratios distintos (eso causaría zoom).
+//
+// Mobile (<768): stack vertical full-width single-column.
+// =============================================================================
+
+.featured-products__grid {
+  display: grid;
+  // padding-top preserva el espaciado original ahora que el background
+  // continuo lo provee .featured-products__container::before.
+  padding-top: clamp(2rem, 3vw + 1rem, 4rem);
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(6, 1fr);
+    row-gap: 1.5rem;
+    column-gap: 1.25rem;
+    margin-top: clamp(2.5rem, 3vw + 1rem, 4rem);
+  }
+}
+
+@media (min-width: 768px) {
+  // Top row — 2 cards grandes, 50/50.
+  .product-card:nth-child(1),
+  .product-card:nth-child(2) {
+    grid-column: span 3;
+  }
+  // Bottom row — 3 cards medianos, 33/33/33. Title más chico porque el card
+  // mide 1/3 de ancho y el title estándar (28-36px) se encimaría al badge.
+  .product-card:nth-child(3),
+  .product-card:nth-child(4),
+  .product-card:nth-child(5) {
+    grid-column: span 2;
+
+    .product-card__title {
+      font-size: clamp(1.0625rem, 0.7rem + 0.6vw, 1.5rem);
+      line-height: 1.15;
+    }
+    .product-card__description {
+      font-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+    }
+  }
+}
+
+// =============================================================================
+// Landscape phone override — viewport con orientation:landscape Y altura ≤500px
+// matchea solo phones rotados (iPhone landscape ~852×393, Galaxy ~915×412).
+// NO matchea tablets landscape (iPad ~1180×820) ni desktop.
+//
+// El bento de @media (min-width:768px) se activa en landscape phone porque el
+// ancho (852) supera el breakpoint, pero la fila de 3 cards queda con ~270px
+// de ancho — la imagen pierde lectura y los textos no caben. El user pidió
+// "uno por uno" en horizontal: single column scrolleable con cards grandes,
+// conservando AR 4:3 (cero zoom sobre la imagen nativa 1448×1086).
+// =============================================================================
+@media (orientation: landscape) and (max-height: 500px) {
+  .featured-products__grid {
+    grid-template-columns: 1fr;
+    max-width: 32rem; // ~512px centrado — un card por viewport, no aplastado.
+    margin-inline: auto;
+    row-gap: 1.5rem;
+  }
+
+  .product-card:nth-child(1),
+  .product-card:nth-child(2),
+  .product-card:nth-child(3),
+  .product-card:nth-child(4),
+  .product-card:nth-child(5) {
+    grid-column: auto;
+  }
+
+  // Revertir el down-scale del bottom-row — ya no son 1/3 de ancho, son
+  // full-card en single column, así que vuelve la jerarquía editorial
+  // estándar de title/description.
+  .product-card:nth-child(3),
+  .product-card:nth-child(4),
+  .product-card:nth-child(5) {
+    .product-card__title {
+      font-size: clamp(1.375rem, 1.1rem + 1.1vw, 2.25rem);
+      line-height: 1.1;
+    }
+    .product-card__description {
+      font-size: clamp(0.875rem, 0.83rem + 0.2vw, 1rem);
+    }
+  }
+}
+
+// =============================================================================
+// ProductCard — mismo lenguaje visual que `.program-card` (nosotros) e
+// `.info-card` (contacto). El user pidió que TODOS los cards de imagen
+// compartan el mismo "borde y estilo de card" — 3-point lighting OKLCH +
+// directional gradient-border. La receta abajo es idéntica byte-a-byte a
+// la de program-card; cualquier ajuste futuro debe propagarse a las tres
+// cards (program-card, product-card, product-row__media, case-row__media).
+// =============================================================================
+.product-card {
+  position: relative;
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-squircle);
+  padding: 0.25rem;
+  isolation: isolate;
+  // GPU compositing — Chrome usa Skia con subpixel preciso para layers GPU.
+  // Sin esto las curvas finas en bordes con gradient AA se redondean a
+  // grid integer y se ven en escalón en HiDPI.
+  will-change: transform;
+  transform: translateZ(0);
+
+  // Surface 3-point lighting + gradient border. Peak top-left atenuado
+  // (lum 0.92 → 0.84) — antes el contraste cyan/navy en el corner hacía
+  // perceptible cualquier sub-pixel del AA.
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 92% -5%,
+      oklch(0.62 0.18 245 / 0.55),
+      oklch(0.42 0.14 250 / 0.22) 35%,
+      transparent 65%
+    ) padding-box,
+    radial-gradient(
+      ellipse 45% 38% at 5% 100%,
+      oklch(0.30 0.10 256 / 0.22),
+      transparent 60%
+    ) padding-box,
+    linear-gradient(
+      180deg,
+      oklch(0.20 0.075 256) 0%,
+      oklch(0.13 0.055 256) 55%,
+      oklch(0.09 0.045 258) 100%
+    ) padding-box,
+    linear-gradient(
+      155deg,
+      oklch(0.84 0.08 248 / 0.62) 0%,
+      oklch(0.74 0.12 248 / 0.55) 18%,
+      oklch(0.60 0.11 252 / 0.35) 45%,
+      oklch(0.52 0.10 256 / 0.22) 75%,
+      oklch(0.45 0.09 258 / 0.18) 100%
+    ) border-box;
+
+  border: 1px solid transparent;
+
+  // Outer halo cyan muy sutil 0 0 0 1px — feathers el corner perceptualmente,
+  // disuelve el step residual si quedara alguno tras el geometric fix.
+  box-shadow:
+    inset 0 1px 0 0 rgb(190 220 255 / 0.18),
+    inset 0 -1px 0 0 rgb(0 0 0 / 0.40),
+    0 0 0 0.5px rgb(150 200 255 / 0.06),
+    0 1px 0 0 rgb(0 0 0 / 0.50),
+    0 24px 48px -16px rgb(0 0 0 / 0.65),
+    0 12px 24px -8px rgb(0 0 0 / 0.40),
+    0 4px 8px -2px rgb(0 0 0 / 0.30);
+
+  min-height: 22rem;
+
+  // Tablet+: aspect-ratio locked a la AR nativa exacta de las imágenes
+  // (1491×1055 = 1.413). Con object-fit:cover, la imagen rellena el card
+  // SIN zoom ni crop (AR del card === AR nativa). Per request del user:
+  // "no zoom, no acercamiento, tamaño original".
+  @media (min-width: 768px) {
+    aspect-ratio: 1491 / 1055;
+    min-height: 0;
+    height: auto;
+  }
+}
+
+.product-card__inner {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  // CONCÉNTRICA con el outer. Outer radius = --radius (32px), inner inset =
+  // border 1px + padding 0.5rem (8px) = 9px → inner radius = 32 - 9 = 23px.
+  // El previo (- 0.5rem = -8px) dejaba la curva interna 1px más abierta que
+  // la externa → en el corner el ring cyan se "estrechaba" a lo largo del
+  // arco y el ojo lo lee como escalón.
+  border-radius: calc(var(--radius-squircle) - 0.25rem - 1px);
+}
+
+.product-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  // object-fit:cover + aspect-ratio del card matching AR nativa de la imagen
+  // (1491×1055) = imagen rellena el card sin zoom ni crop.
+  object-fit: cover;
+}
+
+// Scrim de legibilidad concentrado en el bottom — antes era opaco hasta el
+// fondo y obscurecía 80% de la imagen. Ahora el top 55% del card queda
+// totalmente limpio para que se vea la imagen, y solo la zona del texto
+// (bottom 25-30%) recibe el abyss-fade que necesita el title/description
+// para leer sobre cualquier fondo. Patrón Apple/Pinterest para image+caption.
+.product-card__gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(var(--abyss) / 0.88) 0%,
+    rgb(var(--abyss) / 0.55) 22%,
+    rgb(var(--abyss) / 0.0) 55%
+  );
+  pointer-events: none;
+}
+
+.product-card__hairline {
+  position: absolute;
+  inset: 0;
+  // Match __inner radius (concéntrica con outer). La hairline pinta una
+  // banda inset 1px dentro de su radio — debe ser idéntica a __inner para
+  // no introducir un segundo curve mismatch.
+  border-radius: calc(var(--radius-squircle) - 0.25rem - 1px);
+}
+
+.product-card__top {
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  top: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.product-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  box-shadow: inset 0 0 0 1px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+
+  &[data-accent='lagoon'] {
+    background: rgb(var(--lagoon) / 0.15);
+    color: rgb(var(--lagoon));
+    box-shadow: inset 0 0 0 1px rgb(var(--lagoon) / 0.3);
+  }
+  &[data-accent='bioluminescent'] {
+    background: rgb(var(--bioluminescent) / 0.15);
+    color: rgb(var(--bioluminescent));
+    box-shadow: inset 0 0 0 1px rgb(var(--bioluminescent) / 0.3);
+  }
+  &[data-accent='coral'] {
+    background: rgb(var(--coral) / 0.15);
+    color: rgb(var(--coral));
+    box-shadow: inset 0 0 0 1px rgb(var(--coral) / 0.3);
+  }
+  &[data-accent='kelp'] {
+    background: rgb(var(--kelp) / 0.2);
+    color: rgb(var(--bioluminescent));
+    box-shadow: inset 0 0 0 1px rgb(var(--kelp) / 0.4);
+  }
+}
+
+.product-card__badge-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+.product-card__timeline {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.82);
+  text-shadow:
+    0 1px 2px rgb(var(--abyss) / 0.85),
+    0 0 10px rgb(var(--abyss) / 0.55);
+}
+
+.product-card__bottom {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  right: 1.25rem;
+  z-index: 2;
+}
+
+.product-card__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+// Texto sobre imagen: foam pleno + text-shadow doble (sombra tight + halo
+// difuso). Patrón legibilidad sobre fondos visuales (mismo idioma que el
+// hero). Sin scrim adicional — la profundidad vive en las sombras del texto.
+.product-card__title {
+  font-family: var(--font-display);
+  // Fluid clamp 22→36px en lugar del step 26→36px. Antes en phones angostos
+  // el título (line-height 1.1 + 26px) hacía wrap a 3 líneas — robaba mucha
+  // altura del card. 22px en phones de 320-380 deja el título en 1-2 líneas
+  // y respeta la jerarquía editorial sin reducir el impacto visual.
+  font-size: clamp(1.375rem, 1.1rem + 1.1vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  text-shadow:
+    0 1px 2px rgb(var(--abyss) / 0.85),
+    0 2px 14px rgb(var(--abyss) / 0.55);
+}
+
+.product-card__description {
+  margin-top: 0.5rem;
+  max-width: 40ch;
+  text-wrap: pretty;
+  // Fluid clamp 14→16px sin step. Antes el cambio brusco a 16px en 768
+  // creaba un salto visible en el tablet boundary.
+  font-size: clamp(0.875rem, 0.83rem + 0.2vw, 1rem);
+  color: rgb(var(--foam) / 0.92);
+  text-shadow:
+    0 1px 2px rgb(var(--abyss) / 0.85),
+    0 1px 8px rgb(var(--abyss) / 0.5);
+}
+
+// =============================================================================
+// Arrow button — único punto de navegación de la card. La card en sí no
+// navega (ni desktop ni mobile); el user lo pidió explícitamente. Visible
+// en todos los viewports.
+//
+// Lenguaje visual: burbujita sobria — borde tenue 1px foam translúcido,
+// fondo translúcido bajo, backdrop-blur sutil que la separa del fondo del
+// card. Más sobria que el burger del nav (que es 3D real con catchlight);
+// acá queremos accent discreto que no compita con el contenido editorial.
+// =============================================================================
+.product-card__arrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+
+  // Surface: foam translúcido + leve top-highlight inset para "burbujita"
+  // sin caer en el 3D pleno del glass-bubble del nav.
+  background: rgb(var(--foam) / 0.06);
+  border: 1px solid rgb(var(--foam) / 0.22);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 4px 12px -4px rgb(var(--abyss) / 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+
+  color: rgb(var(--foam));
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color 280ms var(--ease-fluid),
+    border-color 280ms var(--ease-fluid),
+    transform 280ms var(--ease-fluid),
+    box-shadow 280ms var(--ease-fluid);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgb(var(--foam) / 0.12);
+      border-color: rgb(var(--foam) / 0.38);
+      transform: translate(2px, -2px);
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.22),
+        0 8px 20px -6px rgb(var(--abyss) / 0.55);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--lagoon));
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: translate(1px, -1px) scale(0.96);
+    transition-duration: 120ms;
+  }
+}
+
+.product-card__meta {
+  margin-top: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-top: 1px solid rgb(var(--foam) / 0.22);
+  padding-top: 0.75rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.82);
+  text-shadow:
+    0 1px 2px rgb(var(--abyss) / 0.85),
+    0 0 10px rgb(var(--abyss) / 0.5);
+}
+
+.product-card__meta-dot {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: rgb(var(--foam) / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card__arrow {
+    transition-duration: 0.001ms !important;
+  }
+}

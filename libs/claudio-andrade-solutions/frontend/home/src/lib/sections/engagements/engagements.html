@@ -1,0 +1,32 @@
+<section class="engagements">
+  <div class="engagements__container">
+    <div class="engagements__head">
+      <div>
+        <div appReveal>
+          <app-eyebrow
+            tone="lagoon"
+            appCompanionDock="cap-03"
+            [order]="30"
+            [offsetX]="28"
+            label="Capítulo 03 · Modelos de trabajo"
+          >Capítulo 03 · Modelos de trabajo</app-eyebrow>
+        </div>
+        <h2 appReveal [delay]="0.08" class="engagements__title">
+          Tres formas de empezar.
+          <span class="engagements__title-italic">Un mismo nivel.</span>
+        </h2>
+      </div>
+      <p appReveal [delay]="0.18" class="engagements__lead">
+        Trabajamos por cohortes pequeñas para mantener el nivel de atención.
+        Elegí el formato que calce con tu momento — y nosotros calzamos
+        nuestra agenda al tuyo.
+      </p>
+    </div>
+
+    <div class="engagements__grid">
+      @for (t of engagements; track t.name; let i = $index) {
+        <app-engagement-card [engagement]="t" [delay]="0.05 * i" />
+      }
+    </div>
+  </div>
+</section>

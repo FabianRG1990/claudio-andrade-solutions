@@ -1,0 +1,106 @@
+<section class="case-studies">
+  <div class="case-studies__container">
+    <!-- Header: title + CTA paired (protagonista junto al título) -->
+    <div class="case-studies__head">
+      <app-section-heading
+        eyebrow="Capítulo 04 · Casos destacados"
+        title="Tres casos."
+        italic="Tres dramatúrgicas."
+        tone="lagoon"
+        dockId="cap-04"
+        [dockOrder]="40"
+      />
+      <a
+        routerLink="/nosotros"
+        class="case-studies__cta gold-pill-button gold-pill-button--card"
+        appReveal
+        [delay]="0.2"
+      >
+        <span class="case-studies__cta-body">
+          <span class="case-studies__cta-eyebrow">Casos reales</span>
+          <span class="case-studies__cta-title">Ver casos completos</span>
+        </span>
+        <span class="case-studies__cta-icon glass-button-icon">
+          <ng-icon name="phosphorArrowUpRightBold" size="22" />
+        </span>
+      </a>
+    </div>
+
+    <!-- Lista de casos. Estos son TEASER cards (gustito), no detalle de
+         producto: imagen + título corto + tagline + 3 stats. Sin manifesto.
+         Densidad baja a propósito — el detalle vive en `/productos`. -->
+    <div class="case-studies__cases">
+      @for (c of cases; track c.slug; let i = $index) {
+        <article
+          appReveal
+          class="case-row"
+          [class.case-row--reverse]="i % 2 === 1"
+          [attr.data-accent]="c.accent"
+        >
+          <!-- Media · imagen square con carrusel de slides -->
+          <div class="case-row__media">
+            <div class="case-row__media-inner">
+              @for (slide of c.slides; track slide.src; let si = $index) {
+                <picture>
+                  <!-- AVIF para browsers modernos (~30% más liviano que webp).
+                       El <img> usa .webp como ÚNICO fallback — descartamos el
+                       PNG (1-3 MB vs 50-100 KB webp). En 2026 todos los
+                       browsers que soportan ES modules (req. de Angular 21)
+                       soportan WebP, así que PNG era disco muerto en hosting. -->
+                  <source [srcset]="slide.src.replace('.png', '.avif')" type="image/avif" />
+                  <img
+                    [src]="slide.src.replace('.png', '.webp')"
+                    [alt]="slide.alt"
+                    class="case-row__image"
+                    [class.is-active]="indices[i]() === si"
+                    [style.object-position]="slide.position || null"
+                    decoding="async"
+                    loading="eager"
+                  />
+                </picture>
+              }
+              <div class="case-row__media-tint" aria-hidden="true"></div>
+
+              <!-- Top-left: status pill (corta · ≤24 chars en data) -->
+              <div class="case-row__badge">
+                <span class="case-row__pulse" aria-hidden="true"></span>
+                {{ c.status }}
+              </div>
+
+              <!-- Top-right: contador "01/03". La caption del slide pasó
+                   al pie de la card (bottom-left) para no chocar con el
+                   badge live. -->
+              <div class="case-row__counter" aria-hidden="true">
+                {{ pad(indices[i]() + 1) }} / {{ pad(c.slides.length) }}
+              </div>
+
+              <!-- Bottom: caption del slide actual — texto corto que muta
+                   con cada transición. aria-live polite. -->
+              <p class="case-row__caption" aria-live="polite">
+                {{ c.slides[indices[i]()].caption }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Body · título corto + tagline + 3 stats compactas -->
+          <div class="case-row__body">
+            <p class="case-row__zone">
+              {{ c.badgeLabel }} · {{ c.year }}
+            </p>
+            <h3 class="case-row__title">{{ c.name }}</h3>
+            <p class="case-row__copy">{{ c.tagline }}</p>
+
+            <dl class="case-row__stats">
+              @for (s of c.stats; track s.label) {
+                <div class="case-row__stat">
+                  <dt class="case-row__stat-label">{{ s.label }}</dt>
+                  <dd class="case-row__stat-value">{{ s.value }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

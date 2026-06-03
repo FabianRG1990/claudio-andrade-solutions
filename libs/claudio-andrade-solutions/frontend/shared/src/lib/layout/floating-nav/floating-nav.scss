@@ -1,0 +1,734 @@
+// =============================================================================
+// FloatingNav — brand anclado al Hero + rail sticky.
+// =============================================================================
+//
+// Estructura:
+//   .floating-nav-brand → position: absolute. Logo + wordmark.
+//                         Vive al tope del documento (= tope del Hero en
+//                         home). Scrollea con la página y desaparece cuando
+//                         el usuario scrollea más allá del Hero. NO sigue
+//                         al usuario por el resto del sitio.
+//   .floating-nav-rail  → position: fixed. Pill desktop + burger móvil.
+//                         Persistente — sigue al usuario por todo el sitio
+//                         a cualquier altura del scroll.
+//
+// IMPORTANT: ningún ancestor de los elementos con backdrop-filter
+// (.glass-bubble del burger, .glass-nav-shell del pill) puede tener
+// transform — Chrome rompe el blur si lo tienen.
+
+// ─── Brand (absolute, anclado al Hero) ──────────────────────────────────────
+// position: absolute al documento (sin ancestor positioned, cae a la ICB).
+// top: 1rem queda alineado con el rail al cargar; al scrollear, scrollea con
+// la página y desaparece — comportamiento "se queda en el Hero, no me sigue
+// por el resto del sitio".
+.floating-nav-brand {
+  position: absolute;
+  // top/padding usan max(base, env(safe-area-inset-*)) para que en notch
+  // landscape (iPhone X+) la marca baje fuera del recorte. Si el browser no
+  // soporta env() (todos los modernos lo soportan), max() ignora el valor
+  // inválido y mantiene el base.
+  top: max(1rem, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  // 69 — un punto debajo del rail-fixed (70) para que cualquier solapamiento
+  // accidental al cargar deje el rail al frente (la nav es la persistente).
+  z-index: 69;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 80rem;
+  // Padding fluido — alineado al `.hero__container` para que la marca quede
+  // a la misma X que el título del hero. Suma safe-area en los lados para
+  // que en landscape iOS el contenido no se meta bajo la curva del display.
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+  // El bar deja pasar clicks por el espacio que no ocupa el brand link;
+  // solo el hijo visible captura eventos (vía pointer-events: auto puntual).
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+
+  @media (min-width: 1024px) {
+    top: max(1.5rem, env(safe-area-inset-top));
+  }
+}
+
+// ─── Rail (fixed, sticky a la viewport) ─────────────────────────────────────
+// Persistente arriba del viewport en todas las rutas y a cualquier scroll.
+// Centrado horizontalmente — el pill ya no carga chrome (sin glass-shell ni
+// canvas), así que vive como un grupo de links flotando en el centro y se
+// destaca solo por el hover hermoso de cada link.
+.floating-nav-rail {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  // z-index 70 — arriba del .grain::before (z:60) que vive en `<body>` con
+  // mix-blend-mode:overlay.
+  z-index: 70;
+  margin-inline: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline:
+    max(var(--container-px), env(safe-area-inset-left))
+    max(var(--container-px), env(safe-area-inset-right));
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+
+  @media (min-width: 1024px) {
+    top: max(1.5rem, env(safe-area-inset-top));
+  }
+
+  // Entrada por boot — el rail aterriza desde arriba (-10px → 0). Delay 650ms,
+  // el último de la cascada: ocean (350ms) → main (500ms) → nav (650ms). El
+  // ojo recorre la página de fondo a primer plano, y el nav es lo último que
+  // se asienta — equivalente al patrón de Stripe / Linear donde el chrome
+  // confirma "página lista". La regla `html.app-booted .floating-nav-rail
+  // { opacity:1; transform:translateY(0) }` vive en `index.html` (inline
+  // <style>) por la limitación de view-encapsulation con `:root` arriba.
+  opacity: 0;
+  transform: translateY(-10px);
+  transition:
+    opacity 700ms 650ms var(--ease-spring),
+    transform 700ms 650ms var(--ease-spring);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  // En pantallas pequeñas (<880px) cuando el drawer está abierto, el rail
+  // entero (pill + burger) se desvanece. La cabecera del drawer ya ofrece
+  // el botón de cerrar; tener simultáneamente burger-morfeado-a-X afuera
+  // y X dentro del drawer es ruido visual. Sobre desktop (≥880px) el burger
+  // sigue presente para que el usuario tenga un punto de retorno claro al
+  // cerrar el drawer mientras lee el viewport amplio.
+  @media (max-width: 879.98px) {
+    &.is-menu-open {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 280ms var(--ease-fluid);
+
+      // El rail base le da `pointer-events: auto` a sus hijos (pill +
+      // burger) sobre el `none` del wrapper. Tenemos que sobrescribir esos
+      // children también — opacity 0 no bloquea clicks, solo oculta. Sin
+      // este override el burger invisible se quedaría capturando taps por
+      // detrás del drawer.
+      > * {
+        pointer-events: none;
+      }
+    }
+  }
+
+  // Cuando el popover de contactos del WhatsappHub está abierto (companion
+  // o footer) Y estamos en mobile (<880px), el rail desaparece para no
+  // taparlo. Solo aplica en teléfonos por pedido del user: en desktop el
+  // pill horizontal y el burger viven centrados/al margen sin pisar el
+  // popover, no hace falta esconderlos. En phones, en cambio, el burger
+  // del corner derecho y la lista del popover compiten por la misma franja
+  // de viewport. El estado lo dispara `WhatsappHubState.anyOpen()`; cuando
+  // el popover cierra (click fuera, escape, contacto), el rail vuelve con
+  // la misma transición.
+  @media (max-width: 879.98px) {
+    &.is-whatsapp-open {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms var(--ease-fluid);
+
+      > * {
+        pointer-events: none;
+      }
+    }
+  }
+}
+
+// ─── Brand: emblema + wordmark ───────────────────────────────────────────────
+// SIN animation de entrada — `animation-fill-mode: both` + delay deja la
+// marca con `opacity: 0` los primeros ms y se percibe como flicker. La
+// marca debe estar visible desde el primer paint.
+.floating-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+// Wordmark: visible mientras el brand está en pantalla. Antes colapsaba con
+// .is-scrolled (opacity 0 + max-width 0 + translate); el usuario pidió que
+// persista en el Hero, así que sin transiciones de scroll — al scrollear,
+// el brand entero (incluido este wordmark) se va con la página.
+.floating-nav__brand-wordmark {
+  display: inline-block;
+  // Excepción tipográfica: el wordmark conserva Times (serif). El resto del
+  // sitio usa Roboto Medium. La firma editorial debe leerse como marca, no
+  // como título de sección.
+  font-family: var(--font-times);
+  font-size: clamp(0.875rem, 0.7rem + 0.7vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+  white-space: nowrap;
+
+  // Sombra apilada — mismo lenguaje que `.wolf-landscape__title`, escalado
+  // al tamaño chico del wordmark. Garantiza legibilidad sobre la niebla
+  // animada del hero sin meter scrim ni recuadro (ambos vetados — apagan
+  // la escena viva). Capas:
+  //   a) halo ancho de abismo (16px blur, 0.85) — pinta el contraste real
+  //      contra cualquier zona clara de la niebla.
+  //   b) halo intermedio (5px blur, 0.75) — refuerza los bordes a media
+  //      distancia y evita el efecto "halo único difuso".
+  //   c) contorno fino (1px, 0.85) — define cada glifo contra transiciones
+  //      claras de niebla y reflejos cyan del lago.
+  //   d) hairline 0px (0.7) — engrosa el borde sin desplazamiento, hace que
+  //      el serif Times no se "rompa" en thin-strokes contra fondo brillante.
+  //   e) highlight superior (-1px, foam 0.20) — luz cenital esculpida,
+  //      mismo idioma que el título grande.
+  text-shadow:
+    0 2px 16px rgb(var(--abyss) / 0.85),
+    0 1px 5px rgb(var(--abyss) / 0.75),
+    0 1px 1px rgb(var(--abyss) / 0.85),
+    0 0 1px rgb(var(--abyss) / 0.7),
+    0 -1px 0 rgb(var(--foam) / 0.20);
+
+  // En phones <480px ocultamos el wordmark — el ancho no alcanza para
+  // emblema + nombre cómodamente. El emblema ya identifica la app a esa
+  // escala.
+  @media (max-width: 479.98px) {
+    display: none;
+  }
+}
+
+// ─── Pill (navbar real en top of page) ─────────────────────────────────────
+// Visible en TODOS los breakpoints cuando la página está al tope. Cuando el
+// usuario scrollea más allá de 60px, se desvanece + sube ligeramente y el
+// burger toma el relevo en el corner derecho del rail. Transición premium
+// con curva `--ease-fluid`.
+//
+//   · Mobile (<880px): font 12px + padding compacto + labels cortos
+//     ("Inicio · Productos · Nosotros · Contacto" = ~250px de ancho,
+//     cabe holgado en phone 360).
+//   · Desktop (≥880px): font 14px + padding original + labels completos
+//     ("Acerca de nosotros", "Contáctenos").
+//
+// El pill mantiene `position: relative` dentro del flex centrado del rail.
+// Cuando colapsa, el burger absoluto que vive en el right del rail toma
+// el foco visual.
+.floating-nav__pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  border-radius: 9999px;
+  // Padding compacto en mobile; full en desktop.
+  padding: 0.375rem;
+
+  // Transición pill → invisible al scrollear. Slide up + fade out + escala
+  // muy sutil (0.96) para que sienta "lift-off", no "disappear-cut".
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 350ms var(--ease-fluid),
+    transform 350ms var(--ease-fluid);
+  will-change: opacity, transform;
+
+  .floating-nav-rail.is-scrolled & {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+    pointer-events: none;
+  }
+
+  @media (min-width: 880px) {
+    padding: 0.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 200ms linear;
+
+    .floating-nav-rail.is-scrolled & {
+      transform: none;
+    }
+  }
+}
+
+.floating-nav__link {
+  position: relative;
+  z-index: 10;
+  border-radius: 9999px;
+  // Padding + font compacto en mobile (cabe 4 labels cortos en pill 360).
+  padding: 0.375rem 0.625rem;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: rgb(var(--foam) / 0.78);
+  transition: color 380ms var(--ease-fluid);
+
+  // Sombra apilada en el texto — sin chrome de fondo, las letras necesitan
+  // su propio contraste contra cualquier zona del bg (cielo, lago, lobo).
+  // Mismo lenguaje que el resto del copy del hero.
+  text-shadow:
+    0 2px 10px rgb(var(--abyss) / 0.7),
+    0 1px 3px rgb(var(--abyss) / 0.6);
+
+  &:hover {
+    color: rgb(var(--foam));
+  }
+
+  &.is-active {
+    color: rgb(var(--foam));
+  }
+
+  @media (min-width: 880px) {
+    padding: 0.5rem 1.125rem;
+    font-size: 14px;
+    letter-spacing: normal;
+  }
+}
+
+// Conmutación de labels — desktop muestra el "label" completo, mobile el
+// "shortLabel". Sin esto, "Acerca de nosotros" desborda el pill en 360px.
+.floating-nav__link-text--short {
+  display: inline;
+}
+.floating-nav__link-text--full {
+  display: none;
+}
+@media (min-width: 880px) {
+  .floating-nav__link-text--short {
+    display: none;
+  }
+  .floating-nav__link-text--full {
+    display: inline;
+  }
+}
+
+// Indicador — pill cristalina que aparece detrás del link en hover y al
+// activarse la ruta. Sin chrome global del nav, este indicator es la única
+// pieza visible: respira con el cursor (scale + opacity), tiene hairline
+// ring foam y un highlight superior cenital que sugiere luz, no plástico.
+.floating-nav__link-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  opacity: 0;
+  transform: scale(0.86);
+  transform-origin: center;
+  transition:
+    opacity 420ms var(--ease-fluid),
+    transform 480ms var(--ease-fluid);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgb(var(--foam) / 0.10) 0%, transparent 70%),
+    linear-gradient(180deg, rgb(var(--foam) / 0.08) 0%, rgb(var(--foam) / 0.015) 100%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  backdrop-filter: blur(10px) saturate(125%);
+  box-shadow:
+    inset 0 0 0 1px rgb(var(--foam) / 0.12),
+    inset 0 1px 0 rgb(var(--foam) / 0.18),
+    inset 0 -1px 0 rgb(var(--abyss) / 0.25),
+    0 8px 18px -10px rgb(var(--abyss) / 0.55);
+
+  .floating-nav__link:hover & {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .floating-nav__link.is-active & {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.floating-nav__link-text {
+  position: relative;
+}
+
+// ─── Burger discreto (sólo cuando is-scrolled) ─────────────────────────────
+// Vive absoluto al borde derecho del rail. En estado top-of-page está
+// invisible + sin pointer-events; cuando el rail recibe `.is-scrolled` el
+// burger entra con un fade + scale-up spring (cubic-bezier overshoot) que
+// se siente vivo, no abrupto.
+//
+//   · Position absolute right — fuera del centro del viewport (decisión
+//     explícita del usuario: "no quiero burbuja en el centro estorbando").
+//   · El icono son 3 spans CSS que rotan a X cuando el drawer abre — sin
+//     swap de ng-icon, transición continua entre estados.
+//   · 44×44 px = mínimo táctil AAA. La capa visual interna mide menos pero
+//     el hit-box es completo.
+.floating-nav__burger {
+  position: absolute;
+  // Anclado al right del rail. Padding del rail no aplica a hijos absolute,
+  // así que sumamos safe-area-inset-right en el offset right.
+  top: 0;
+  right: max(var(--container-px), env(safe-area-inset-right));
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: rgb(var(--foam));
+  touch-action: manipulation;
+
+  // Estado top-of-page: invisible. El burger debe sentirse "ausente"
+  // cuando el navbar pill ocupa el centro del rail.
+  opacity: 0;
+  transform: translateY(-12px) scale(0.85);
+  pointer-events: none;
+  // Spring curve con overshoot ligero (1.56) — sensación premium de
+  // "elemento aterrizando", no de fade-in lineal.
+  transition:
+    opacity 480ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: opacity, transform;
+
+  .floating-nav-rail.is-scrolled & {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 200ms linear;
+
+    .floating-nav-rail.is-scrolled & {
+      transform: none;
+    }
+  }
+}
+
+// ─── Icono morfeable burger ↔ X (CSS puro, sin swap de ng-icon) ────────────
+// 3 líneas horizontales que rotan + escalan en sincronía cuando el drawer
+// se abre/cierra. Patrón inspirado en Linear / Stripe — la transición
+// continua entre estados se lee como gesto premium, no como cambio de
+// estado abrupto.
+.floating-nav__burger-icon {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+  width: 18px;
+  height: 14px;
+  position: relative;
+}
+
+.floating-nav__burger-line {
+  height: 1.5px;
+  width: 100%;
+  background: currentColor;
+  border-radius: 2px;
+  transform-origin: center;
+  transition:
+    transform 380ms cubic-bezier(0.34, 1.36, 0.64, 1),
+    opacity 280ms ease;
+  will-change: transform, opacity;
+}
+
+// Estado abierto: línea1 + línea3 convergen al centro y rotan ±45° formando
+// la X. Línea2 se desvanece + escala a 0.
+.floating-nav__burger-icon.is-open .floating-nav__burger-line:nth-child(1) {
+  // gap 4px + height 1.5px → centro del icono cae a 5.5px del centro de
+  // la línea1. translateY(5.5px) la pone justo sobre el eje X central.
+  transform: translateY(5.5px) rotate(45deg);
+}
+.floating-nav__burger-icon.is-open .floating-nav__burger-line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.floating-nav__burger-icon.is-open .floating-nav__burger-line:nth-child(3) {
+  transform: translateY(-5.5px) rotate(-45deg);
+}
+
+// =============================================================================
+// Mobile drawer — réplica del side-menu de moofyvip adaptado a la paleta CAS.
+//
+// Estructura: contenedor `position: fixed inset:0` con dos capas:
+//   1) `.mobile-drawer__backdrop` — fondo oscuro con blur, fade-in al abrir.
+//      Tap fuera del panel = cierra el drawer.
+//   2) `.mobile-drawer__panel` — sidenav 280px de ancho que entra de
+//      izquierda a derecha (`transform: translateX(-100%) → 0`) con la
+//      misma curva 500ms ease-in-out que usa mat-sidenav en moofyvip.
+//
+// Cada item del drawer es un "card glass" con icono + label, esquina
+// triangular decorativa y estado activo con borde-izquierdo accent +
+// gradiente lagoon (vide side-menu.scss del repo moofyvip).
+// =============================================================================
+
+.mobile-drawer {
+  position: fixed;
+  inset: 0;
+  // z-index 65 — encima del .grain (60) pero debajo del brand-bar (70).
+  z-index: 65;
+  pointer-events: none;
+  // `var(--app-vh)` viene del JS en `apps/.../index.html` que mide
+  // `visualViewport.height` (el área visible REAL en iOS Safari, donde
+  // 100dvh/100svh fallan en algunas versiones — el drawer y backdrop
+  // quedaban más cortos que el viewport visible, dejando el contenido de
+  // la página visible sin blur abajo del panel; reporte usuario 2026-05).
+  // Sticky-max desde JS asegura que el drawer crece pero no encoge si la
+  // URL bar transiciona mientras está abierto.
+  //
+  // Fallback chain:
+  //   1. 100vh — Safari < 15.4 (raro en 2026).
+  //   2. var(--app-vh, 100dvh) — moderno.
+  height: 100vh;
+  height: var(--app-vh, 100dvh);
+
+  &.is-open {
+    pointer-events: auto;
+  }
+}
+
+.mobile-drawer__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--abyss) / 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 500ms ease-in-out;
+  cursor: pointer;
+
+  .mobile-drawer.is-open & {
+    opacity: 1;
+  }
+}
+
+.mobile-drawer__panel {
+  position: absolute;
+  // Drawer pegado al borde izquierdo, dejando un margen alrededor para que
+  // se lea como "card flotante" (mismo lenguaje que el dashboard de moofyvip
+  // donde el mat-sidenav tiene margin + border-radius).
+  top: max(1rem, calc(env(safe-area-inset-top) + 0.5rem));
+  bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));
+  left: max(1rem, env(safe-area-inset-left));
+  width: min(20rem, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(var(--foam) / 0.03),
+      rgb(var(--foam) / 0.015)
+    ),
+    rgb(var(--abyss) / 0.92);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  // Sombra suave para que el panel se sienta levantado del fondo.
+  box-shadow:
+    0 24px 56px -16px rgb(var(--abyss) / 0.6),
+    inset 0 1px 0 rgb(var(--foam) / 0.06);
+  overflow: hidden;
+  // Transición de entrada — moofyvip usa `transition: all 500ms ease-in-out`
+  // sobre `mat-sidenav`. Replicamos esa curva exacta para el slide horizontal.
+  transform: translateX(calc(-100% - 2rem));
+  transition: transform 500ms ease-in-out;
+
+  .mobile-drawer.is-open & {
+    transform: translateX(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+// ─── Header card "Navegación" ──────────────────────────────────────────────
+// Equivalente a `.sidenav-header` del moofyvip: padding 1rem, fondo glass
+// sutil, border, sombra blanda, line-height 1.5.
+.mobile-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  background: rgb(var(--foam) / 0.03);
+  box-shadow: 0 4px 12px -4px rgb(var(--abyss) / 0.4);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  color: rgb(var(--foam));
+  line-height: 1.5;
+}
+
+.mobile-drawer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  background: rgb(var(--foam) / 0.04);
+  color: rgb(var(--foam) / 0.7);
+  cursor: pointer;
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+
+  &:hover {
+    background: rgb(var(--foam) / 0.08);
+    color: rgb(var(--foam));
+    border-color: rgb(var(--foam) / 0.18);
+  }
+}
+
+// ─── Lista de items ─────────────────────────────────────────────────────────
+.mobile-drawer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  // Permite scroll si la lista crece más allá del alto del panel.
+  overflow-y: auto;
+  // Scrollbar oculta para look limpio (sigue funcionando con touch).
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    width: 0;
+  }
+}
+
+// ─── Item del drawer (card glass premium) ──────────────────────────────────
+// Réplica del `.menu-item` de moofyvip:
+//   • border-radius 0.95rem, border 1px, background glass sutil
+//   • 5rem de alto, padding interno para icono + label
+//   • border-left transparente (4px) — se vuelve accent en active
+//   • triangulito decorativo en la esquina inferior-derecha
+//   • hover: ilumina border + bg
+//   • active: gradiente lagoon + accent left border + corner triangle teñido
+.mobile-drawer__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  height: 4.5rem;
+  padding: 0 1rem 0 0.875rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgb(var(--foam) / 0.08);
+  border-left: 3px solid transparent;
+  background: rgb(var(--foam) / 0.02);
+  color: rgb(var(--foam) / 0.78);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-decoration: none;
+  overflow: hidden;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    transform 200ms ease;
+
+  // Stagger de entrada — cada item aparece con un pequeño delay después de
+  // que el panel se desliza. Da el toque premium al abrir el menú.
+  opacity: 0;
+  transform: translateX(-12px);
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    opacity 400ms ease-out,
+    transform 400ms ease-out;
+  transition-delay: calc(220ms + var(--stagger-index, 0) * 60ms);
+
+  .mobile-drawer.is-open & {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  // Hover (pointer fine — touch usa :active al final del archivo).
+  &:hover {
+    background: rgb(var(--foam) / 0.045);
+    border-color: rgb(var(--foam) / 0.18);
+    color: rgb(var(--foam));
+  }
+
+  // Triangulito decorativo bottom-right — réplica del ::after de moofyvip.
+  // Sutil en estado normal, se intensifica + tiñe lagoon en active.
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 12px;
+    height: 12px;
+    background: rgb(var(--foam) / 0.12);
+    clip-path: polygon(100% 0, 0 100%, 100% 100%);
+    pointer-events: none;
+    transition: background 200ms ease;
+  }
+}
+
+// Active state — gradiente lagoon + accent border + glow corner.
+.mobile-drawer__item.is-active {
+  color: rgb(var(--foam));
+  border-left-color: rgb(var(--lagoon));
+  background: linear-gradient(
+    90deg,
+    rgb(var(--lagoon) / 0.18),
+    rgb(var(--foam) / 0.02) 72%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(var(--foam) / 0.06),
+    0 12px 24px -8px rgb(var(--abyss) / 0.5);
+
+  &::after {
+    background: linear-gradient(
+      135deg,
+      rgb(var(--bioluminescent) / 0.84),
+      rgb(var(--lagoon) / 0.38)
+    );
+  }
+
+  .mobile-drawer__item-icon {
+    color: rgb(var(--foam));
+    background: rgb(var(--lagoon) / 0.18);
+    border-color: rgb(var(--lagoon) / 0.32);
+  }
+}
+
+// ─── Icon del item ─────────────────────────────────────────────────────────
+// Disco glass con el icono adentro. Tamaño calibrado para que cuadre con
+// el alto del item (4.5rem) sin dominarlo.
+.mobile-drawer__item-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgb(var(--foam) / 0.1);
+  background: rgb(var(--foam) / 0.04);
+  color: rgb(var(--foam) / 0.78);
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+.mobile-drawer__item-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

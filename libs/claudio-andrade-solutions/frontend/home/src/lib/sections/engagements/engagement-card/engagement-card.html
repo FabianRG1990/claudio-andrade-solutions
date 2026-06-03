@@ -1,0 +1,89 @@
+@let e = engagement();
+
+<article
+  appReveal
+  [delay]="delay()"
+  class="engagement-card"
+  [class.engagement-card--highlight]="e.highlight"
+  [attr.data-accent]="e.accent"
+>
+  <div class="engagement-card__inner">
+    <!-- Head: icon container + plain title (separados) + badge optional -->
+    <div class="engagement-card__head">
+      <div class="engagement-card__head-left">
+        <span class="engagement-card__icon" aria-hidden="true">
+          <ng-icon [name]="e.icon" size="18" />
+        </span>
+        <h3 class="engagement-card__name">{{ e.name }}</h3>
+      </div>
+      @if (e.highlight) {
+        <span class="engagement-card__tag">
+          <span class="engagement-card__tag-icon" aria-hidden="true">
+            <ng-icon name="phosphorStarFill" size="10" />
+          </span>
+          El más popular
+        </span>
+      }
+    </div>
+
+    <!-- Price block: striked original + current price huge + cadence inline -->
+    <div class="engagement-card__price-row">
+      @if (e.originalPrice) {
+        <span class="engagement-card__price-original" aria-label="Precio anterior">{{ e.originalPrice }}</span>
+      }
+      <span
+        class="engagement-card__price"
+        [class.engagement-card__price--word]="!/[0-9]/.test(e.price)"
+      >{{ e.price }}</span>
+      <span
+        class="engagement-card__cadence"
+        [class.engagement-card__cadence--block]="e.cadence.length > 14"
+      >{{ e.cadence }}</span>
+    </div>
+    @if (e.priceBreakdown) {
+      <p class="engagement-card__price-breakdown">{{ e.priceBreakdown }}</p>
+    }
+
+    <p class="engagement-card__description">{{ e.description }}</p>
+
+    <ul class="engagement-card__features">
+      @for (f of e.features; track f.label) {
+        <li
+          class="engagement-card__feature"
+          [class.engagement-card__feature--excluded]="!f.included"
+        >
+          <span class="engagement-card__feature-icon" aria-hidden="true">
+            @if (f.included) {
+              <ng-icon name="phosphorCheckBold" size="11" />
+            } @else {
+              <ng-icon name="phosphorXBold" size="10" />
+            }
+          </span>
+          <span class="engagement-card__feature-label">{{ f.label }}</span>
+        </li>
+      }
+    </ul>
+
+    @if (e.scarcityNote) {
+      <p class="engagement-card__scarcity" role="status">
+        <span class="engagement-card__scarcity-icon" aria-hidden="true">
+          <ng-icon name="phosphorUsersBold" size="13" />
+        </span>
+        {{ e.scarcityNote }}
+      </p>
+    }
+
+    <div class="engagement-card__cta-wrap">
+      <a
+        routerLink="/contacto"
+        class="engagement-card__cta"
+        [class.engagement-card__cta--highlight]="e.highlight"
+      >
+        <span class="engagement-card__cta-label">Elegir {{ e.name }}</span>
+        <span class="engagement-card__cta-icon" aria-hidden="true">
+          <ng-icon name="phosphorArrowRightBold" [size]="e.highlight ? '28' : '18'" />
+        </span>
+      </a>
+    </div>
+  </div>
+</article>

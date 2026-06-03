@@ -1,0 +1,27 @@
+<!-- Canvas full-viewport para el pez verde durante el swim. Vive siempre
+     en el DOM (incluso antes de que los docks se registren) para que la
+     init del renderer three.js pueda atarse al canvas en afterNextRender.
+     Sin docks o sin swim, queda transparente (no se llama render()). -->
+<canvas #fishCanvas class="companion__fish-canvas" aria-hidden="true"></canvas>
+
+@if (activeDockId() !== null) {
+  <!-- Pivot del botón: position fixed, transform driven por JS para
+       anclarse al dock activo. La clase .is-swimming se ata a hubVisible
+       (no a swimState) porque la transformación premium (curl ↔ orbe)
+       requiere overlap: el hub se ESCONDE 250ms antes de "swimming"
+       activo (durante el curl-in del pez) y RE-APARECE 250ms antes del
+       fin del swim (durante el curl-out del pez), creando crossfade en
+       las dos puntas.
+       El @if condiciona en activeDockId (no en hasDocks): cuando NO hay
+       dock visible/válido en el viewport actual (caso mobile sin el hero
+       dock — su anchor vive en .hero__scroll-hint display:none), el
+       pivot NO se renderiza. Eso evita el bug del hub cortado contra el
+       navbar en (16, 0). -->
+  <div
+    #pivot
+    class="companion__pivot"
+    [class.is-swimming]="!hubVisible()"
+  >
+    <app-whatsapp-hub #hub size="sm" class="companion__hub" />
+  </div>
+}
