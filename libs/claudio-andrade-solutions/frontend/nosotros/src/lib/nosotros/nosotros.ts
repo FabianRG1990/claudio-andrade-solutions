@@ -4,6 +4,8 @@ import { ImgFadeDirective } from '@cas-ui-shared/directives/img-fade/img-fade.di
 import { PageHeader } from '@cas-ui-shared/components/page-header/page-header';
 import { RevealDirective } from '@cas-ui-shared/directives/reveal/reveal.directive';
 
+import { WhatWeDo } from '../sections/what-we-do/what-we-do';
+
 interface Program {
   code: string;
   title: string;
@@ -54,7 +56,7 @@ const PROGRAMS: ReadonlyArray<Program> = [
  */
 @Component({
   selector: 'app-nosotros-page',
-  imports: [ImgFadeDirective, PageHeader, RevealDirective],
+  imports: [ImgFadeDirective, PageHeader, RevealDirective, WhatWeDo],
   templateUrl: './nosotros.html',
   styleUrl: './nosotros.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

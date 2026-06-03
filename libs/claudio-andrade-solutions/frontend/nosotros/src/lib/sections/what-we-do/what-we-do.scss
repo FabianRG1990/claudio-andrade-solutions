@@ -1,0 +1,423 @@
+// =============================================================================
+// WhatWeDo — segmento "Lo que hacemos" con scroll pinned/scrubbed.
+// Base = layout pinned (sticky stage dentro de un track alto). Funciona incluso
+// pre-hidratación mostrando el slide 0. `prefers-reduced-motion` lo colapsa a
+// un layout apilado y visible (sin pin, sin scrub).
+// =============================================================================
+
+.whatwedo {
+  // Track: N × 100svh. N = 3 slides → 300svh. Da duración al pin.
+  position: relative;
+  height: 300svh;
+}
+
+.whatwedo__stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: clip; // recorta el nombre gigante sin scrollbar horizontal
+  // Fondo abyss propio para que la escena pinned no muestre el fondo de la
+  // página debajo durante el recorrido.
+  background: rgb(var(--abyss));
+  isolation: isolate;
+}
+
+// ─── Eyebrow ────────────────────────────────────────────────────────────────
+.whatwedo__eyebrow {
+  position: absolute;
+  top: 24%;
+  left: clamp(1.25rem, 21vw, 22rem);
+  z-index: 4;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-label-md);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.85);
+}
+
+// ─── Capa de slides (overlap absoluto; solo el activo visible) ───────────────
+.whatwedo__slides {
+  position: absolute;
+  inset: 0;
+}
+
+.whatwedo__slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  // El nombre/panel aparecen relativamente rápido (0.8s) para que LIDEREN; la
+  // imagen (frame) tiene su propia transición más lenta — así el nombre se
+  // aprecia mientras la imagen aún está girando/acomodándose encima.
+  transition:
+    opacity 0.7s var(--ease-fluid),
+    visibility 0s linear 0.7s;
+
+  &.is-active {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 0.7s var(--ease-fluid),
+      visibility 0s;
+  }
+}
+
+// ─── Nombre de fondo (ESTÁTICO) ──────────────────────────────────────────────
+// Nombre prominente DETRÁS de la imagen (z-index 0): la foto tapa el centro y
+// los extremos sobresalen a los lados, como en la referencia. NO se desliza con
+// el scroll — es estático; lo que anima es la imagen al cambiar. La transición
+// del nombre es un enfoque elegante (blur → nítido) acompañando el crossfade.
+.whatwedo__ghost {
+  position: absolute;
+  top: 47%;
+  left: 36%; // alineado con el centro de la imagen (lado izquierdo)
+  z-index: 0;
+  width: max-content;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(3.5rem, 12.5vw, 10.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  color: rgb(var(--foam) / 0.8);
+  user-select: none;
+  filter: blur(9px);
+  transition: filter 0.6s var(--ease-fluid);
+
+  .is-active & {
+    filter: blur(0);
+  }
+}
+
+// ─── Imagen recortada en rombo (rectángulo rotado) ───────────────────────────
+.whatwedo__frame {
+  position: absolute;
+  top: 50%;
+  // Lado izquierdo (36%) — deja todo el lado derecho libre para la descripción,
+  // sin estorbar las letras del nombre.
+  left: 36%;
+  z-index: 1;
+  width: clamp(14rem, 25vw, 26rem);
+  // Rectángulo limpio con esquinas RECTAS — diagonal sobrio como la referencia.
+  aspect-ratio: 4 / 5;
+  overflow: clip;
+  border-radius: 0;
+  box-shadow: 0 40px 90px -30px rgb(0 0 0 / 0.7);
+  // Estado de entrada: la imagen arranca CHICA y más girada (46°), tucked,
+  // dejando ver el nombre detrás. Al activarse "da vuelta" desplegándose hasta
+  // su sitio (22°, tamaño completo) y revelándose con un clip lateral. La
+  // transición es LENTA (1.5s) y con un pequeño delay para que el nombre se
+  // aprecie primero antes de que la imagen lo cubra. Inclinación volteada
+  // (+22°) acorde a la referencia.
+  transform: translate(-50%, -50%) rotate(46deg) scale(0.78);
+  clip-path: inset(0 100% 0 0);
+  transition:
+    clip-path 1.5s var(--ease-fluid) 0.2s,
+    transform 1.5s var(--ease-fluid) 0.2s;
+
+  .is-active & {
+    transform: translate(-50%, -50%) rotate(22deg) scale(1);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+// Inner contra-rotado: mantiene la foto vertical mientras el frame va rotado.
+// El inset negativo agranda el inner para cubrir el área del rectángulo sin
+// esquinas vacías tras la contra-rotación.
+.whatwedo__frame-inner {
+  position: absolute;
+  // -22% = lo justo para cubrir las esquinas del rectángulo tras la contra-
+  // rotación de 22° (más que eso solo recorta/zoomea la foto de más).
+  inset: -22%;
+  transform: rotate(-22deg);
+}
+
+.whatwedo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// ─── Placeholder del rombo (mientras no hay foto real) ───────────────────────
+.whatwedo__frame.is-placeholder {
+  // Degradado tenue del color de acento → abyss, sobrio. Hairline interior para
+  // que el rectángulo diagonal se lea limpio sin foto.
+  box-shadow:
+    inset 0 0 0 1px rgb(var(--foam) / 0.12),
+    0 40px 90px -30px rgb(0 0 0 / 0.7);
+
+  &[data-accent='coral'] {
+    background: linear-gradient(150deg, rgb(var(--coral) / 0.32), rgb(var(--abyss)) 78%);
+  }
+  &[data-accent='lagoon'] {
+    background: linear-gradient(150deg, rgb(var(--lagoon) / 0.3), rgb(var(--abyss)) 78%);
+  }
+  &[data-accent='bioluminescent'] {
+    background: linear-gradient(150deg, rgb(var(--bioluminescent) / 0.3), rgb(var(--abyss)) 78%);
+  }
+}
+
+// ─── Panel de copy (rol + nombre + bio) + CTA ────────────────────────────────
+.whatwedo__panel {
+  position: absolute;
+  z-index: 2;
+  left: clamp(1.25rem, 63vw, 64rem);
+  bottom: 29%;
+  max-width: min(24rem, 30vw);
+  transform: translateY(14px);
+  transition:
+    opacity 0.8s var(--ease-fluid),
+    transform 0.8s var(--ease-fluid);
+
+  .is-active & {
+    transform: translateY(0);
+  }
+}
+
+.whatwedo__role {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: var(--type-label-md);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--lagoon));
+
+  &[data-accent='coral'] {
+    color: rgb(var(--coral));
+  }
+  &[data-accent='bioluminescent'] {
+    color: rgb(var(--bioluminescent));
+  }
+}
+
+.whatwedo__name {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-display);
+  font-size: var(--type-h3-lg);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-tight);
+  color: rgb(var(--foam));
+}
+
+.whatwedo__bio {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-body);
+  font-weight: 400;
+  line-height: 1.55;
+  text-wrap: pretty;
+  color: rgb(var(--foam) / 0.72);
+}
+
+.whatwedo__cta {
+  position: absolute;
+  z-index: 3;
+  left: clamp(1.25rem, 63vw, 64rem);
+  bottom: 16%;
+}
+
+// ─── Dots de paginación ──────────────────────────────────────────────────────
+.whatwedo__dots {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.75rem);
+  top: 50%;
+  z-index: 4;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.whatwedo__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: rgb(var(--foam) / 0.25);
+  cursor: pointer;
+  transition:
+    background 0.4s var(--ease-fluid),
+    transform 0.4s var(--ease-spring);
+
+  &.is-active {
+    background: rgb(var(--foam));
+    transform: scale(1.5);
+  }
+
+  &:hover {
+    background: rgb(var(--foam) / 0.55);
+  }
+}
+
+// ─── Scroll cue ──────────────────────────────────────────────────────────────
+.whatwedo__scroll {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.75rem);
+  bottom: clamp(2rem, 6vh, 4rem);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  writing-mode: vertical-rl;
+  font-family: var(--font-display);
+  font-size: var(--type-label-sm);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: rgb(var(--foam) / 0.55);
+
+  &::after {
+    content: '';
+    width: 1px;
+    height: 3rem;
+    background: linear-gradient(
+      to bottom,
+      rgb(var(--foam) / 0.4),
+      transparent
+    );
+  }
+}
+
+// ─── Responsive: < 768px reflowea a columna centrada ─────────────────────────
+@media (max-width: 767px) {
+  .whatwedo__eyebrow {
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .whatwedo__ghost {
+    top: 40%;
+    left: 50%; // re-centra en mobile (desktop lo alinea a 44%)
+    font-size: clamp(3.5rem, 28vw, 7rem);
+  }
+
+  .whatwedo__frame {
+    width: clamp(11rem, 52vw, 16rem);
+    top: 44%;
+    left: 50%; // re-centra en mobile (desktop lo desplaza a 44%)
+  }
+
+  .whatwedo__panel {
+    left: 50%;
+    right: auto;
+    bottom: 19%;
+    max-width: min(22rem, 84vw);
+    transform: translate(-50%, 14px);
+    text-align: center;
+
+    .is-active & {
+      transform: translate(-50%, 0);
+    }
+  }
+
+  .whatwedo__cta {
+    left: 50%;
+    bottom: 9%;
+    transform: translateX(-50%);
+  }
+
+  .whatwedo__dots {
+    right: clamp(0.75rem, 4vw, 1.25rem);
+  }
+
+  .whatwedo__scroll {
+    display: none;
+  }
+}
+
+// ─── Reduced motion: sin pin, slides apilados visibles ───────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .whatwedo {
+    height: auto;
+  }
+
+  .whatwedo__stage {
+    position: static;
+    height: auto;
+    overflow: visible;
+    padding-block: clamp(4rem, 8vh, 7rem);
+  }
+
+  .whatwedo__eyebrow {
+    position: static;
+    margin-inline: auto;
+    margin-bottom: 2.5rem;
+    width: max-content;
+  }
+
+  .whatwedo__slides {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3rem, 8vh, 6rem);
+  }
+
+  .whatwedo__slide {
+    position: relative;
+    inset: auto;
+    opacity: 1;
+    visibility: visible;
+    display: grid;
+    place-items: center;
+    gap: 1.5rem;
+    min-height: 60vh;
+    transition: none;
+  }
+
+  .whatwedo__ghost {
+    position: relative;
+    inset: auto;
+    top: auto;
+    left: auto;
+    transform: none;
+    filter: none; // sin blur en el stack (todas las personas visibles)
+    transition: none;
+    font-size: clamp(3rem, 14vw, 8rem);
+    color: rgb(var(--foam) / 0.1);
+  }
+
+  .whatwedo__frame {
+    position: relative;
+    inset: auto;
+    top: auto;
+    left: auto;
+    transform: none; // rectángulo recto en el stack
+    clip-path: none;
+    margin-block: 2rem;
+  }
+
+  .whatwedo__frame-inner {
+    inset: 0;
+    transform: none;
+  }
+
+  .whatwedo__panel {
+    position: relative;
+    inset: auto;
+    left: auto;
+    bottom: auto;
+    max-width: 36rem;
+    text-align: center;
+    transform: none;
+  }
+
+  .whatwedo__cta {
+    position: relative;
+    inset: auto;
+    left: auto;
+    bottom: auto;
+    justify-self: center;
+  }
+
+  .whatwedo__dots,
+  .whatwedo__scroll {
+    display: none;
+  }
+}
