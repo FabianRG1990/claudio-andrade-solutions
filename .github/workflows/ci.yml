@@ -22,9 +22,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'yarn'
 
       - run: corepack enable
+      - run: corepack prepare yarn@4.14.1 --activate
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - run: yarn --version
       - run: yarn install --immutable
 
       - run: yarn nx run-many -t lint typecheck build
